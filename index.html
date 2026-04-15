@@ -514,14 +514,13 @@
             
             // 挑战模式无论对错都进入下一关
             if (gameState.gameMode === 'tenLevel') {
-                gameState.level++;
-                
                 // 检查是否达到挑战模式的结束条件
-                if (gameState.level > gameState.totalLevels) {
+                if (gameState.level >= gameState.totalLevels) {
                     // 挑战模式结束
                     showGameEnd();
                     return;
                 }
+                gameState.level++;
             } else if (gameState.gameMode === 'endless' && selectedColor === gameState.currentTargetColor) {
                 // 无尽模式只有做对才进入下一关
                 gameState.level++;
