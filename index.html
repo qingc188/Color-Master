@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色彩记忆大师 - 挑战你的色彩感知</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-fast': 'bounce 0.5s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'scale-in': 'scaleIn 0.3s ease-in-out',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.9)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .text-shadow-lg {
+                text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.25);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+            }
+            .glass-dark {
+                background: rgba(30, 41, 59, 0.85);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+            }
+            .color-card {
+                transition: all 0.2s ease;
+            }
+            .color-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            }
+            .color-card:active {
+                transform: translateY(0);
+            }
+            .progress-bar {
+                transition: width 1s linear;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-dark to-gray-900 min-h-screen text-light overflow-x-hidden">
+    <!-- 游戏容器 -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- 游戏标题 -->
+        <header class="text-center mb-8 animate-fade-in">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-shadow-lg">
+                    Color Master
+                </h1>
+                <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-2 text-shadow-lg">
+                    色彩记忆大师
+                </h1>
+            </div>
+            <p class="text-lg text-gray-300">挑战你的色彩感知与记忆力</p>
+        </header>
+
+        <!-- 游戏信息栏 -->
+        <div class="glass-dark rounded-xl p-4 mb-6 flex justify-between items-center animate-fade-in border border-white/10 shadow-lg">
+            <div class="flex items-center space-x-6">
+                <div class="text-center">
+                    <p class="text-sm text-gray-400">当前关卡</p>
+                    <p id="level" class="text-2xl font-bold text-white">1</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-400">连续得分</p>
+                    <p id="score" class="text-2xl font-bold text-white">0</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-400">最佳记录</p>
+                    <p id="best-score" class="text-2xl font-bold text-white">0</p>
+                </div>
+                <div class="text-center" id="lives-display">
+                    <p class="text-sm text-gray-400">生命值</p>
+                    <p id="lives" class="text-2xl font-bold text-danger">3</p>
+                </div>
+            </div>
+            <div>
+                <button id="sound-toggle" class="p-2 rounded-full hover:bg-gray-700 transition-colors duration-300">
+                    <i id="sound-icon" class="fa fa-volume-up text-xl text-white"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏主区域 -->
+        <main class="relative">
+            <!-- 模式选择屏幕 -->
+            <div id="mode-selection-screen" class="glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <h2 class="text-3xl font-bold mb-6">选择游戏模式</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                    <!-- 挑战模式 -->
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="ten-level-mode">
+                        <h3 class="text-xl font-bold mb-3 text-white">挑战模式</h3>
+                        <p class="text-gray-300 mb-4">完成10关挑战，统计正确率</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> 共10关</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 统计正确率</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 适合练习</li>
+                        </ul>
+                    </div>
+                    <!-- 无尽模式 -->
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="endless-mode">
+                        <h3 class="text-xl font-bold mb-3 text-white">无尽模式</h3>
+                        <p class="text-gray-300 mb-4">挑战极限，看你能坚持到第几关</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> 3条生命</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 无限关卡</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 挑战极限</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        <!-- 开始游戏屏幕 -->
+            <div id="start-screen" class="glass-dark rounded-2xl p-8 text-center animate-fade-in hidden">
+                <h2 class="text-3xl font-bold mb-6">准备好挑战了吗？</h2>
+                <div class="mb-8 text-left max-w-lg mx-auto">
+                    <h3 class="text-xl font-semibold mb-3 text-primary">游戏规则：</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li><i class="fa fa-circle text-xs mr-2"></i> 每关将显示一个目标颜色，观察并记住它</li>
+                        <li><i class="fa fa-circle text-xs mr-2"></i> 6秒后，屏幕上将出现16个不同的颜色方块</li>
+                        <li><i class="fa fa-circle text-xs mr-2"></i> 从这些方块中找出与目标颜色完全相同的那个</li>
+                        <li><i class="fa fa-circle text-xs mr-2"></i> 选择正确进入下一关，连续得分+1</li>
+                        <li><i class="fa fa-circle text-xs mr-2"></i> 选择错误游戏重置，重新开始挑战</li>
+                    </ul>
+                </div>
+                <button id="start-button" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                    开始游戏
+                </button>
+            </div>
+
+            <!-- 目标颜色显示区域 -->
+            <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
+                <div class="mb-6">
+                    <div id="countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4">
+                        <div id="progress-bar" class="bg-primary h-2.5 rounded-full progress-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div id="target-color" class="w-64 h-64 mx-auto rounded-2xl shadow-2xl"></div>
+                <p class="mt-6 text-gray-400">请等待6秒倒计时结束...</p>
+            </div>
+
+            <!-- 颜色选择区域 -->
+            <div id="color-grid-screen" class="hidden animate-fade-in">
+                <h2 class="text-2xl font-bold mb-6 text-center">找出与目标颜色相同的方块</h2>
+                <div id="color-grid" class="grid grid-cols-4 gap-4"></div>
+            </div>
+
+            <!-- 结果反馈区域 -->
+            <div id="result-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <div id="result-icon" class="text-6xl mb-4"></div>
+                <h2 id="result-text" class="text-3xl font-bold mb-6"></h2>
+                <div class="flex justify-center space-x-6 mb-8">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400">当前关卡</p>
+                        <p id="result-level" class="text-2xl font-bold">1</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400">得分</p>
+                        <p id="result-score" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-8">
+                    <div class="text-center">
+                        <div class="w-32 h-32 rounded-xl shadow-lg mx-auto" id="result-target-color"></div>
+                        <p class="mt-2 text-sm text-gray-400">目标颜色</p>
+                        <p id="target-color-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-32 h-32 rounded-xl shadow-lg mx-auto" id="result-selected-color"></div>
+                        <p class="mt-2 text-sm text-gray-400">选择颜色</p>
+                        <p id="selected-color-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
+                    </div>
+                </div>
+                <div class="mt-8">
+                    <button id="continue-button" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                        下一关
+                    </button>
+                    <button id="restart-button" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg mt-4 md:mt-0 md:ml-4">
+                        重新开始
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- 色彩历史记录 -->
+        <div class="mt-8 glass-dark rounded-xl p-4 animate-fade-in">
+            <h3 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-history mr-2 text-primary"></i>
+                色彩历史
+            </h3>
+            <div id="color-history" class="flex flex-wrap gap-2">
+                <!-- 历史颜色将在这里动态添加 -->
+            </div>
+        </div>
+
+        <!-- 游戏说明 -->
+        <div class="mt-8 glass-dark rounded-xl p-6 animate-fade-in">
+            <h3 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-info-circle mr-2 text-primary"></i>
+                游戏技巧
+            </h3>
+            <div class="text-gray-300 space-y-3">
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>专注观察</strong>：仔细注意颜色的色调、饱和度和亮度</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>对比记忆</strong>：尝试将颜色与已知物体对比，帮助记忆</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>排除法</strong>：先排除明显不同的颜色，缩小选择范围</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>相信直觉</strong>：有时第一感觉往往是正确的</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏脚本 -->
+    <script>
+        // 游戏状态
+        const gameState = {
+            level: 1,
+            score: 0,
+            bestScore: localStorage.getItem('colorMemoryBestScore') || 0,
+            currentTargetColor: null,
+            isGameActive: false,
+            isSoundEnabled: localStorage.getItem('colorMemorySound') !== 'false',
+            colorHistory: [],
+            // 新模式相关状态
+            gameMode: null, // 'tenLevel' 或 'endless'
+            lives: 3, // 仅用于无尽模式
+            totalLevels: 10, // 仅用于10关模式
+            correctAnswers: 0, // 用于计算正确率
+            totalAnswers: 0 // 用于计算正确率
+        };
+
+        // DOM 元素
+        const elements = {
+            modeSelectionScreen: document.getElementById('mode-selection-screen'),
+            tenLevelMode: document.getElementById('ten-level-mode'),
+            endlessMode: document.getElementById('endless-mode'),
+            startScreen: document.getElementById('start-screen'),
+            targetColorScreen: document.getElementById('target-color-screen'),
+            colorGridScreen: document.getElementById('color-grid-screen'),
+            resultScreen: document.getElementById('result-screen'),
+            startButton: document.getElementById('start-button'),
+            continueButton: document.getElementById('continue-button'),
+            restartButton: document.getElementById('restart-button'),
+            targetColor: document.getElementById('target-color'),
+            colorGrid: document.getElementById('color-grid'),
+            countdown: document.getElementById('countdown'),
+            progressBar: document.getElementById('progress-bar'),
+            levelDisplay: document.getElementById('level'),
+            scoreDisplay: document.getElementById('score'),
+            bestScoreDisplay: document.getElementById('best-score'),
+            livesDisplay: document.getElementById('lives-display'),
+            lives: document.getElementById('lives'),
+            resultIcon: document.getElementById('result-icon'),
+            resultText: document.getElementById('result-text'),
+            resultLevel: document.getElementById('result-level'),
+            resultScore: document.getElementById('result-score'),
+            resultTargetColor: document.getElementById('result-target-color'),
+            resultSelectedColor: document.getElementById('result-selected-color'),
+            colorHistory: document.getElementById('color-history'),
+            soundToggle: document.getElementById('sound-toggle'),
+            soundIcon: document.getElementById('sound-icon')
+        };
+
+        // 音效
+        const sounds = {
+            correct: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3'),
+            wrong: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3'),
+            levelUp: new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3')
+        };
+
+        // 初始化游戏
+        function initGame() {
+            // 更新最佳分数显示
+            elements.bestScoreDisplay.textContent = gameState.bestScore;
+            
+            // 设置音效状态
+            updateSoundIcon();
+            
+            // 绑定事件监听器
+            elements.tenLevelMode.addEventListener('click', () => selectGameMode('tenLevel'));
+            elements.endlessMode.addEventListener('click', () => selectGameMode('endless'));
+            elements.startButton.addEventListener('click', startGame);
+            elements.continueButton.addEventListener('click', nextLevel);
+            elements.restartButton.addEventListener('click', restartGame);
+            elements.soundToggle.addEventListener('click', toggleSound);
+            // 移除点击提前结束倒计时的功能，确保稳定的10秒倒计时
+        }
+        
+        // 选择游戏模式
+        function selectGameMode(mode) {
+            gameState.gameMode = mode;
+            elements.modeSelectionScreen.classList.add('hidden');
+            elements.startScreen.classList.remove('hidden');
+        }
+
+        // 开始游戏
+        function startGame() {
+            elements.startScreen.classList.add('hidden');
+            showTargetColor();
+            gameState.isGameActive = true;
+            gameState.level = 1;
+            gameState.score = 0;
+            gameState.colorHistory = [];
+            gameState.correctAnswers = 0;
+            gameState.totalAnswers = 0;
+            
+            // 根据模式初始化状态
+            if (gameState.gameMode === 'endless') {
+                gameState.lives = 3;
+            }
+            
+            updateDisplays();
+            clearColorHistory();
+        }
+
+        // 显示目标颜色
+        function showTargetColor() {
+            elements.targetColorScreen.classList.remove('hidden');
+            
+            // 生成目标颜色
+            gameState.currentTargetColor = generateColor(gameState.level);
+            
+            // 设置目标颜色显示
+            elements.targetColor.style.backgroundColor = gameState.currentTargetColor;
+            
+            // 开始倒计时
+            let countdown = 6;
+            elements.countdown.textContent = countdown;
+            elements.progressBar.style.width = '100%';
+            
+            // 使用更稳定的倒计时实现
+            let startTime = Date.now();
+            const totalTime = 6000; // 6秒
+            
+            function updateCountdown() {
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, totalTime - elapsed);
+                const secondsLeft = Math.ceil(remaining / 1000);
+                
+                elements.countdown.textContent = secondsLeft;
+                elements.progressBar.style.width = `${(remaining / totalTime) * 100}%`;
+                
+                if (remaining > 0) {
+                    requestAnimationFrame(updateCountdown);
+                } else {
+                    // 确保倒计时结束后再显示颜色网格
+                    setTimeout(() => {
+                        showColorGrid();
+                    }, 100);
+                }
+            }
+            
+            // 开始倒计时
+            requestAnimationFrame(updateCountdown);
+        }
+
+        // 显示颜色选择网格
+        function showColorGrid() {
+            elements.targetColorScreen.classList.add('hidden');
+            elements.colorGridScreen.classList.remove('hidden');
+            
+            // 清空颜色网格
+            elements.colorGrid.innerHTML = '';
+            
+            // 生成16个颜色，其中一个是目标颜色
+            const colors = [gameState.currentTargetColor];
+            
+            // 生成其他15个不同的颜色
+            while (colors.length < 16) {
+                const newColor = generateSimilarColor(gameState.currentTargetColor, gameState.level);
+                if (!colors.includes(newColor)) {
+                    colors.push(newColor);
+                }
+            }
+            
+            // 随机打乱颜色顺序
+            shuffleArray(colors);
+            
+            // 创建颜色方块
+            colors.forEach((color, index) => {
+                const colorBlock = document.createElement('div');
+                colorBlock.className = 'color-card w-full aspect-square rounded-xl shadow-lg cursor-pointer transition-all transform hover:scale-105 hover:shadow-xl animate-scale-in';
+                colorBlock.style.backgroundColor = color;
+                colorBlock.style.animationDelay = `${index * 0.05}s`;
+                colorBlock.addEventListener('click', () => checkColorSelection(color));
+                elements.colorGrid.appendChild(colorBlock);
+            });
+        }
+
+        // 检查颜色选择
+        function checkColorSelection(selectedColor) {
+            elements.colorGridScreen.classList.add('hidden');
+            elements.resultScreen.classList.remove('hidden');
+            
+            // 记录选择的颜色到历史
+            addToColorHistory(gameState.currentTargetColor);
+            
+            // 更新结果显示
+            elements.resultTargetColor.style.backgroundColor = gameState.currentTargetColor;
+            elements.resultSelectedColor.style.backgroundColor = selectedColor;
+            elements.resultLevel.textContent = gameState.level;
+            elements.resultScore.textContent = gameState.score;
+            
+            // 显示颜色的十六进制色码
+            document.getElementById('target-color-code').textContent = rgbToHex(gameState.currentTargetColor);
+            document.getElementById('selected-color-code').textContent = rgbToHex(selectedColor);
+            
+            // 增加总答题数
+            gameState.totalAnswers++;
+            
+            // 判断选择是否正确
+            if (selectedColor === gameState.currentTargetColor) {
+                // 选择正确
+                playSound('correct');
+                gameState.score++;
+                gameState.correctAnswers++;
+                
+                elements.resultIcon.className = 'text-6xl mb-4 text-success';
+                elements.resultIcon.innerHTML = '<i class="fa fa-check-circle"></i>';
+                elements.resultText.textContent = '太棒了！';
+                elements.resultText.className = 'text-3xl font-bold mb-6 text-success';
+                
+                // 更新最佳分数
+                if (gameState.score > gameState.bestScore) {
+                    gameState.bestScore = gameState.score;
+                    localStorage.setItem('colorMemoryBestScore', gameState.bestScore);
+                    elements.bestScoreDisplay.textContent = gameState.bestScore;
+                }
+                
+                // 如果得分是5的倍数，播放升级音效
+                if (gameState.score % 5 === 0) {
+                    playSound('levelUp');
+                }
+            } else {
+                // 选择错误
+                playSound('wrong');
+                
+                elements.resultIcon.className = 'text-6xl mb-4 text-danger';
+                elements.resultIcon.innerHTML = '<i class="fa fa-times-circle"></i>';
+                elements.resultText.textContent = '再接再厉！';
+                elements.resultText.className = 'text-3xl font-bold mb-6 text-danger';
+                
+                // 添加抖动动画
+                elements.resultSelectedColor.classList.add('animate-shake');
+                
+                // 处理无尽模式的生命值
+                if (gameState.gameMode === 'endless') {
+                    gameState.lives--;
+                    
+                    // 检查是否游戏结束
+                    if (gameState.lives <= 0) {
+                        showGameEnd();
+                        return;
+                    }
+                } else {
+                    // 传统模式，答错重置
+                    if (gameState.gameMode !== 'tenLevel') {
+                        gameState.level = 1;
+                        gameState.score = 0;
+                        gameState.correctAnswers = 0;
+                        gameState.totalAnswers = 0;
+                    }
+                }
+            }
+            
+            // 挑战模式无论对错都进入下一关
+            if (gameState.gameMode === 'tenLevel') {
+                gameState.level++;
+                
+                // 检查是否达到挑战模式的结束条件
+                if (gameState.level > gameState.totalLevels) {
+                    // 挑战模式结束
+                    showGameEnd();
+                    return;
+                }
+            } else if (gameState.gameMode === 'endless' && selectedColor === gameState.currentTargetColor) {
+                // 无尽模式只有做对才进入下一关
+                gameState.level++;
+            }
+            
+            updateDisplays();
+        }
+
+        // 进入下一关
+        function nextLevel() {
+            elements.resultScreen.classList.add('hidden');
+            showTargetColor();
+        }
+        
+        // 显示游戏结束
+        function showGameEnd() {
+            elements.resultScreen.classList.remove('hidden');
+            
+            // 根据游戏模式显示不同的结束信息
+            if (gameState.gameMode === 'tenLevel') {
+                // 挑战模式结束
+                const accuracy = Math.round((gameState.correctAnswers / gameState.totalAnswers) * 100);
+                
+                elements.resultIcon.className = 'text-6xl mb-4 text-primary';
+                elements.resultIcon.innerHTML = '<i class="fa fa-trophy"></i>';
+                elements.resultText.textContent = '挑战完成！';
+                elements.resultText.className = 'text-3xl font-bold mb-6 text-primary';
+                
+                // 添加正确率显示
+                const accuracyElement = document.createElement('div');
+                accuracyElement.className = 'mb-6';
+                accuracyElement.innerHTML = `
+                    <p class="text-xl font-semibold mb-2">正确率: <span class="text-success">${accuracy}%</span></p>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5">
+                        <div class="bg-success h-2.5 rounded-full" style="width: ${accuracy}%"></div>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-2">答对: ${gameState.correctAnswers} / 总题数: ${gameState.totalAnswers}</p>
+                `;
+                
+                // 插入到结果文本下方
+                elements.resultText.insertAdjacentElement('afterend', accuracyElement);
+            } else if (gameState.gameMode === 'endless') {
+                // 无尽模式结束
+                elements.resultIcon.className = 'text-6xl mb-4 text-secondary';
+                elements.resultIcon.innerHTML = '<i class="fa fa-star"></i>';
+                elements.resultText.textContent = '游戏结束！';
+                elements.resultText.className = 'text-3xl font-bold mb-6 text-secondary';
+                
+                // 添加最高关卡显示
+                const levelElement = document.createElement('div');
+                levelElement.className = 'mb-6';
+                levelElement.innerHTML = `
+                    <p class="text-xl font-semibold mb-2">最高关卡: <span class="text-secondary">${gameState.level}</span></p>
+                    <p class="text-sm text-gray-400">你坚持到了第 ${gameState.level} 关！</p>
+                `;
+                
+                // 插入到结果文本下方
+                elements.resultText.insertAdjacentElement('afterend', levelElement);
+            }
+            
+            // 更新结果显示
+            elements.resultLevel.textContent = gameState.level;
+            elements.resultScore.textContent = gameState.score;
+            
+            // 隐藏"下一关"按钮，只显示"重新开始"按钮
+            elements.continueButton.classList.add('hidden');
+            elements.restartButton.classList.remove('hidden');
+        }
+
+        // 重新开始游戏
+        function restartGame() {
+            elements.resultScreen.classList.add('hidden');
+            elements.modeSelectionScreen.classList.remove('hidden');
+            gameState.isGameActive = false;
+            
+            // 清除结果屏幕上添加的元素
+            const resultText = elements.resultText;
+            while (resultText.nextElementSibling && resultText.nextElementSibling.className.includes('mb-6')) {
+                resultText.nextElementSibling.remove();
+            }
+            
+            // 恢复按钮显示
+            elements.continueButton.classList.remove('hidden');
+        }
+
+        // 生成随机颜色
+        function generateColor(level) {
+            // 随着关卡提升，颜色范围可以适当调整
+            const hue = Math.floor(Math.random() * 360);
+            const saturation = 50 + Math.floor(Math.random() * 50); // 50-100%
+            const lightness = 40 + Math.floor(Math.random() * 20); // 40-60%
+            
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
+        // 生成与目标颜色相似的颜色
+        function generateSimilarColor(targetColor, level) {
+            // 解析目标颜色的HSL值
+            const hslMatch = targetColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            if (!hslMatch) return generateColor(level);
+            
+            const [, targetHue, targetSaturation, targetLightness] = hslMatch;
+            
+            // 随着关卡提升，颜色差异减小
+            const variation = Math.max(5, 30 - level * 2); // 5-30的差异范围
+            
+            // 生成相似但不同的颜色
+            const hue = (parseInt(targetHue) + Math.floor(Math.random() * variation * 2) - variation + 360) % 360;
+            const saturation = Math.max(0, Math.min(100, parseInt(targetSaturation) + Math.floor(Math.random() * variation * 2) - variation));
+            const lightness = Math.max(0, Math.min(100, parseInt(targetLightness) + Math.floor(Math.random() * variation * 2) - variation));
+            
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
+        // 打乱数组
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 更新显示
+        function updateDisplays() {
+            elements.levelDisplay.textContent = gameState.level;
+            elements.scoreDisplay.textContent = gameState.score;
+            
+            // 根据游戏模式显示或隐藏生命值
+            if (gameState.gameMode === 'endless') {
+                elements.livesDisplay.classList.remove('hidden');
+                elements.lives.textContent = gameState.lives;
+            } else {
+                elements.livesDisplay.classList.add('hidden');
+            }
+        }
+
+        // 添加颜色到历史记录
+        function addToColorHistory(color) {
+            // 保存当前关卡信息
+            gameState.colorHistory.push({
+                color: color,
+                level: gameState.level
+            });
+            
+            // 最多显示10个历史颜色
+            if (gameState.colorHistory.length > 10) {
+                gameState.colorHistory.shift();
+            }
+            
+            updateColorHistoryDisplay();
+        }
+        
+        // 更新颜色历史显示
+        function updateColorHistoryDisplay() {
+            elements.colorHistory.innerHTML = '';
+            
+            gameState.colorHistory.forEach((item, index) => {
+                const colorBlock = document.createElement('div');
+                colorBlock.className = 'w-8 h-8 rounded-full shadow-md cursor-pointer transition-transform hover:scale-110';
+                colorBlock.style.backgroundColor = item.color;
+                const level = item.level;
+                const hexCode = rgbToHex(item.color);
+                colorBlock.title = `关卡 ${level}: ${hexCode}`;
+                
+                // 点击显示颜色代码
+                colorBlock.addEventListener('click', () => {
+                    showColorCodeTooltip(colorBlock, hexCode, level);
+                });
+                
+                elements.colorHistory.appendChild(colorBlock);
+            });
+        }
+        
+        // 显示颜色代码提示
+        function showColorCodeTooltip(element, hexCode, level) {
+            // 检查是否已存在提示框
+            let tooltip = document.getElementById('color-tooltip');
+            if (tooltip) {
+                tooltip.remove();
+            }
+            
+            // 创建新的提示框
+            tooltip = document.createElement('div');
+            tooltip.id = 'color-tooltip';
+            tooltip.className = 'absolute z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-3 animate-fade-in';
+            tooltip.style.left = `${element.getBoundingClientRect().left + window.scrollX - 50}px`;
+            tooltip.style.top = `${element.getBoundingClientRect().top + window.scrollY - 80}px`;
+            
+            // 提示框内容
+            tooltip.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <div class="w-6 h-6 rounded-full" style="background-color: ${element.style.backgroundColor}"></div>
+                    <div>
+                        <p class="text-xs text-gray-400">关卡 ${level}</p>
+                        <p class="font-mono text-sm">${hexCode}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(tooltip);
+            
+            // 点击其他地方关闭提示框
+            setTimeout(() => {
+                document.addEventListener('click', function closeTooltip(e) {
+                    if (!tooltip.contains(e.target) && e.target !== element) {
+                        tooltip.remove();
+                        document.removeEventListener('click', closeTooltip);
+                    }
+                });
+            }, 100);
+        }
+        
+        // 将RGB或HSL颜色转换为十六进制
+        function rgbToHex(color) {
+            // 处理HSL颜色
+            if (color.startsWith('hsl')) {
+                const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+                if (hslMatch) {
+                    const [, h, s, l] = hslMatch;
+                    color = hslToRgb(parseInt(h), parseInt(s), parseInt(l));
+                }
+            }
+            
+            // 处理RGB颜色
+            const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (rgbMatch) {
+                const [, r, g, b] = rgbMatch;
+                return '#' + ((1 << 24) + (parseInt(r) << 16) + (parseInt(g) << 8) + parseInt(b)).toString(16).slice(1).toUpperCase();
+            }
+            
+            // 如果已经是十六进制，直接返回
+            if (color.startsWith('#')) {
+                return color.toUpperCase();
+            }
+            
+            return color;
+        }
+        
+        // HSL转RGB
+        function hslToRgb(h, s, l) {
+            h /= 360;
+            s /= 100;
+            l /= 100;
+            
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l; // 灰色
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            const toHex = x => {
+                const hex = Math.round(x * 255).toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            };
+            
+            return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+        }
+
+        // 清空颜色历史
+        function clearColorHistory() {
+            gameState.colorHistory = [];
+            elements.colorHistory.innerHTML = '';
+        }
+
+        // 切换音效
+        function toggleSound() {
+            gameState.isSoundEnabled = !gameState.isSoundEnabled;
+            localStorage.setItem('colorMemorySound', gameState.isSoundEnabled);
+            updateSoundIcon();
+        }
+
+        // 更新音效图标
+        function updateSoundIcon() {
+            elements.soundIcon.className = gameState.isSoundEnabled ? 'fa fa-volume-up text-xl' : 'fa fa-volume-off text-xl';
+        }
+
+        // 播放音效
+        function playSound(soundName) {
+            if (gameState.isSoundEnabled && sounds[soundName]) {
+                sounds[soundName].currentTime = 0;
+                sounds[soundName].play().catch(e => console.log('Error playing sound:', e));
+            }
+        }
+
+        // 初始化游戏
+        window.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
