@@ -1,0 +1,66 @@
+﻿.text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.glass {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.glass-dark {
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.color-card {
+    transition: all 0.2s ease;
+}
+.color-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+.color-card:active {
+    transform: translateY(0);
+}
+.progress-bar {
+    transition: width 1s linear;
+}
+.hsl-wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(
+        hsl(0, 100%, 50%),
+        hsl(30, 100%, 50%),
+        hsl(60, 100%, 50%),
+        hsl(90, 100%, 50%),
+        hsl(120, 100%, 50%),
+        hsl(150, 100%, 50%),
+        hsl(180, 100%, 50%),
+        hsl(210, 100%, 50%),
+        hsl(240, 100%, 50%),
+        hsl(270, 100%, 50%),
+        hsl(300, 100%, 50%),
+        hsl(330, 100%, 50%),
+        hsl(360, 100%, 50%)
+    );
+    position: relative;
+    cursor: crosshair;
+    touch-action: none;
+}
+.hsl-wheel::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    height: 60%;
+    background: white;
+    border-radius: 50%;
+}
+

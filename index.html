@@ -1,0 +1,316 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>色彩记忆大师 - 挑战你的色彩感知</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        success: '#10b981',
+                        danger: '#ef4444',
+                        dark: '#1e293b',
+                        light: '#f8fafc'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-fast': 'bounce 0.5s infinite',
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'scale-in': 'scaleIn 0.3s ease-in-out',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        scaleIn: {
+                            '0%': { transform: 'scale(0.9)', opacity: '0' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gradient-to-br from-dark to-gray-900 min-h-screen text-light overflow-x-hidden">
+    <!-- 游戏容器 -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- 游戏标题 -->
+        <header class="text-center mb-8 animate-fade-in">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-shadow-lg">
+                    Color Master
+                </h1>
+                <h1 class="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-2 text-shadow-lg">
+                    色彩记忆大师
+                </h1>
+            </div>
+            <p class="text-lg text-gray-300">挑战你的色彩感知与记忆力</p>
+        </header>
+
+        <!-- 游戏信息栏 -->
+        <div class="glass-dark rounded-xl p-4 mb-6 grid grid-cols-[1fr_auto] items-center gap-4 animate-fade-in border border-white/10 shadow-lg">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
+                    <p class="text-sm text-gray-400">当前关卡</p>
+                    <p id="level" class="text-2xl font-bold text-white">1</p>
+                </div>
+                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
+                    <p id="score-label" class="text-sm text-gray-400">连续得分</p>
+                    <p id="score" class="text-2xl font-bold text-white">0</p>
+                </div>
+                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
+                    <p id="best-score-label" class="text-sm text-gray-400">最佳记录</p>
+                    <p id="best-score" class="text-2xl font-bold text-white">0</p>
+                </div>
+                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0" id="lives-display">
+                    <p class="text-sm text-gray-400">生命值</p>
+                    <p id="lives" class="text-2xl font-bold text-danger">3</p>
+                </div>
+            </div>
+            <div>
+                <button id="sound-toggle" class="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 hover:bg-gray-700 transition-colors duration-300">
+                    <i id="sound-icon" class="fa fa-volume-up text-xl text-white"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 游戏主区域 -->
+        <main class="relative">
+            <!-- 模式选择屏幕 -->
+            <div id="mode-selection-screen" class="glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <h2 class="text-3xl font-bold mb-6">选择游戏模式</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                    <!-- 挑战模式 -->
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="ten-level-mode">
+                        <h3 class="text-xl font-bold mb-3 text-white">挑战模式</h3>
+                        <p class="text-gray-300 mb-4">完成10关挑战，统计正确率</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> 共10关</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 统计正确率</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 适合练习</li>
+                        </ul>
+                    </div>
+                    <!-- 无尽模式 -->
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="endless-mode">
+                        <h3 class="text-xl font-bold mb-3 text-white">无尽模式</h3>
+                        <p class="text-gray-300 mb-4">挑战极限，看你能坚持到第几关</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> 3条生命</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 无限关卡</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 挑战极限</li>
+                        </ul>
+                    </div>
+                    <!-- 颜色复现模式 -->
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="color-recall-mode">
+                        <h3 class="text-xl font-bold mb-3 text-white">颜色复现</h3>
+                        <p class="text-gray-300 mb-4">使用HSL控制盘复现颜色</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> 共10轮</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> HSL控制</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 计算总分</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        <!-- 开始游戏屏幕 -->
+            <div id="start-screen" class="glass-dark rounded-2xl p-8 text-center animate-fade-in hidden">
+                <h2 class="text-3xl font-bold mb-6">准备好挑战了吗？</h2>
+                <div id="game-rules" class="mb-8 text-left max-w-lg mx-auto">
+                    <h3 class="text-xl font-semibold mb-3 text-primary">游戏规则：</h3>
+                    <ul id="rules-list" class="space-y-2 text-gray-300">
+                        <!-- 规则将根据游戏模式动态更新 -->
+                    </ul>
+                </div>
+                <button id="start-button" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                    开始游戏
+                </button>
+            </div>
+
+            <!-- 目标颜色显示区域 -->
+            <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
+                <div class="mb-6">
+                    <div id="countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4">
+                        <div id="progress-bar" class="bg-primary h-2.5 rounded-full progress-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div id="target-color" class="w-64 h-64 mx-auto rounded-2xl shadow-2xl"></div>
+                <p class="mt-6 text-gray-400">请等待6秒倒计时结束...</p>
+            </div>
+
+            <!-- 颜色选择区域 -->
+            <div id="color-grid-screen" class="hidden animate-fade-in">
+                <h2 class="text-2xl font-bold mb-6 text-center">找出与目标颜色相同的方块</h2>
+                <div id="color-grid" class="grid grid-cols-4 gap-4"></div>
+            </div>
+
+            <!-- 颜色复现游戏区域 -->
+            <div id="color-recall-screen" class="hidden animate-fade-in">
+                <!-- 目标颜色展示区域 -->
+                <div id="recall-target-section" class="glass-dark rounded-2xl p-8 text-center mb-6">
+                    <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
+                    <div id="recall-countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4">
+                        <div id="recall-progress-bar" class="bg-primary h-2.5 rounded-full progress-bar" style="width: 100%"></div>
+                    </div>
+                    <div id="recall-target-color" class="w-64 h-64 mx-auto rounded-2xl shadow-2xl"></div>
+                    <p class="mt-6 text-gray-400">请记住这个颜色...</p>
+                </div>
+
+                <!-- HSL控制区域 -->
+                <div id="recall-control-section" class="glass-dark rounded-2xl p-8 hidden">
+                    <h2 class="text-2xl font-bold mb-6 text-center">你的复现</h2>
+                    
+                    <!-- 色轮和颜色预览并排 -->
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-8 mb-6">
+                        <!-- HSL色轮 -->
+                        <div class="flex flex-col items-center">
+                            <p class="text-sm text-gray-400 mb-2">色调 & 饱和度</p>
+                            <div class="hsl-wheel-container relative" style="width: 200px; height: 200px;">
+                                <div id="hsl-wheel" class="hsl-wheel w-full h-full cursor-crosshair"></div>
+                                <div id="hsl-wheel-pointer" class="hsl-wheel-pointer absolute w-4 h-4 bg-white border-2 border-gray-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" style="top: 50%; left: 50%;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 复现颜色预览 -->
+                        <div class="flex flex-col items-center">
+                            <p class="text-sm text-gray-400 mb-2">当前复现</p>
+                            <div id="recall-user-color" class="w-40 h-40 rounded-2xl shadow-2xl"></div>
+                            <div id="recall-user-hsl" class="mt-3 text-xs text-gray-400 font-mono"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 亮度滑块 -->
+                    <div class="max-w-md mx-auto mb-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">亮度</span>
+                            <span id="lightness-value" class="text-sm text-white font-mono">50%</span>
+                        </div>
+                        <input type="range" id="lightness-slider" min="0" max="100" value="50" 
+                               class="w-full h-3 bg-gradient-to-r from-black via-gray-500 to-white rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <div class="flex justify-center">
+                        <button id="submit-recall-btn" class="w-full max-w-md bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                            提交答案
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 复现结果区域 -->
+                <div id="recall-result-section" class="glass-dark rounded-2xl p-8 text-center hidden">
+                    <h2 class="text-3xl font-bold mb-6">本轮得分</h2>
+                    <div id="recall-round-score" class="text-6xl font-bold text-primary mb-6">0.00</div>
+                    <div class="flex justify-center space-x-8 mb-8">
+                        <div class="text-center">
+                            <div id="recall-result-target" class="w-32 h-32 rounded-xl shadow-lg mx-auto"></div>
+                            <p class="mt-2 text-sm text-gray-400">目标颜色</p>
+                            <p id="recall-target-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
+                        </div>
+                        <div class="text-center">
+                            <div id="recall-result-user" class="w-32 h-32 rounded-xl shadow-lg mx-auto"></div>
+                            <p class="mt-2 text-sm text-gray-400">你的复现</p>
+                            <p id="recall-user-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
+                        </div>
+                    </div>
+                    <button id="next-recall-btn" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                        下一轮
+                    </button>
+                </div>
+            </div>
+
+            <!-- 结果反馈区域 -->
+            <div id="result-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <div id="result-icon" class="text-6xl mb-4"></div>
+                <h2 id="result-text" class="text-3xl font-bold mb-6"></h2>
+                <div id="result-detail" class="mb-6 hidden"></div>
+                <div class="flex justify-center space-x-6 mb-8">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400">当前关卡</p>
+                        <p id="result-level" class="text-2xl font-bold">1</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-sm text-gray-400">得分</p>
+                        <p id="result-score" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+                <div class="flex justify-center space-x-8">
+                    <div class="text-center">
+                        <div class="w-32 h-32 rounded-xl shadow-lg mx-auto" id="result-target-color"></div>
+                        <p class="mt-2 text-sm text-gray-400">目标颜色</p>
+                        <p id="target-color-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-32 h-32 rounded-xl shadow-lg mx-auto" id="result-selected-color"></div>
+                        <p class="mt-2 text-sm text-gray-400">选择颜色</p>
+                        <p id="selected-color-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
+                    </div>
+                </div>
+                <div class="mt-8">
+                    <button id="continue-button" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                        下一关
+                    </button>
+                    <button id="restart-button" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg mt-4 md:mt-0 md:ml-4">
+                        重新开始
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- 色彩历史记录 -->
+        <div class="mt-8 glass-dark rounded-xl p-4 animate-fade-in">
+            <h3 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-history mr-2 text-primary"></i>
+                色彩历史
+            </h3>
+            <div id="color-history" class="flex flex-wrap gap-2">
+                <!-- 历史颜色将在这里动态添加 -->
+            </div>
+        </div>
+
+        <!-- 游戏说明 -->
+        <div class="mt-8 glass-dark rounded-xl p-6 animate-fade-in">
+            <h3 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-info-circle mr-2 text-primary"></i>
+                游戏技巧
+            </h3>
+            <div class="text-gray-300 space-y-3">
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>专注观察</strong>：仔细注意颜色的色调、饱和度和亮度</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>对比记忆</strong>：尝试将颜色与已知物体对比，帮助记忆</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>排除法</strong>：先排除明显不同的颜色，缩小选择范围</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>相信直觉</strong>：有时第一感觉往往是正确的</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏脚本 -->
+    <script src="color-utils.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
+
