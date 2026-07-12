@@ -27,7 +27,54 @@
     transform: translateY(0);
 }
 .progress-bar {
-    transition: width 1s linear;
+    transition: none;
+}
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.875rem;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.back-button:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateX(-2px);
+}
+.rgb-slider {
+    height: 0.75rem;
+    border-radius: 999px;
+    appearance: none;
+    cursor: pointer;
+}
+.rgb-red {
+    background: linear-gradient(to right, rgb(0, 0, 0), rgb(255, 0, 0));
+}
+.rgb-green {
+    background: linear-gradient(to right, rgb(0, 0, 0), rgb(0, 255, 0));
+}
+.rgb-blue {
+    background: linear-gradient(to right, rgb(0, 0, 0), rgb(0, 0, 255));
+}
+.rgb-slider::-webkit-slider-thumb {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    border: 2px solid #f8fafc;
+    background: #1e293b;
+    appearance: none;
+}
+.rgb-slider::-moz-range-thumb {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    border: 2px solid #f8fafc;
+    background: #1e293b;
 }
 .hsl-wheel {
     width: 100%;

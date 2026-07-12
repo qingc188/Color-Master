@@ -125,3 +125,12 @@ function calculateColorSimilarity(target, user) {
     return score.toFixed(2);
 }
 
+function calculateRgbSimilarity(target, user) {
+    const rDiff = Math.abs(target.r - user.r) / 255;
+    const gDiff = Math.abs(target.g - user.g) / 255;
+    const bDiff = Math.abs(target.b - user.b) / 255;
+    const totalDiff = Math.sqrt(rDiff * rDiff + gDiff * gDiff + bDiff * bDiff) / Math.sqrt(3);
+    const score = Math.max(0, 10 - totalDiff * 10);
+    return score.toFixed(2);
+}
+

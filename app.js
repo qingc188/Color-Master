@@ -14,11 +14,20 @@ const gameState = {
     correctAnswers: 0, // 用于计算正确率
     totalAnswers: 0, // 用于计算正确率
     // 颜色复现模式专用
+    recallDifficulty: 'basic',
     recallTotalScore: 0, // 累计得分
-    recallBestScore: Number(localStorage.getItem('colorMemoryBestRecallScore')) || 0, // 最佳得分
+    recallBestScores: {
+        basic: Number(localStorage.getItem('colorMemoryBestRecallScore_basic') ?? localStorage.getItem('colorMemoryBestRecallScore')) || 0,
+        advanced: Number(localStorage.getItem('colorMemoryBestRecallScore_advanced')) || 0,
+        master: Number(localStorage.getItem('colorMemoryBestRecallScore_master')) || 0
+    },
     recallTargetHSL: null, // 目标HSL颜色
+    recallTargetRGB: null,
     recallUserHSL: { h: 0, s: 100, l: 50 }, // 用户当前HSL颜色
+    recallUserRGB: { r: 128, g: 128, b: 128 },
     recallRound: 1, // 当前轮次
+    recallRoundSubmitted: false,
+    recallLastRoundScore: 0,
     recallTotalRounds: 10 // 总轮次
 };
 
@@ -28,6 +37,8 @@ const elements = {
     tenLevelMode: document.getElementById('ten-level-mode'),
     endlessMode: document.getElementById('endless-mode'),
     colorRecallMode: document.getElementById('color-recall-mode'),
+    recallDifficultyScreen: document.getElementById('recall-difficulty-screen'),
+    recallDifficultyCards: document.querySelectorAll('[data-recall-difficulty]'),
     startScreen: document.getElementById('start-screen'),
     targetColorScreen: document.getElementById('target-color-screen'),
     colorGridScreen: document.getElementById('color-grid-screen'),
@@ -35,10 +46,16 @@ const elements = {
     recallTargetSection: document.getElementById('recall-target-section'),
     recallControlSection: document.getElementById('recall-control-section'),
     recallResultSection: document.getElementById('recall-result-section'),
+    recallControlTitle: document.getElementById('recall-control-title'),
+    hslControlPanel: document.getElementById('hsl-control-panel'),
+    rgbControlPanel: document.getElementById('rgb-control-panel'),
+    recallPreviewPanel: document.getElementById('recall-preview-panel'),
+    masterPreviewNote: document.getElementById('master-preview-note'),
     resultScreen: document.getElementById('result-screen'),
     startButton: document.getElementById('start-button'),
     continueButton: document.getElementById('continue-button'),
     restartButton: document.getElementById('restart-button'),
+    backButtons: document.querySelectorAll('[data-back-target]'),
     rulesList: document.getElementById('rules-list'),
     targetColor: document.getElementById('target-color'),
     colorGrid: document.getElementById('color-grid'),
@@ -66,13 +83,20 @@ const elements = {
     recallProgressBar: document.getElementById('recall-progress-bar'),
     recallTargetColor: document.getElementById('recall-target-color'),
     recallUserColor: document.getElementById('recall-user-color'),
-    recallUserHSLDisplay: document.getElementById('recall-user-hsl'),
+    recallUserCodeDisplay: document.getElementById('recall-user-code-display'),
     hslWheel: document.getElementById('hsl-wheel'),
     hslWheelPointer: document.getElementById('hsl-wheel-pointer'),
     lightnessSlider: document.getElementById('lightness-slider'),
     lightnessValue: document.getElementById('lightness-value'),
+    redSlider: document.getElementById('red-slider'),
+    greenSlider: document.getElementById('green-slider'),
+    blueSlider: document.getElementById('blue-slider'),
+    redValue: document.getElementById('red-value'),
+    greenValue: document.getElementById('green-value'),
+    blueValue: document.getElementById('blue-value'),
     submitRecallBtn: document.getElementById('submit-recall-btn'),
     nextRecallBtn: document.getElementById('next-recall-btn'),
+    restartRecallBtn: document.getElementById('restart-recall-btn'),
     recallRoundScore: document.getElementById('recall-round-score'),
     recallResultTarget: document.getElementById('recall-result-target'),
     recallResultUser: document.getElementById('recall-result-user'),
@@ -89,6 +113,7 @@ const sounds = {
 
 const mainScreens = [
     elements.modeSelectionScreen,
+    elements.recallDifficultyScreen,
     elements.startScreen,
     elements.targetColorScreen,
     elements.colorGridScreen,
@@ -104,6 +129,48 @@ const recallSections = [
 
 let activeCountdownId = 0;
 
+const recallDifficultyConfig = {
+    basic: {
+        name: '基础',
+        controlName: 'HSL 控制',
+        preview: true,
+        storageKey: 'colorMemoryBestRecallScore_basic',
+        rules: [
+            '每轮将显示一个目标颜色，观察并记住它',
+            '6秒后目标颜色隐藏，进入复现环节',
+            '使用 HSL 色轮和亮度滑杆调整颜色',
+            '调整时可以实时看到当前复现颜色',
+            '共10轮，累计得分并保存基础模式最佳纪录'
+        ]
+    },
+    advanced: {
+        name: '进阶',
+        controlName: 'RGB 控制',
+        preview: true,
+        storageKey: 'colorMemoryBestRecallScore_advanced',
+        rules: [
+            '每轮将显示一个目标颜色，观察并记住它',
+            '6秒后目标颜色隐藏，进入复现环节',
+            '使用 R、G、B 三个滑杆调整颜色',
+            '调整时可以实时看到当前复现颜色',
+            '共10轮，累计得分并保存进阶模式最佳纪录'
+        ]
+    },
+    master: {
+        name: '大师',
+        controlName: 'RGB 盲调',
+        preview: false,
+        storageKey: 'colorMemoryBestRecallScore_master',
+        rules: [
+            '每轮将显示一个目标颜色，观察并记住它',
+            '6秒后目标颜色隐藏，进入复现环节',
+            '只使用 R、G、B 三个滑杆调整参数',
+            '调整时不会显示实时颜色预览',
+            '共10轮，累计得分并保存大师模式最佳纪录'
+        ]
+    }
+};
+
 function showScreen(screen) {
     mainScreens.forEach((item) => {
         item.classList.toggle('hidden', item !== screen);
@@ -114,6 +181,43 @@ function showRecallSection(section) {
     recallSections.forEach((item) => {
         item.classList.toggle('hidden', item !== section);
     });
+}
+
+function stopActiveCountdown() {
+    activeCountdownId++;
+}
+
+function resetRecallAttemptState() {
+    gameState.recallTotalScore = 0;
+    gameState.recallRound = 1;
+    gameState.recallRoundSubmitted = false;
+    gameState.recallLastRoundScore = 0;
+    gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
+    gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
+    elements.nextRecallBtn.textContent = '下一轮';
+    updateDisplays();
+}
+
+function undoRecallRoundSubmission() {
+    if (!gameState.recallRoundSubmitted) return;
+
+    gameState.recallTotalScore = Math.max(0, gameState.recallTotalScore - gameState.recallLastRoundScore);
+    gameState.recallRoundSubmitted = false;
+    gameState.recallLastRoundScore = 0;
+    elements.nextRecallBtn.textContent = '下一轮';
+    updateDisplays();
+}
+
+function resetResultColorBlocks() {
+    elements.resultTargetColor.style.backgroundColor = '';
+    elements.resultTargetColor.style.border = '';
+    elements.resultTargetColor.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
+    elements.resultTargetColor.innerHTML = '';
+    elements.resultSelectedColor.style.backgroundColor = '';
+    elements.resultSelectedColor.style.border = '';
+    elements.resultSelectedColor.classList.remove('animate-shake');
+    elements.resultSelectedColor.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
+    elements.resultSelectedColor.innerHTML = '';
 }
 
 function runCountdown({ counter, progressBar, durationMs, onComplete }) {
@@ -157,10 +261,17 @@ function initGame() {
     // 绑定事件监听器
     elements.tenLevelMode.addEventListener('click', () => selectGameMode('tenLevel'));
     elements.endlessMode.addEventListener('click', () => selectGameMode('endless'));
-    elements.colorRecallMode.addEventListener('click', () => selectGameMode('colorRecall'));
+    elements.colorRecallMode.addEventListener('click', () => showScreen(elements.recallDifficultyScreen));
+    elements.recallDifficultyCards.forEach((card) => {
+        card.addEventListener('click', () => selectRecallDifficulty(card.dataset.recallDifficulty));
+    });
     elements.startButton.addEventListener('click', startGame);
     elements.continueButton.addEventListener('click', nextLevel);
     elements.restartButton.addEventListener('click', restartGame);
+    elements.restartRecallBtn.addEventListener('click', restartCurrentRecallDifficulty);
+    elements.backButtons.forEach((button) => {
+        button.addEventListener('click', () => handleBackNavigation(button.dataset.backTarget));
+    });
     elements.soundToggle.addEventListener('click', toggleSound);
     // 移除点击提前结束倒计时的功能，确保稳定的10秒倒计时
 }
@@ -170,15 +281,7 @@ function selectGameMode(mode) {
     gameState.gameMode = mode;
     
     // 根据模式更新游戏规则
-    if (mode === 'colorRecall') {
-        elements.rulesList.innerHTML = `
-            <li><i class="fa fa-circle text-xs mr-2"></i> 每轮将显示一个目标颜色，观察并记住它</li>
-            <li><i class="fa fa-circle text-xs mr-2"></i> 6秒后目标颜色隐藏，进入复现环节</li>
-            <li><i class="fa fa-circle text-xs mr-2"></i> 使用HSL控制盘调整颜色来复现目标</li>
-            <li><i class="fa fa-circle text-xs mr-2"></i> 点击提交答案查看本轮得分</li>
-            <li><i class="fa fa-circle text-xs mr-2"></i> 共10轮，计算累计总分</li>
-        `;
-    } else if (mode === 'tenLevel') {
+    if (mode === 'tenLevel') {
         elements.rulesList.innerHTML = `
             <li><i class="fa fa-circle text-xs mr-2"></i> 每关将显示一个目标颜色，观察并记住它</li>
             <li><i class="fa fa-circle text-xs mr-2"></i> 6秒后，屏幕上将出现16个不同的颜色方块</li>
@@ -199,6 +302,85 @@ function selectGameMode(mode) {
     showScreen(elements.startScreen);
 }
 
+function selectRecallDifficulty(difficulty) {
+    const config = recallDifficultyConfig[difficulty];
+    gameState.gameMode = 'colorRecall';
+    gameState.recallDifficulty = difficulty;
+    gameState.recallTotalScore = 0;
+    gameState.recallRound = 1;
+    elements.rulesList.innerHTML = config.rules
+        .map((rule) => `<li><i class="fa fa-circle text-xs mr-2"></i> ${rule}</li>`)
+        .join('');
+    updateDisplays();
+    showScreen(elements.startScreen);
+}
+
+function handleBackNavigation(target) {
+    stopActiveCountdown();
+
+    if (target === 'mode-selection') {
+        showScreen(elements.modeSelectionScreen);
+        gameState.gameMode = null;
+        updateDisplays();
+        return;
+    }
+
+    if (target === 'mode-selection-or-difficulty') {
+        if (gameState.gameMode === 'colorRecall') {
+            showScreen(elements.recallDifficultyScreen);
+        } else {
+            showScreen(elements.modeSelectionScreen);
+            gameState.gameMode = null;
+        }
+        updateDisplays();
+        return;
+    }
+
+    if (target === 'start') {
+        showScreen(elements.startScreen);
+        updateDisplays();
+        return;
+    }
+
+    if (target === 'target') {
+        showTargetColor();
+        return;
+    }
+
+    if (target === 'recall-target') {
+        showRecallSection(elements.recallTargetSection);
+        runCountdown({
+            counter: elements.recallCountdown,
+            progressBar: elements.recallProgressBar,
+            durationMs: 6000,
+            onComplete: () => showRecallSection(elements.recallControlSection)
+        });
+        return;
+    }
+
+    if (target === 'recall-control') {
+        undoRecallRoundSubmission();
+        showRecallSection(elements.recallControlSection);
+        return;
+    }
+
+    if (target === 'result') {
+        if (gameState.gameMode === 'colorRecall') {
+            restartCurrentRecallDifficulty();
+            return;
+        }
+        showScreen(elements.startScreen);
+    }
+}
+
+function restartCurrentRecallDifficulty() {
+    stopActiveCountdown();
+    gameState.gameMode = 'colorRecall';
+    resetResultColorBlocks();
+    resetRecallAttemptState();
+    showScreen(elements.startScreen);
+}
+
 // 开始游戏
 function startGame() {
     gameState.isGameActive = true;
@@ -213,9 +395,7 @@ function startGame() {
         gameState.lives = 3;
     } else if (gameState.gameMode === 'colorRecall') {
         // 初始化颜色复现模式
-        gameState.recallTotalScore = 0;
-        gameState.recallRound = 1;
-        gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
+        resetRecallAttemptState();
     }
     
     updateDisplays();
@@ -282,9 +462,9 @@ function showColorGrid() {
 // 检查颜色选择
 function checkColorSelection(selectedColor) {
     showScreen(elements.resultScreen);
+    resetResultColorBlocks();
     elements.resultDetail.innerHTML = '';
     elements.resultDetail.classList.add('hidden');
-    elements.resultSelectedColor.classList.remove('animate-shake');
     
     // 记录选择的颜色到历史
     addToColorHistory(gameState.currentTargetColor);
@@ -382,6 +562,7 @@ function nextLevel() {
 // 显示游戏结束
 function showGameEnd() {
     showScreen(elements.resultScreen);
+    resetResultColorBlocks();
     elements.resultDetail.classList.add('hidden');
     elements.resultDetail.innerHTML = '';
     
@@ -431,7 +612,7 @@ function showGameEnd() {
 // 重新开始游戏
 function restartGame() {
     showScreen(elements.modeSelectionScreen);
-    activeCountdownId++;
+    stopActiveCountdown();
     gameState.isGameActive = false;
     gameState.gameMode = null;
     
@@ -447,25 +628,22 @@ function restartGame() {
     elements.continueButton.classList.remove('hidden');
     
     // 恢复结果区域样式
-    elements.resultTargetColor.style.backgroundColor = '';
-    elements.resultTargetColor.style.border = '';
-    elements.resultTargetColor.innerHTML = '';
-    elements.resultSelectedColor.style.backgroundColor = '';
-    elements.resultSelectedColor.style.border = '';
-    elements.resultSelectedColor.classList.remove('animate-shake');
-    elements.resultSelectedColor.innerHTML = '';
+    resetResultColorBlocks();
 }
 
 // 更新显示
 function updateDisplays() {
-    elements.levelDisplay.textContent = gameState.level;
+    elements.levelDisplay.textContent = gameState.gameMode === 'colorRecall'
+        ? gameState.recallRound
+        : gameState.level;
     
     // 根据游戏模式显示不同的得分和标签
     if (gameState.gameMode === 'colorRecall') {
+        const config = recallDifficultyConfig[gameState.recallDifficulty];
         elements.scoreLabel.textContent = '累计得分';
-        elements.bestScoreLabel.textContent = '最佳纪录';
+        elements.bestScoreLabel.textContent = `${config.name}最佳`;
         elements.scoreDisplay.textContent = gameState.recallTotalScore.toFixed(2);
-        elements.bestScoreDisplay.textContent = gameState.recallBestScore.toFixed(2);
+        elements.bestScoreDisplay.textContent = gameState.recallBestScores[gameState.recallDifficulty].toFixed(2);
     } else {
         elements.scoreLabel.textContent = '连续得分';
         elements.bestScoreLabel.textContent = '最佳记录';
@@ -562,10 +740,17 @@ function showColorCodeTooltip(element, hexCode, level) {
 
 // 开始一轮颜色复现
 function startColorRecallRound() {
+    gameState.recallRoundSubmitted = false;
+    gameState.recallLastRoundScore = 0;
+    elements.nextRecallBtn.textContent = '下一轮';
+    updateDisplays();
+    configureRecallControlPanel();
+
     // 生成随机目标颜色
     const targetColor = generateColor(gameState.recallRound);
     const [, h, s, l] = targetColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/).map(Number);
     gameState.recallTargetHSL = { h, s, l };
+    gameState.recallTargetRGB = hslToRgb(h, s, l);
     
     // 设置目标颜色显示
     elements.recallTargetColor.style.backgroundColor = targetColor;
@@ -576,10 +761,14 @@ function startColorRecallRound() {
     
     // 重置用户颜色
     gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
+    gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
     elements.lightnessSlider.value = 50;
     elements.lightnessValue.textContent = '50%';
+    elements.redSlider.value = 128;
+    elements.greenSlider.value = 128;
+    elements.blueSlider.value = 128;
     updateHSLPointerPosition();
-    elements.recallUserColor.style.backgroundColor = `hsl(0, 100%, 50%)`;
+    updateRecallUserColor();
     
     runCountdown({
         counter: elements.recallCountdown,
@@ -608,22 +797,58 @@ function updateHSLPointerPosition() {
     elements.hslWheelPointer.style.top = `${y}px`;
 }
 
+function configureRecallControlPanel() {
+    const config = recallDifficultyConfig[gameState.recallDifficulty];
+    const usesHsl = gameState.recallDifficulty === 'basic';
+
+    elements.recallControlTitle.textContent = `${config.name}模式：你的复现`;
+    elements.hslControlPanel.classList.toggle('hidden', !usesHsl);
+    elements.rgbControlPanel.classList.toggle('hidden', usesHsl);
+    elements.recallPreviewPanel.classList.toggle('hidden', !config.preview);
+    elements.masterPreviewNote.classList.toggle('hidden', config.preview);
+}
+
+function getRecallUserRGB() {
+    if (gameState.recallDifficulty === 'basic') {
+        const { h, s, l } = gameState.recallUserHSL;
+        return hslToRgb(h, s, l);
+    }
+
+    return { ...gameState.recallUserRGB };
+}
+
 // 更新用户复现颜色
 function updateRecallUserColor() {
     const { h, s, l } = gameState.recallUserHSL;
-    elements.recallUserColor.style.backgroundColor = `hsl(${h}, ${s}%, ${l}%)`;
-    // 更新HSL显示
-    elements.recallUserHSLDisplay.textContent = `hsl(${h}, ${s}%, ${l}%)`;
+    const { r, g, b } = gameState.recallUserRGB;
+
+    elements.lightnessValue.textContent = `${l}%`;
+    elements.redValue.textContent = r;
+    elements.greenValue.textContent = g;
+    elements.blueValue.textContent = b;
+
+    if (gameState.recallDifficulty === 'basic') {
+        elements.recallUserColor.style.backgroundColor = `hsl(${h}, ${s}%, ${l}%)`;
+        elements.recallUserCodeDisplay.textContent = `hsl(${h}, ${s}%, ${l}%)`;
+        return;
+    }
+
+    elements.recallUserColor.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+    elements.recallUserCodeDisplay.textContent = `rgb(${r}, ${g}, ${b})`;
 }
 
 // 提交颜色复现答案
 function submitRecallAnswer() {
-    const target = gameState.recallTargetHSL;
-    const user = gameState.recallUserHSL;
-    const score = parseFloat(calculateColorSimilarity(target, user));
+    if (gameState.recallRoundSubmitted) return;
+
+    const target = gameState.recallTargetRGB;
+    const user = getRecallUserRGB();
+    const score = parseFloat(calculateRgbSimilarity(target, user));
     
     // 累计得分
     gameState.recallTotalScore += score;
+    gameState.recallRoundSubmitted = true;
+    gameState.recallLastRoundScore = score;
     
     // 显示结果
     showRecallSection(elements.recallResultSection);
@@ -632,12 +857,12 @@ function submitRecallAnswer() {
     elements.recallRoundScore.textContent = score.toFixed(2);
     
     // 显示目标颜色和用户复现
-    elements.recallResultTarget.style.backgroundColor = `hsl(${target.h}, ${target.s}%, ${target.l}%)`;
-    elements.recallResultUser.style.backgroundColor = `hsl(${user.h}, ${user.s}%, ${user.l}%)`;
+    elements.recallResultTarget.style.backgroundColor = `rgb(${target.r}, ${target.g}, ${target.b})`;
+    elements.recallResultUser.style.backgroundColor = `rgb(${user.r}, ${user.g}, ${user.b})`;
     
     // 显示色码
-    elements.recallTargetCode.textContent = `hsl(${target.h}, ${target.s}%, ${target.l}%)`;
-    elements.recallUserCode.textContent = `hsl(${user.h}, ${user.s}%, ${user.l}%)`;
+    elements.recallTargetCode.textContent = `rgb(${target.r}, ${target.g}, ${target.b})`;
+    elements.recallUserCode.textContent = `rgb(${user.r}, ${user.g}, ${user.b})`;
     
     // 更新显示
     updateDisplays();
@@ -668,19 +893,21 @@ function nextRecallRoundOrEnd() {
 // 显示颜色复现游戏结果
 function showColorRecallResult() {
     showScreen(elements.resultScreen);
+    resetResultColorBlocks();
     elements.resultDetail.innerHTML = '';
     elements.resultDetail.classList.add('hidden');
+    const config = recallDifficultyConfig[gameState.recallDifficulty];
     
     // 检查是否是新纪录
-    const isNewRecord = gameState.recallTotalScore > gameState.recallBestScore;
+    const isNewRecord = gameState.recallTotalScore > gameState.recallBestScores[gameState.recallDifficulty];
     if (isNewRecord) {
-        gameState.recallBestScore = gameState.recallTotalScore;
-        localStorage.setItem('colorMemoryBestRecallScore', gameState.recallTotalScore.toString());
+        gameState.recallBestScores[gameState.recallDifficulty] = gameState.recallTotalScore;
+        localStorage.setItem(config.storageKey, gameState.recallTotalScore.toString());
     }
     
     elements.resultIcon.className = 'text-6xl mb-4 text-primary';
     elements.resultIcon.innerHTML = '<i class="fa fa-palette"></i>';
-    elements.resultText.textContent = '颜色复现挑战完成！';
+    elements.resultText.textContent = `${config.name}颜色复现完成！`;
     elements.resultText.className = 'text-3xl font-bold mb-6 text-primary';
     
     elements.resultLevel.textContent = gameState.recallTotalRounds;
@@ -688,11 +915,15 @@ function showColorRecallResult() {
     
     elements.resultTargetColor.style.backgroundColor = 'transparent';
     elements.resultTargetColor.style.border = '2px solid #6366f1';
+    elements.resultTargetColor.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
     elements.resultTargetColor.innerHTML = `<p class="text-sm">累计得分</p><p class="text-2xl font-bold text-primary">${gameState.recallTotalScore.toFixed(2)}</p>`;
+    document.getElementById('target-color-code').textContent = '';
     
     elements.resultSelectedColor.style.backgroundColor = 'transparent';
     elements.resultSelectedColor.style.border = '2px solid #10b981';
-    elements.resultSelectedColor.innerHTML = `<p class="text-sm">${isNewRecord ? '🎉 新纪录！' : '最佳纪录'}</p><p class="text-2xl font-bold text-success">${gameState.recallBestScore.toFixed(2)}</p>`;
+    elements.resultSelectedColor.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
+    elements.resultSelectedColor.innerHTML = `<p class="text-sm">${isNewRecord ? '🎉 新纪录！' : `${config.name}最佳`}</p><p class="text-2xl font-bold text-success">${gameState.recallBestScores[gameState.recallDifficulty].toFixed(2)}</p>`;
+    document.getElementById('selected-color-code').textContent = '';
     
     elements.continueButton.classList.add('hidden');
 }
@@ -761,9 +992,20 @@ function setupHSLWheelInteraction() {
     // 亮度滑块
     elements.lightnessSlider.addEventListener('input', (e) => {
         gameState.recallUserHSL.l = parseInt(e.target.value);
-        elements.lightnessValue.textContent = `${gameState.recallUserHSL.l}%`;
         updateRecallUserColor();
     });
+
+    const syncRgbSlider = () => {
+        gameState.recallUserRGB = {
+            r: parseInt(elements.redSlider.value),
+            g: parseInt(elements.greenSlider.value),
+            b: parseInt(elements.blueSlider.value)
+        };
+        updateRecallUserColor();
+    };
+    elements.redSlider.addEventListener('input', syncRgbSlider);
+    elements.greenSlider.addEventListener('input', syncRgbSlider);
+    elements.blueSlider.addEventListener('input', syncRgbSlider);
     
     // 提交按钮
     elements.submitRecallBtn.addEventListener('click', submitRecallAnswer);

@@ -125,11 +125,52 @@
                     <!-- 颜色复现模式 -->
                     <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="color-recall-mode">
                         <h3 class="text-xl font-bold mb-3 text-white">颜色复现</h3>
-                        <p class="text-gray-300 mb-4">使用HSL控制盘复现颜色</p>
+                        <p class="text-gray-300 mb-4">选择不同难度，用 HSL 或 RGB 复现颜色</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
                             <li><i class="fa fa-check text-success mr-2"></i> 共10轮</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> HSL控制</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 计算总分</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 基础 / 进阶 / 大师</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 独立最佳记录</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 颜色复现难度选择屏幕 -->
+            <div id="recall-difficulty-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <div class="flex justify-start mb-4">
+                    <button class="back-button" data-back-target="mode-selection">
+                        <i class="fa fa-arrow-left"></i>
+                        <span>返回</span>
+                    </button>
+                </div>
+                <h2 class="text-3xl font-bold mb-3">选择颜色复现难度</h2>
+                <p class="text-gray-300 mb-6">同样是记住颜色，不同控制方式会考验完全不同的色彩理解。</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="basic">
+                        <h3 class="text-xl font-bold mb-3 text-white">基础</h3>
+                        <p class="text-gray-300 mb-4">使用 HSL 色轮和亮度滑杆复现颜色，并实时预览。</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> HSL 控制</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 实时看到复现颜色</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 适合建立色相感觉</li>
+                        </ul>
+                    </div>
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="advanced">
+                        <h3 class="text-xl font-bold mb-3 text-white">进阶</h3>
+                        <p class="text-gray-300 mb-4">使用 RGB 三个滑杆复现颜色，并实时预览。</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> RGB 控制</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 实时看到复现颜色</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 训练通道理解</li>
+                        </ul>
+                    </div>
+                    <div class="glass rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="master">
+                        <h3 class="text-xl font-bold mb-3 text-white">大师</h3>
+                        <p class="text-gray-300 mb-4">只使用 RGB 滑杆，不显示实时颜色预览。</p>
+                        <ul class="text-left text-sm text-gray-400 space-y-2">
+                            <li><i class="fa fa-check text-success mr-2"></i> RGB 控制</li>
+                            <li><i class="fa fa-check text-danger mr-2"></i> 无实时预览</li>
+                            <li><i class="fa fa-check text-success mr-2"></i> 考验参数直觉</li>
                         </ul>
                     </div>
                 </div>
@@ -137,6 +178,12 @@
 
         <!-- 开始游戏屏幕 -->
             <div id="start-screen" class="glass-dark rounded-2xl p-8 text-center animate-fade-in hidden">
+                <div class="flex justify-start mb-4">
+                    <button class="back-button" data-back-target="mode-selection-or-difficulty">
+                        <i class="fa fa-arrow-left"></i>
+                        <span>返回</span>
+                    </button>
+                </div>
                 <h2 class="text-3xl font-bold mb-6">准备好挑战了吗？</h2>
                 <div id="game-rules" class="mb-8 text-left max-w-lg mx-auto">
                     <h3 class="text-xl font-semibold mb-3 text-primary">游戏规则：</h3>
@@ -151,6 +198,12 @@
 
             <!-- 目标颜色显示区域 -->
             <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <div class="flex justify-start mb-4">
+                    <button class="back-button" data-back-target="start">
+                        <i class="fa fa-arrow-left"></i>
+                        <span>返回</span>
+                    </button>
+                </div>
                 <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
                 <div class="mb-6">
                     <div id="countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
@@ -164,6 +217,12 @@
 
             <!-- 颜色选择区域 -->
             <div id="color-grid-screen" class="hidden animate-fade-in">
+                <div class="flex justify-start mb-4">
+                    <button class="back-button" data-back-target="target">
+                        <i class="fa fa-arrow-left"></i>
+                        <span>返回</span>
+                    </button>
+                </div>
                 <h2 class="text-2xl font-bold mb-6 text-center">找出与目标颜色相同的方块</h2>
                 <div id="color-grid" class="grid grid-cols-4 gap-4"></div>
             </div>
@@ -172,6 +231,12 @@
             <div id="color-recall-screen" class="hidden animate-fade-in">
                 <!-- 目标颜色展示区域 -->
                 <div id="recall-target-section" class="glass-dark rounded-2xl p-8 text-center mb-6">
+                    <div class="flex justify-start mb-4">
+                        <button class="back-button" data-back-target="start">
+                            <i class="fa fa-arrow-left"></i>
+                            <span>返回</span>
+                        </button>
+                    </div>
                     <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
                     <div id="recall-countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
                     <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4">
@@ -183,35 +248,68 @@
 
                 <!-- HSL控制区域 -->
                 <div id="recall-control-section" class="glass-dark rounded-2xl p-8 hidden">
-                    <h2 class="text-2xl font-bold mb-6 text-center">你的复现</h2>
+                    <div class="flex justify-start mb-4">
+                        <button class="back-button" data-back-target="recall-target">
+                            <i class="fa fa-arrow-left"></i>
+                            <span>返回</span>
+                        </button>
+                    </div>
+                    <h2 id="recall-control-title" class="text-2xl font-bold mb-6 text-center">你的复现</h2>
                     
-                    <!-- 色轮和颜色预览并排 -->
                     <div class="flex flex-col md:flex-row items-center justify-center gap-8 mb-6">
-                        <!-- HSL色轮 -->
-                        <div class="flex flex-col items-center">
-                            <p class="text-sm text-gray-400 mb-2">色调 & 饱和度</p>
-                            <div class="hsl-wheel-container relative" style="width: 200px; height: 200px;">
-                                <div id="hsl-wheel" class="hsl-wheel w-full h-full cursor-crosshair"></div>
-                                <div id="hsl-wheel-pointer" class="hsl-wheel-pointer absolute w-4 h-4 bg-white border-2 border-gray-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" style="top: 50%; left: 50%;"></div>
+                        <!-- HSL 控制 -->
+                        <div id="hsl-control-panel" class="flex flex-col items-center">
+                            <div class="flex flex-col items-center mb-6">
+                                <p class="text-sm text-gray-400 mb-2">色调 & 饱和度</p>
+                                <div class="hsl-wheel-container relative" style="width: 200px; height: 200px;">
+                                    <div id="hsl-wheel" class="hsl-wheel w-full h-full cursor-crosshair"></div>
+                                    <div id="hsl-wheel-pointer" class="hsl-wheel-pointer absolute w-4 h-4 bg-white border-2 border-gray-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" style="top: 50%; left: 50%;"></div>
+                                </div>
                             </div>
+                            <div class="w-full max-w-md">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-gray-400">亮度</span>
+                                    <span id="lightness-value" class="text-sm text-white font-mono">50%</span>
+                                </div>
+                                <input type="range" id="lightness-slider" min="0" max="100" value="50" 
+                                       class="w-full h-3 bg-gradient-to-r from-black via-gray-500 to-white rounded-lg appearance-none cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- RGB 控制 -->
+                        <div id="rgb-control-panel" class="w-full max-w-md hidden">
+                            <div class="space-y-5">
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm text-red-300">R 红色通道</span>
+                                        <span id="red-value" class="text-sm text-white font-mono">128</span>
+                                    </div>
+                                    <input type="range" id="red-slider" min="0" max="255" value="128" class="rgb-slider rgb-red w-full">
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm text-green-300">G 绿色通道</span>
+                                        <span id="green-value" class="text-sm text-white font-mono">128</span>
+                                    </div>
+                                    <input type="range" id="green-slider" min="0" max="255" value="128" class="rgb-slider rgb-green w-full">
+                                </div>
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm text-blue-300">B 蓝色通道</span>
+                                        <span id="blue-value" class="text-sm text-white font-mono">128</span>
+                                    </div>
+                                    <input type="range" id="blue-slider" min="0" max="255" value="128" class="rgb-slider rgb-blue w-full">
+                                </div>
+                            </div>
+                            <p id="master-preview-note" class="hidden mt-4 text-sm text-gray-400 text-center">大师模式不会显示实时颜色，只能依靠 RGB 参数判断。</p>
                         </div>
                         
                         <!-- 复现颜色预览 -->
-                        <div class="flex flex-col items-center">
+                        <div id="recall-preview-panel" class="flex flex-col items-center">
                             <p class="text-sm text-gray-400 mb-2">当前复现</p>
                             <div id="recall-user-color" class="w-40 h-40 rounded-2xl shadow-2xl"></div>
-                            <div id="recall-user-hsl" class="mt-3 text-xs text-gray-400 font-mono"></div>
+                            <div id="recall-user-code-display" class="mt-3 text-xs text-gray-400 font-mono"></div>
                         </div>
-                    </div>
-                    
-                    <!-- 亮度滑块 -->
-                    <div class="max-w-md mx-auto mb-6">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm text-gray-400">亮度</span>
-                            <span id="lightness-value" class="text-sm text-white font-mono">50%</span>
-                        </div>
-                        <input type="range" id="lightness-slider" min="0" max="100" value="50" 
-                               class="w-full h-3 bg-gradient-to-r from-black via-gray-500 to-white rounded-lg appearance-none cursor-pointer">
                     </div>
                     
                     <div class="flex justify-center">
@@ -223,6 +321,12 @@
 
                 <!-- 复现结果区域 -->
                 <div id="recall-result-section" class="glass-dark rounded-2xl p-8 text-center hidden">
+                    <div class="flex justify-start mb-4">
+                        <button class="back-button" data-back-target="recall-control">
+                            <i class="fa fa-arrow-left"></i>
+                            <span>返回</span>
+                        </button>
+                    </div>
                     <h2 class="text-3xl font-bold mb-6">本轮得分</h2>
                     <div id="recall-round-score" class="text-6xl font-bold text-primary mb-6">0.00</div>
                     <div class="flex justify-center space-x-8 mb-8">
@@ -237,14 +341,25 @@
                             <p id="recall-user-code" class="mt-1 font-mono text-sm bg-gray-800 px-2 py-1 rounded"></p>
                         </div>
                     </div>
-                    <button id="next-recall-btn" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
-                        下一轮
-                    </button>
+                    <div class="flex flex-col sm:flex-row justify-center gap-3">
+                        <button id="next-recall-btn" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
+                            下一轮
+                        </button>
+                        <button id="restart-recall-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg">
+                            重新开始
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- 结果反馈区域 -->
             <div id="result-screen" class="hidden glass-dark rounded-2xl p-8 text-center animate-fade-in">
+                <div class="flex justify-start mb-4">
+                    <button class="back-button" data-back-target="result">
+                        <i class="fa fa-arrow-left"></i>
+                        <span>返回</span>
+                    </button>
+                </div>
                 <div id="result-icon" class="text-6xl mb-4"></div>
                 <h2 id="result-text" class="text-3xl font-bold mb-6"></h2>
                 <div id="result-detail" class="mb-6 hidden"></div>
@@ -300,7 +415,8 @@
             </h3>
             <div class="text-gray-300 space-y-3">
                 <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>专注观察</strong>：仔细注意颜色的色调、饱和度和亮度</p>
-                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>对比记忆</strong>：尝试将颜色与已知物体对比，帮助记忆</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>理解通道</strong>：RGB 模式下分别判断红、绿、蓝三个通道的强弱</p>
+                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>对比记忆</strong>：尝试将颜色与已知物体或常见色号对比，帮助记忆</p>
                 <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>排除法</strong>：先排除明显不同的颜色，缩小选择范围</p>
                 <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>相信直觉</strong>：有时第一感觉往往是正确的</p>
             </div>
