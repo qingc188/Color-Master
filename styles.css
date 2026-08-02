@@ -88,9 +88,22 @@ input:focus-visible,
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
+    background-color: transparent;
     background-size: 100% 0.75rem;
     background-position: center;
     background-repeat: no-repeat;
+}
+.rgb-slider::-webkit-slider-runnable-track,
+.recall-slider::-webkit-slider-runnable-track {
+    border: 0;
+    background: transparent;
+}
+.rgb-slider::-moz-range-track,
+.recall-slider::-moz-range-track,
+.rgb-slider::-moz-range-progress,
+.recall-slider::-moz-range-progress {
+    border: 0;
+    background: transparent;
 }
 .rgb-red {
     background-image: linear-gradient(to right, rgb(0, 0, 0), rgb(255, 0, 0));
