@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="一款在浏览器中练习颜色匹配与颜色复现的记忆游戏。">
-    <meta name="theme-color" content="#1e293b">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231e293b'/%3E%3Ccircle cx='24' cy='24' r='13' fill='%236366f1'/%3E%3Ccircle cx='40' cy='40' r='13' fill='%238b5cf6'/%3E%3C/svg%3E">
-    <title>色彩记忆大师 - 挑战你的色彩感知</title>
+    <meta name="description" content="忆色：一款在浏览器中练习颜色匹配与颜色复现的记忆游戏。">
+    <meta name="theme-color" content="#071820">
+    <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
+    <title>忆色 ColorMaster</title>
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -17,12 +17,12 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#6366f1',
-                        secondary: '#8b5cf6',
-                        success: '#10b981',
-                        danger: '#ef4444',
-                        dark: '#1e293b',
-                        light: '#f8fafc'
+                        primary: '#5ec8c2',
+                        secondary: '#f36f63',
+                        success: '#5ec8c2',
+                        danger: '#f36f63',
+                        dark: '#071820',
+                        light: '#f4efe6'
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -56,20 +56,18 @@
     </script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-gradient-to-br from-dark to-gray-900 min-h-screen text-light overflow-x-hidden">
+<body class="site-body min-h-screen text-light overflow-x-hidden">
     <!-- 游戏容器 -->
     <div class="app-container container mx-auto px-4 py-8 max-w-4xl">
-        <!-- 游戏标题 -->
-        <header class="text-center mb-8 animate-fade-in">
-            <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-                <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 text-shadow-lg">
-                    Color Master
-                </h1>
-                <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-2 text-shadow-lg">
-                    色彩记忆大师
-                </h1>
+        <!-- 游戏内品牌条，独立首页中隐藏 -->
+        <header id="brand-header" class="brand-header hidden">
+            <div class="brand-lockup">
+                <img src="assets/yise-cube-mark.svg" alt="" aria-hidden="true" class="brand-mark" width="512" height="512">
+                <div class="brand-copy">
+                    <p class="brand-name"><span>忆色</span><small>ColorMaster</small></p>
+                </div>
             </div>
-            <p class="text-lg text-gray-300">挑战你的色彩感知与记忆力</p>
+            <p class="brand-context">观察 · 记忆 · 重现</p>
         </header>
 
         <!-- 游戏信息栏 -->
@@ -115,12 +113,50 @@
 
         <!-- 游戏主区域 -->
         <main class="relative">
+            <!-- 独立品牌首页 -->
+            <section id="landing-screen" class="landing-screen animate-fade-in" aria-labelledby="landing-title">
+                <div class="landing-orbit" aria-hidden="true">
+                    <span class="orbit-frame orbit-frame--outer"></span>
+                    <span class="orbit-frame orbit-frame--inner"></span>
+                    <span class="orbit-corner orbit-corner--cyan"></span>
+                    <span class="orbit-corner orbit-corner--coral"></span>
+                    <img src="assets/yise-cube-mark.svg" alt="" class="landing-mark" width="512" height="512">
+                </div>
+                <div class="landing-copy">
+                    <p class="landing-english">ColorMaster</p>
+                    <h1 id="landing-title" class="landing-title"><span>忆</span><span>色</span></h1>
+                    <p class="landing-sequence" aria-label="游戏过程">观察 <span></span> 记忆 <span></span> 重现</p>
+                </div>
+                <div class="landing-actions">
+                    <button id="enter-game-button" type="button" class="landing-primary">开始挑战</button>
+                    <a href="#game-guide" class="landing-secondary">了解玩法</a>
+                </div>
+            </section>
+
             <!-- 模式选择屏幕 -->
-            <div id="mode-selection-screen" class="glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
-                <h2 class="text-3xl font-bold mb-6">选择游戏模式</h2>
+            <div id="mode-selection-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
+                <div class="screen-heading">
+                    <button class="back-button" data-back-target="landing">
+                        <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                        <span>返回首页</span>
+                    </button>
+                    <p class="screen-eyebrow">CHOOSE MODE</p>
+                    <h2 class="text-3xl font-bold">选择游戏模式</h2>
+                    <p>先决定你想训练辨色，还是练习凭记忆还原颜色。</p>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                     <!-- 颜色匹配模式 -->
-                    <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="color-match-mode">
+                    <div role="button" tabindex="0" class="mode-card glass w-full rounded-xl p-6 cursor-pointer" id="color-match-mode">
+                        <div class="mode-card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 48 48">
+                                <rect x="5" y="5" width="16" height="16" rx="3"></rect>
+                                <rect x="27" y="5" width="16" height="16" rx="3"></rect>
+                                <rect x="5" y="27" width="16" height="16" rx="3"></rect>
+                                <path d="M27 35h16M35 27v16"></path>
+                                <circle cx="35" cy="35" r="7"></circle>
+                            </svg>
+                        </div>
+                        <p class="mode-card-code">MATCH</p>
                         <h3 class="text-xl font-bold mb-3 text-white">颜色匹配</h3>
                         <p class="text-gray-300 mb-4">选择不同难度，从颜色池中找出目标颜色</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
@@ -130,7 +166,17 @@
                         </ul>
                     </div>
                     <!-- 颜色复现模式 -->
-                    <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" id="color-recall-mode">
+                    <div role="button" tabindex="0" class="mode-card glass w-full rounded-xl p-6 cursor-pointer" id="color-recall-mode">
+                        <div class="mode-card-icon mode-card-icon--coral" aria-hidden="true">
+                            <svg viewBox="0 0 48 48">
+                                <path d="M10 14h28M10 24h28M10 34h18"></path>
+                                <circle cx="18" cy="14" r="4"></circle>
+                                <circle cx="31" cy="24" r="4"></circle>
+                                <circle cx="22" cy="34" r="4"></circle>
+                                <path d="m34 32 5 4-5 4"></path>
+                            </svg>
+                        </div>
+                        <p class="mode-card-code">RECALL</p>
                         <h3 class="text-xl font-bold mb-3 text-white">颜色复现</h3>
                         <p class="text-gray-300 mb-4">选择不同难度，用 HSL 或 RGB 复现颜色</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
@@ -432,37 +478,43 @@
             </div>
         </main>
 
-        <!-- 色彩历史记录 -->
-        <div class="mt-8 glass-dark rounded-xl p-4 animate-fade-in">
-            <div class="flex items-center justify-between gap-4 mb-4">
-                <h3 class="text-xl font-semibold flex items-center">
-                    <i class="fa fa-history mr-2 text-primary"></i>
-                    色彩历史
-                </h3>
-                <button id="clear-history-btn" class="back-button">
-                    <i class="fa fa-trash"></i>
-                    <span>清空</span>
-                </button>
+        <section id="supporting-content" class="supporting-content">
+            <!-- 色彩历史记录 -->
+            <div class="support-card glass-dark rounded-xl p-4 animate-fade-in">
+                <div class="flex items-center justify-between gap-4 mb-4">
+                    <h3 class="text-xl font-semibold flex items-center">
+                        <span class="support-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"></path><path d="M12 7.5V12l3 2"></path></svg>
+                        </span>
+                        色彩历史
+                    </h3>
+                    <button id="clear-history-btn" class="back-button danger-button">
+                        <i class="fa fa-trash" aria-hidden="true"></i>
+                        <span>清空</span>
+                    </button>
+                </div>
+                <div id="color-history" class="flex flex-wrap gap-2">
+                    <!-- 历史颜色将在这里动态添加 -->
+                </div>
             </div>
-            <div id="color-history" class="flex flex-wrap gap-2">
-                <!-- 历史颜色将在这里动态添加 -->
-            </div>
-        </div>
 
-        <!-- 游戏说明 -->
-        <div class="mt-8 glass-dark rounded-xl p-6 animate-fade-in">
-            <h3 class="text-xl font-semibold mb-4 flex items-center">
-                <i class="fa fa-info-circle mr-2 text-primary"></i>
-                游戏技巧
-            </h3>
-            <div class="text-gray-300 space-y-3">
-                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>先拆开看</strong>：先记它偏什么色，再留意是鲜艳还是发灰、偏亮还是偏暗</p>
-                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>给颜色起个名字</strong>：像“偏灰的薄荷绿”或“很亮的橘红”，比硬记整块颜色更容易回想</p>
-                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>匹配时分两步</strong>：先排除色相明显不对的方块，再比较剩下几个的明暗和鲜艳程度</p>
-                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>RGB 先找主色</strong>：偏黄多看红和绿，偏青多看绿和蓝，偏紫多看红和蓝</p>
-                <p><i class="fa fa-lightbulb-o text-yellow-400 mr-2"></i> <strong>复现时先粗后细</strong>：有预览时先确定大致方向再微调；无预览时先判断三个通道谁高谁低</p>
+            <!-- 游戏说明 -->
+            <div id="game-guide" class="support-card glass-dark rounded-xl p-6 animate-fade-in">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="support-icon support-icon--coral" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"></path><path d="M8.2 14.7A7 7 0 1 1 15.8 14.7 4 4 0 0 0 15 17H9a4 4 0 0 0-.8-2.3Z"></path></svg>
+                    </span>
+                    游戏技巧
+                </h3>
+                <div class="tips-list text-gray-300 space-y-3">
+                    <p><strong>先拆开看</strong>：先记它偏什么色，再留意是鲜艳还是发灰、偏亮还是偏暗</p>
+                    <p><strong>给颜色起个名字</strong>：像“偏灰的薄荷绿”或“很亮的橘红”，比硬记整块颜色更容易回想</p>
+                    <p><strong>匹配时分两步</strong>：先排除色相明显不对的方块，再比较剩下几个的明暗和鲜艳程度</p>
+                    <p><strong>RGB 先找主色</strong>：偏黄多看红和绿，偏青多看绿和蓝，偏紫多看红和蓝</p>
+                    <p><strong>复现时先粗后细</strong>：有预览时先确定大致方向再微调；无预览时先判断三个通道谁高谁低</p>
+                </div>
             </div>
-        </div>
+        </section>
     </div>
 
     <!-- 游戏脚本 -->

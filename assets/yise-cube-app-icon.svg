@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">忆色应用图标</title>
+  <desc id="desc">深蓝背景上的青色、珊瑚红和奶白色块魔方</desc>
+  <rect width="512" height="512" rx="112" fill="#071820"/>
+  <path d="M256 54 458 256 256 458 54 256Z" fill="none" stroke="#5EC8C2" stroke-opacity=".14" stroke-width="4"/>
+  <path d="M256 90 422 256 256 422 90 256Z" fill="none" stroke="#F4EFE6" stroke-opacity=".08" stroke-width="2"/>
+  <g transform="translate(64 64) scale(.75)" stroke="#071820" stroke-width="8" stroke-linejoin="round">
+    <path fill="#F4EFE6" d="M256 72 338 118 256 164 174 118Z"/>
+    <path fill="#FFD7C7" d="m338 118 82 46-82 46-82-46Z"/>
+    <path fill="#F6A08E" d="m256 164 82 46-82 46-82-46Z"/>
+    <path fill="#70D5D0" d="m174 118 82 46-82 46-82-46Z"/>
+    <path fill="#62C9C5" d="m92 164 82 46v92l-82-46Z"/>
+    <path fill="#4FB5B5" d="m174 210 82 46v92l-82-46Z"/>
+    <path fill="#397F88" d="m92 256 82 46v92l-82-46Z"/>
+    <path fill="#2A5865" d="m174 302 82 46v92l-82-46Z"/>
+    <path fill="#FF8C7D" d="m338 210 82-46v92l-82 46Z"/>
+    <path fill="#F36F63" d="m256 256 82-46v92l-82 46Z"/>
+    <path fill="#D95752" d="m338 302 82-46v92l-82 46Z"/>
+    <path fill="#B84043" d="m256 348 82-46v92l-82 46Z"/>
+  </g>
+</svg>

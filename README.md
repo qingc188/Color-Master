@@ -1,6 +1,6 @@
-# Color Master 色彩记忆大师
+# 忆色 ColorMaster
 
-一个直接在浏览器中运行的颜色记忆游戏。玩家先观察目标色，再通过颜色匹配或颜色复现完成挑战。项目没有后端，也不需要安装依赖和执行构建。
+一个直接在浏览器中运行的颜色记忆游戏。玩家先观察目标色，再通过颜色匹配或颜色复现完成挑战。界面使用由简约色块组成的魔方作为品牌标志，支持手机和桌面浏览器。项目没有后端，也不需要安装依赖和执行构建。
 
 在线地址：[https://qingc188.github.io/Color-Master/](https://qingc188.github.io/Color-Master/)
 
@@ -46,6 +46,7 @@
 
 ```text
 Color-Master/
+├── assets/          品牌图标和界面美术资源
 ├── index.html       页面结构和游戏界面
 ├── styles.css       自定义样式与移动端适配
 ├── color-utils.js   颜色生成、格式转换和评分
@@ -78,6 +79,7 @@ index.html
 styles.css
 color-utils.js
 app.js
+assets/
 README.md
 ```
 

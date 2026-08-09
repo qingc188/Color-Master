@@ -41,6 +41,10 @@ const gameState = {
 
 // DOM 元素
 const elements = {
+    brandHeader: document.getElementById('brand-header'),
+    landingScreen: document.getElementById('landing-screen'),
+    enterGameButton: document.getElementById('enter-game-button'),
+    supportingContent: document.getElementById('supporting-content'),
     modeSelectionScreen: document.getElementById('mode-selection-screen'),
     colorMatchMode: document.getElementById('color-match-mode'),
     matchDifficultyScreen: document.getElementById('match-difficulty-screen'),
@@ -132,6 +136,7 @@ const soundPatterns = {
 };
 
 const mainScreens = [
+    elements.landingScreen,
     elements.modeSelectionScreen,
     elements.matchDifficultyScreen,
     elements.recallDifficultyScreen,
@@ -242,8 +247,25 @@ function showScreen(screen) {
     mainScreens.forEach((item) => {
         item.classList.toggle('hidden', item !== screen);
     });
+    updateBrandState(screen);
     updateStatsVisibility(screen);
+    updateSupportingVisibility(screen);
     window.scrollTo(0, 0);
+}
+
+function updateBrandState(screen) {
+    const isActiveGameScreen = screen === elements.targetColorScreen
+        || screen === elements.colorGridScreen
+        || screen === elements.colorRecallScreen;
+    elements.brandHeader.classList.toggle('hidden', screen === elements.landingScreen || isActiveGameScreen);
+}
+
+function updateSupportingVisibility(screen) {
+    const isFinalResult = screen === elements.resultScreen && !gameState.isGameActive;
+    const shouldShow = screen === elements.landingScreen
+        || screen === elements.modeSelectionScreen
+        || isFinalResult;
+    elements.supportingContent.classList.toggle('hidden', !shouldShow);
 }
 
 function showRecallSection(section) {
@@ -294,7 +316,8 @@ function saveColorHistory() {
 }
 
 function updateStatsVisibility(screen) {
-    const isMainMenu = screen === elements.modeSelectionScreen;
+    const isMainMenu = screen === elements.landingScreen
+        || screen === elements.modeSelectionScreen;
     const isDifficultyScreen = screen === elements.matchDifficultyScreen
         || screen === elements.recallDifficultyScreen;
 
@@ -419,7 +442,9 @@ function bindCardActivation(element, handler) {
 // 初始化游戏
 function initGame() {
     // 更新最佳分数显示
-    updateStatsVisibility(elements.modeSelectionScreen);
+    updateBrandState(elements.landingScreen);
+    updateStatsVisibility(elements.landingScreen);
+    updateSupportingVisibility(elements.landingScreen);
     updateBestOverviews();
     updateDisplays();
     updateColorHistoryDisplay();
@@ -431,6 +456,7 @@ function initGame() {
     updateSoundIcon();
     
     // 绑定事件监听器
+    elements.enterGameButton.addEventListener('click', () => showScreen(elements.modeSelectionScreen));
     bindCardActivation(elements.colorMatchMode, () => showDifficultyScreen(elements.matchDifficultyScreen, 'colorMatch'));
     elements.matchDifficultyCards.forEach((card) => {
         bindCardActivation(card, () => selectMatchDifficulty(card.dataset.matchDifficulty));
@@ -490,6 +516,13 @@ function handleBackNavigation(target) {
     }
 
     stopActiveCountdown();
+
+    if (target === 'landing') {
+        gameState.gameMode = null;
+        showScreen(elements.landingScreen);
+        updateDisplays();
+        return;
+    }
 
     if (target === 'mode-selection') {
         showScreen(elements.modeSelectionScreen);
@@ -844,7 +877,11 @@ function updateDisplays() {
     }
     
     // 根据游戏模式显示或隐藏生命值
-    if (gameState.gameMode === 'colorMatch' && matchDifficultyConfig[gameState.matchDifficulty].endless) {
+    const shouldShowLives = gameState.gameMode === 'colorMatch'
+        && matchDifficultyConfig[gameState.matchDifficulty].endless;
+    elements.gameStatsPanel.classList.toggle('has-lives', shouldShowLives);
+
+    if (shouldShowLives) {
         elements.livesDisplay.classList.remove('hidden');
         elements.lives.textContent = gameState.lives;
     } else {
@@ -896,7 +933,7 @@ function updateColorHistoryDisplay() {
     gameState.colorHistory.forEach((item, index) => {
         const colorBlock = document.createElement('button');
         colorBlock.type = 'button';
-        colorBlock.className = 'history-color w-11 h-11 sm:w-9 sm:h-9 rounded-full shadow-md cursor-pointer transition-transform hover:scale-110';
+        colorBlock.className = 'history-color w-11 h-11 rounded-full shadow-md cursor-pointer transition-transform hover:scale-110';
         colorBlock.style.backgroundColor = item.color;
         colorBlock.title = `${item.hex} · ${item.context || '历史颜色'}`;
         colorBlock.setAttribute('aria-label', `查看历史颜色 ${index + 1}：${item.hex}`);
@@ -1140,13 +1177,13 @@ function showColorRecallResult() {
     elements.resultScore.textContent = gameState.recallTotalScore.toFixed(2);
     
     elements.resultTargetColor.style.backgroundColor = 'transparent';
-    elements.resultTargetColor.style.border = '2px solid #6366f1';
+    elements.resultTargetColor.style.border = '2px solid #5ec8c2';
     elements.resultTargetColor.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
     elements.resultTargetColor.innerHTML = `<p class="text-sm">累计得分</p><p class="text-2xl font-bold text-primary">${gameState.recallTotalScore.toFixed(2)}</p>`;
     document.getElementById('target-color-code').textContent = '';
     
     elements.resultSelectedColor.style.backgroundColor = 'transparent';
-    elements.resultSelectedColor.style.border = '2px solid #10b981';
+    elements.resultSelectedColor.style.border = '2px solid #f36f63';
     elements.resultSelectedColor.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
     elements.resultSelectedColor.innerHTML = `<p class="text-sm">${isNewRecord ? '新纪录' : `${config.name}最佳`}</p><p class="text-2xl font-bold text-success">${gameState.recallBestScores[gameState.recallDifficulty].toFixed(2)}</p>`;
     document.getElementById('selected-color-code').textContent = '';
