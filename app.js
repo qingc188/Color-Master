@@ -72,7 +72,6 @@ const elements = {
     hslControlPanel: document.getElementById('hsl-control-panel'),
     rgbControlPanel: document.getElementById('rgb-control-panel'),
     recallPreviewPanel: document.getElementById('recall-preview-panel'),
-    masterPreviewNote: document.getElementById('master-preview-note'),
     resultScreen: document.getElementById('result-screen'),
     startButton: document.getElementById('start-button'),
     continueButton: document.getElementById('continue-button'),
@@ -1063,7 +1062,6 @@ function configureRecallControlPanel() {
     elements.hslControlPanel.classList.toggle('hidden', !usesHsl);
     elements.rgbControlPanel.classList.toggle('hidden', usesHsl);
     elements.recallPreviewPanel.classList.toggle('hidden', !config.preview);
-    elements.masterPreviewNote.classList.toggle('hidden', config.preview);
 }
 
 function getRecallUserRGB() {

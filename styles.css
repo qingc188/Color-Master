@@ -891,13 +891,6 @@ div.app-container {
     background: var(--ink-800);
 }
 
-#master-preview-note {
-    padding: 0.75rem;
-    border-left: 2px solid var(--coral);
-    background: var(--coral-soft);
-    text-align: left;
-}
-
 #recall-target-code,
 #recall-user-code,
 #target-color-code,
