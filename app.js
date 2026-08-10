@@ -767,7 +767,6 @@ function nextLevel() {
 function showGameEnd() {
     gameState.isGameActive = false;
     showScreen(elements.resultScreen);
-    resetResultColorBlocks();
     elements.resultDetail.classList.add('hidden');
     elements.resultDetail.innerHTML = '';
     const config = matchDifficultyConfig[gameState.matchDifficulty];
