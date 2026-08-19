@@ -337,8 +337,9 @@ div.app-container {
 
 .site-footer-name {
     color: var(--muted);
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 .site-footer-separator {
