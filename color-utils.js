@@ -1,104 +1,51 @@
-﻿// 颜色生成、转换和评分工具
-// 生成随机颜色
-function generateColor(level) {
-    // 目标色覆盖更宽的饱和度和亮度范围，避免题目过于集中。
-    const hue = Math.floor(Math.random() * 360);
-    const saturation = 30 + Math.floor(Math.random() * 71); // 30-100%
-    const lightness = 30 + Math.floor(Math.random() * 51); // 30-80%
-    
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+// 颜色生成、转换和评分工具
+const OKLAB_SCORE_ANCHORS = Object.freeze([
+    { distance: 0, score: 10 },
+    { distance: 2, score: 9.8 },
+    { distance: 5, score: 9.3 },
+    { distance: 10, score: 8.2 },
+    { distance: 20, score: 6.5 },
+    { distance: 40, score: 3.5 },
+    { distance: 70, score: 0.8 },
+    { distance: 100, score: 0 }
+]);
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
 }
 
-// 生成与目标颜色相似的颜色
-function generateSimilarColor(targetColor, level) {
-    // 解析目标颜色的HSL值
-    const hslMatch = targetColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-    if (!hslMatch) return generateColor(level);
-    
-    const [, targetHue, targetSaturation, targetLightness] = hslMatch;
-    
-    // 随着关卡提升，颜色差异减小
-    const variation = Math.max(5, 30 - level * 2); // 5-30的差异范围
-    
-    // 生成相似但不同的颜色
-    const hue = (parseInt(targetHue) + Math.floor(Math.random() * variation * 2) - variation + 360) % 360;
-    const saturation = Math.max(0, Math.min(100, parseInt(targetSaturation) + Math.floor(Math.random() * variation * 2) - variation));
-    const lightness = Math.max(0, Math.min(100, parseInt(targetLightness) + Math.floor(Math.random() * variation * 2) - variation));
-    
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+function rgbToCss({ r, g, b }) {
+    return `rgb(${r}, ${g}, ${b})`;
 }
 
-// 打乱数组
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-}
-
-// 将RGB或HSL颜色转换为十六进制
-function rgbToHex(color) {
-    // 如果是对象格式（来自hslToRgb）
-    if (typeof color === 'object' && color.r !== undefined) {
-        return '#' + ((1 << 24) + (color.r << 16) + (color.g << 8) + color.b).toString(16).slice(1).toUpperCase();
-    }
-    
-    // 处理HSL颜色
-    if (typeof color === 'string' && color.startsWith('hsl')) {
-        const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-        if (hslMatch) {
-            const [, h, s, l] = hslMatch;
-            const rgb = hslToRgb(parseInt(h), parseInt(s), parseInt(l));
-            return '#' + ((1 << 24) + (rgb.r << 16) + (rgb.g << 8) + rgb.b).toString(16).slice(1).toUpperCase();
-        }
-    }
-    
-    // 处理RGB颜色
-    if (typeof color === 'string') {
-        const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-        if (rgbMatch) {
-            const [, r, g, b] = rgbMatch;
-            return '#' + ((1 << 24) + (parseInt(r) << 16) + (parseInt(g) << 8) + parseInt(b)).toString(16).slice(1).toUpperCase();
-        }
-        
-        // 如果已经是十六进制，直接返回
-        if (color.startsWith('#')) {
-            return color.toUpperCase();
-        }
-    }
-    
-    return color;
-}
-
-// HSL转RGB
+// HSL 转 8 位 sRGB
 function hslToRgb(h, s, l) {
-    h /= 360;
-    s /= 100;
-    l /= 100;
-    
-    let r, g, b;
-    
+    h = ((Number(h) % 360) + 360) % 360 / 360;
+    s = clamp(Number(s), 0, 100) / 100;
+    l = clamp(Number(l), 0, 100) / 100;
+
+    let r;
+    let g;
+    let b;
+
     if (s === 0) {
-        r = g = b = l; // 灰色
+        r = g = b = l;
     } else {
         const hue2rgb = (p, q, t) => {
             if (t < 0) t += 1;
             if (t > 1) t -= 1;
-            if (t < 1/6) return p + (q - p) * 6 * t;
-            if (t < 1/2) return q;
-            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
             return p;
         };
-        
         const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
         const p = 2 * l - q;
-        
-        r = hue2rgb(p, q, h + 1/3);
+        r = hue2rgb(p, q, h + 1 / 3);
         g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1/3);
+        b = hue2rgb(p, q, h - 1 / 3);
     }
-    
+
     return {
         r: Math.round(r * 255),
         g: Math.round(g * 255),
@@ -106,31 +53,326 @@ function hslToRgb(h, s, l) {
     };
 }
 
-// 计算颜色相似度得分
-function calculateColorSimilarity(target, user) {
-    // HSL颜色差异计算
-    let hDiff = Math.abs(target.h - user.h);
-    // 处理色相环绕
-    if (hDiff > 180) hDiff = 360 - hDiff;
-    hDiff = hDiff / 180; // 归一化到0-1
-    
-    const sDiff = Math.abs(target.s - user.s) / 100;
-    const lDiff = Math.abs(target.l - user.l) / 100;
-    
-    // 加权计算总差异
-    const totalDiff = Math.sqrt(hDiff * hDiff + sDiff * sDiff + lDiff * lDiff) / Math.sqrt(3);
-    
-    // 转换为0-10的得分
-    const score = Math.max(0, 10 - totalDiff * 10);
-    return score.toFixed(2);
+function rgbToHsl({ r, g, b }) {
+    r = clamp(Number(r), 0, 255) / 255;
+    g = clamp(Number(g), 0, 255) / 255;
+    b = clamp(Number(b), 0, 255) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const lightness = (max + min) / 2;
+    let hue = 0;
+    let saturation = 0;
+
+    if (max !== min) {
+        const delta = max - min;
+        saturation = lightness > 0.5
+            ? delta / (2 - max - min)
+            : delta / (max + min);
+        if (max === r) hue = (g - b) / delta + (g < b ? 6 : 0);
+        if (max === g) hue = (b - r) / delta + 2;
+        if (max === b) hue = (r - g) / delta + 4;
+        hue /= 6;
+    }
+
+    return {
+        h: Math.round(hue * 360) % 360,
+        s: Math.round(saturation * 100),
+        l: Math.round(lightness * 100)
+    };
 }
 
-function calculateRgbSimilarity(target, user) {
-    const rDiff = Math.abs(target.r - user.r) / 255;
-    const gDiff = Math.abs(target.g - user.g) / 255;
-    const bDiff = Math.abs(target.b - user.b) / 255;
-    const totalDiff = Math.sqrt(rDiff * rDiff + gDiff * gDiff + bDiff * bDiff) / Math.sqrt(3);
-    const score = Math.max(0, 10 - totalDiff * 10);
-    return score.toFixed(2);
+function parseColorToRgb(color) {
+    if (color && typeof color === 'object') {
+        const channels = [color.r, color.g, color.b].map(Number);
+        if (channels.every(Number.isFinite)) {
+            return {
+                r: Math.round(clamp(channels[0], 0, 255)),
+                g: Math.round(clamp(channels[1], 0, 255)),
+                b: Math.round(clamp(channels[2], 0, 255))
+            };
+        }
+    }
+
+    if (typeof color !== 'string') return null;
+
+    const hslMatch = color.match(/^hsl\(\s*(-?[\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/i);
+    if (hslMatch) {
+        return hslToRgb(Number(hslMatch[1]), Number(hslMatch[2]), Number(hslMatch[3]));
+    }
+
+    const rgbMatch = color.match(/^rgb\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)$/i);
+    if (rgbMatch) {
+        return parseColorToRgb({
+            r: Number(rgbMatch[1]),
+            g: Number(rgbMatch[2]),
+            b: Number(rgbMatch[3])
+        });
+    }
+
+    const hexMatch = color.match(/^#([\da-f]{3}|[\da-f]{6})$/i);
+    if (!hexMatch) return null;
+    const value = hexMatch[1].length === 3
+        ? [...hexMatch[1]].map((digit) => digit + digit).join('')
+        : hexMatch[1];
+    return {
+        r: parseInt(value.slice(0, 2), 16),
+        g: parseInt(value.slice(2, 4), 16),
+        b: parseInt(value.slice(4, 6), 16)
+    };
 }
 
+function rgbToHex(color) {
+    const rgb = parseColorToRgb(color);
+    if (!rgb) return color;
+    return `#${[rgb.r, rgb.g, rgb.b]
+        .map((channel) => channel.toString(16).padStart(2, '0'))
+        .join('')}`.toUpperCase();
+}
+
+function srgbByteToLinear(channel) {
+    const normalized = clamp(Number(channel), 0, 255) / 255;
+    return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function linearToSrgbByte(channel) {
+    const normalized = channel <= 0.0031308
+        ? 12.92 * channel
+        : 1.055 * (channel ** (1 / 2.4)) - 0.055;
+    return Math.round(clamp(normalized, 0, 1) * 255);
+}
+
+function rgbToOklab(color) {
+    const rgb = parseColorToRgb(color);
+    if (!rgb) throw new TypeError('Expected an RGB, HSL, or hex color.');
+
+    const r = srgbByteToLinear(rgb.r);
+    const g = srgbByteToLinear(rgb.g);
+    const b = srgbByteToLinear(rgb.b);
+    const l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b;
+    const m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b;
+    const s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b;
+    const lRoot = Math.cbrt(l);
+    const mRoot = Math.cbrt(m);
+    const sRoot = Math.cbrt(s);
+
+    return {
+        l: 0.2104542553 * lRoot + 0.7936177850 * mRoot - 0.0040720468 * sRoot,
+        a: 1.9779984951 * lRoot - 2.4285922050 * mRoot + 0.4505937099 * sRoot,
+        b: 0.0259040371 * lRoot + 0.7827717662 * mRoot - 0.8086757660 * sRoot
+    };
+}
+
+function oklabToLinearRgb({ l, a, b }) {
+    const lRoot = l + 0.3963377774 * a + 0.2158037573 * b;
+    const mRoot = l - 0.1055613458 * a - 0.0638541728 * b;
+    const sRoot = l - 0.0894841775 * a - 1.2914855480 * b;
+    const lValue = lRoot ** 3;
+    const mValue = mRoot ** 3;
+    const sValue = sRoot ** 3;
+
+    return {
+        r: 4.0767416621 * lValue - 3.3077115913 * mValue + 0.2309699292 * sValue,
+        g: -1.2684380046 * lValue + 2.6097574011 * mValue - 0.3413193965 * sValue,
+        b: -0.0041960863 * lValue - 0.7034186147 * mValue + 1.707614701 * sValue
+    };
+}
+
+function isLinearRgbInGamut({ r, g, b }) {
+    const epsilon = 1e-7;
+    return r >= -epsilon && r <= 1 + epsilon
+        && g >= -epsilon && g <= 1 + epsilon
+        && b >= -epsilon && b <= 1 + epsilon;
+}
+
+function oklabToRgb(oklab) {
+    const linear = oklabToLinearRgb(oklab);
+    if (!isLinearRgbInGamut(linear)) return null;
+    return {
+        r: linearToSrgbByte(linear.r),
+        g: linearToSrgbByte(linear.g),
+        b: linearToSrgbByte(linear.b)
+    };
+}
+
+function oklchToOklab({ l, c, h }) {
+    const radians = h * Math.PI / 180;
+    return {
+        l,
+        a: c * Math.cos(radians),
+        b: c * Math.sin(radians)
+    };
+}
+
+function findMaxOklchChroma(lightness, hue) {
+    let low = 0;
+    let high = 0.4;
+    for (let index = 0; index < 14; index++) {
+        const middle = (low + high) / 2;
+        const linear = oklabToLinearRgb(oklchToOklab({ l: lightness, c: middle, h: hue }));
+        if (isLinearRgbInGamut(linear)) {
+            low = middle;
+        } else {
+            high = middle;
+        }
+    }
+    return low;
+}
+
+// 在 Oklch 中取样，让不同色相的目标色拥有更接近的感知亮度和彩度范围。
+function generateColor(_level, random = Math.random) {
+    for (let attempt = 0; attempt < 50; attempt++) {
+        const lightness = 0.4 + random() * 0.42;
+        const hue = random() * 360;
+        const maxChroma = findMaxOklchChroma(lightness, hue);
+        const chroma = maxChroma * (0.32 + random() * 0.4);
+        const rgb = oklabToRgb(oklchToOklab({ l: lightness, c: chroma, h: hue }));
+        if (rgb) return rgbToCss(rgb);
+    }
+
+    return 'rgb(128, 128, 128)';
+}
+
+function calculateOklabDistance(first, second) {
+    const color1 = rgbToOklab(first);
+    const color2 = rgbToOklab(second);
+    return Math.hypot(
+        color2.l - color1.l,
+        color2.a - color1.a,
+        color2.b - color1.b
+    );
+}
+
+// 使用放大 100 倍的 Oklab 距离，便于配置游戏难度和分数锚点。
+function calculatePerceptualDistance(first, second) {
+    return calculateOklabDistance(first, second) * 100;
+}
+
+function scoreFromPerceptualDistance(distance) {
+    const safeDistance = Math.max(0, Number(distance));
+    for (let index = 1; index < OKLAB_SCORE_ANCHORS.length; index++) {
+        const upper = OKLAB_SCORE_ANCHORS[index];
+        if (safeDistance > upper.distance) continue;
+        const lower = OKLAB_SCORE_ANCHORS[index - 1];
+        const progress = (safeDistance - lower.distance) / (upper.distance - lower.distance);
+        return lower.score + (upper.score - lower.score) * progress;
+    }
+    return 0;
+}
+
+function calculatePerceptualScore(target, user) {
+    return scoreFromPerceptualDistance(calculatePerceptualDistance(target, user));
+}
+
+function getMatchDistanceBand(difficulty, level) {
+    const safeLevel = Math.max(1, Number(level) || 1);
+    let center;
+
+    if (difficulty === 'advanced') {
+        const progress = clamp((safeLevel - 1) / 9, 0, 1);
+        center = 10 - 5 * progress;
+    } else if (difficulty === 'master') {
+        center = Math.max(3.5, 9 * (0.94 ** (safeLevel - 1)));
+    } else {
+        const progress = clamp((safeLevel - 1) / 9, 0, 1);
+        center = 14 - 6 * progress;
+    }
+
+    return {
+        center,
+        min: center * 0.85,
+        max: center * 1.15,
+        minPairDistance: Math.max(1.4, center * 0.38)
+    };
+}
+
+function randomUnitVector(random) {
+    const lightnessDirection = random() * 2 - 1;
+    const angle = random() * Math.PI * 2;
+    const chromaDirection = Math.sqrt(1 - lightnessDirection ** 2);
+    return {
+        l: lightnessDirection,
+        a: chromaDirection * Math.cos(angle),
+        b: chromaDirection * Math.sin(angle)
+    };
+}
+
+function generatePerceptualDistractors(targetColor, count, options = {}) {
+    const difficulty = options.difficulty || 'basic';
+    const level = options.level || 1;
+    const random = options.random || Math.random;
+    const maxAttempts = options.maxAttempts || 8000;
+    const targetRgb = parseColorToRgb(targetColor);
+    if (!targetRgb) throw new TypeError('Cannot generate distractors for an invalid target color.');
+
+    const targetOklab = rgbToOklab(targetRgb);
+    const targetHex = rgbToHex(targetRgb);
+    const band = getMatchDistanceBand(difficulty, level);
+    const minPairDistance = band.minPairDistance * (options.pairDistanceScale || 1);
+    const distractors = [];
+    const usedHex = new Set([targetHex]);
+
+    for (let attempt = 0; attempt < maxAttempts && distractors.length < count; attempt++) {
+        const direction = randomUnitVector(random);
+        const requestedDistance = band.min + random() * (band.max - band.min);
+        const scale = requestedDistance / 100;
+        const candidateRgb = oklabToRgb({
+            l: targetOklab.l + direction.l * scale,
+            a: targetOklab.a + direction.a * scale,
+            b: targetOklab.b + direction.b * scale
+        });
+        if (!candidateRgb) continue;
+
+        const candidateHex = rgbToHex(candidateRgb);
+        if (usedHex.has(candidateHex)) continue;
+        const actualDistance = calculatePerceptualDistance(targetRgb, candidateRgb);
+        if (actualDistance < band.min || actualDistance > band.max) continue;
+        const isSeparated = distractors.every((color) => (
+            calculatePerceptualDistance(color, candidateRgb) >= minPairDistance
+        ));
+        if (!isSeparated) continue;
+
+        distractors.push(candidateRgb);
+        usedHex.add(candidateHex);
+    }
+
+    if (distractors.length !== count) {
+        throw new Error(`Unable to generate ${count} perceptually separated distractors.`);
+    }
+
+    return distractors.map(rgbToCss);
+}
+
+function shuffleArray(array, random = Math.random) {
+    for (let index = array.length - 1; index > 0; index--) {
+        const randomIndex = Math.floor(random() * (index + 1));
+        [array[index], array[randomIndex]] = [array[randomIndex], array[index]];
+    }
+    return array;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        OKLAB_SCORE_ANCHORS,
+        calculateOklabDistance,
+        calculatePerceptualDistance,
+        calculatePerceptualScore,
+        findMaxOklchChroma,
+        generateColor,
+        generatePerceptualDistractors,
+        getMatchDistanceBand,
+        hslToRgb,
+        oklabToRgb,
+        oklchToOklab,
+        parseColorToRgb,
+        rgbToCss,
+        rgbToHex,
+        rgbToHsl,
+        rgbToOklab,
+        scoreFromPerceptualDistance,
+        shuffleArray,
+        srgbByteToLinear
+    };
+}

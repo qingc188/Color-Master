@@ -1,33 +1,73 @@
 ﻿// 游戏状态
 const COLOR_HISTORY_STORAGE_KEY = 'colorMemoryGlobalColorHistory';
-const MAX_COLOR_HISTORY = 50;
+const MAX_COLOR_HISTORY = 100;
+const OBSERVATION_DURATION_MS = 5000;
+let storageAvailable = true;
+
+function markStorageUnavailable() {
+    storageAvailable = false;
+    document.getElementById('storage-status')?.classList.remove('hidden');
+}
+
+function getStorageItem(key) {
+    if (!storageAvailable) return null;
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        markStorageUnavailable();
+        return null;
+    }
+}
+
+function setStorageItem(key, value) {
+    if (!storageAvailable) return false;
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch {
+        markStorageUnavailable();
+        return false;
+    }
+}
+
+function removeStorageItem(key) {
+    if (!storageAvailable) return false;
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch {
+        markStorageUnavailable();
+        return false;
+    }
+}
 
 const gameState = {
     level: 1,
     score: 0,
     currentTargetColor: null,
     isGameActive: false,
-    isSoundEnabled: localStorage.getItem('colorMemorySound') !== 'false',
     colorHistory: loadColorHistory(),
     // 新模式相关状态
     gameMode: null, // 'colorMatch' 或 'colorRecall'
     matchDifficulty: 'basic',
     matchBestScores: {
-        basic: Number(localStorage.getItem('colorMemoryBestMatchScore_basic')) || 0,
-        advanced: Number(localStorage.getItem('colorMemoryBestMatchScore_advanced')) || 0,
-        master: Number(localStorage.getItem('colorMemoryBestMatchScore_master') ?? localStorage.getItem('colorMemoryBestScore')) || 0
+        basic: Number(getStorageItem('colorMemoryBestMatchScore_basic')) || 0,
+        advanced: Number(getStorageItem('colorMemoryBestMatchScore_advanced')) || 0,
+        master: Number(getStorageItem('colorMemoryBestMatchScore_master') ?? getStorageItem('colorMemoryBestScore')) || 0
     },
     lives: 3, // 仅用于颜色匹配大师模式
     totalLevels: 10, // 仅用于固定关卡的颜色匹配模式
     correctAnswers: 0, // 用于计算正确率
     totalAnswers: 0, // 用于计算正确率
+    matchRoundSubmitted: false,
     // 颜色复现模式专用
     recallDifficulty: 'basic',
     recallTotalScore: 0, // 累计得分
+    recallTotalScoreCenti: 0,
     recallBestScores: {
-        basic: Number(localStorage.getItem('colorMemoryBestRecallScore_basic') ?? localStorage.getItem('colorMemoryBestRecallScore')) || 0,
-        advanced: Number(localStorage.getItem('colorMemoryBestRecallScore_advanced')) || 0,
-        master: Number(localStorage.getItem('colorMemoryBestRecallScore_master')) || 0
+        basic: Number(getStorageItem('colorMemoryBestRecallScore_basic_oklab_v2')) || 0,
+        advanced: Number(getStorageItem('colorMemoryBestRecallScore_advanced_oklab_v2')) || 0,
+        master: Number(getStorageItem('colorMemoryBestRecallScore_master_oklab_v2')) || 0
     },
     recallTargetHSL: null, // 目标HSL颜色
     recallTargetRGB: null,
@@ -36,6 +76,7 @@ const gameState = {
     recallRound: 1, // 当前轮次
     recallRoundSubmitted: false,
     recallLastRoundScore: 0,
+    recallLastRoundDistance: 0,
     recallTotalRounds: 10 // 总轮次
 };
 
@@ -44,7 +85,10 @@ const elements = {
     brandHeader: document.getElementById('brand-header'),
     landingScreen: document.getElementById('landing-screen'),
     enterGameButton: document.getElementById('enter-game-button'),
-    supportingContent: document.getElementById('supporting-content'),
+    colorHistoryEntry: document.getElementById('color-history-entry'),
+    landingHistoryCount: document.getElementById('landing-history-count'),
+    colorHistoryScreen: document.getElementById('color-history-screen'),
+    colorHistoryTitle: document.getElementById('color-history-title'),
     modeSelectionScreen: document.getElementById('mode-selection-screen'),
     colorMatchMode: document.getElementById('color-match-mode'),
     matchDifficultyScreen: document.getElementById('match-difficulty-screen'),
@@ -56,6 +100,7 @@ const elements = {
     targetColorScreen: document.getElementById('target-color-screen'),
     colorGridScreen: document.getElementById('color-grid-screen'),
     colorRecallScreen: document.getElementById('color-recall-screen'),
+    gameInfoAnchor: document.getElementById('game-info-anchor'),
     gameInfoBar: document.getElementById('game-info-bar'),
     gameStatsPanel: document.getElementById('game-stats-panel'),
     modeBestOverview: document.getElementById('mode-best-overview'),
@@ -93,15 +138,32 @@ const elements = {
     resultIcon: document.getElementById('result-icon'),
     resultText: document.getElementById('result-text'),
     resultDetail: document.getElementById('result-detail'),
+    matchResultSummary: document.getElementById('match-result-summary'),
     resultLevelLabel: document.getElementById('result-level-label'),
     resultLevel: document.getElementById('result-level'),
     resultScore: document.getElementById('result-score'),
     resultTargetColor: document.getElementById('result-target-color'),
     resultSelectedColor: document.getElementById('result-selected-color'),
+    recallFinalSummary: document.getElementById('recall-final-summary'),
+    recallFinalScore: document.getElementById('recall-final-score'),
+    recallFinalMax: document.getElementById('recall-final-max'),
+    recallFinalAverage: document.getElementById('recall-final-average'),
+    recallFinalBest: document.getElementById('recall-final-best'),
+    recallFinalRounds: document.getElementById('recall-final-rounds'),
+    recallFinalRecordNote: document.getElementById('recall-final-record-note'),
+    resultChangeDifficulty: document.getElementById('result-change-difficulty'),
     colorHistory: document.getElementById('color-history'),
+    colorHistoryCollection: document.getElementById('color-history-collection'),
+    colorHistorySummary: document.getElementById('color-history-summary'),
+    colorHistoryEmpty: document.getElementById('color-history-empty'),
     clearHistoryBtn: document.getElementById('clear-history-btn'),
-    soundToggle: document.getElementById('sound-toggle'),
-    soundIcon: document.getElementById('sound-icon'),
+    clearHistoryCancel: document.getElementById('clear-history-cancel'),
+    paletteInspectorSwatch: document.getElementById('palette-inspector-swatch'),
+    paletteInspectorHex: document.getElementById('palette-inspector-hex'),
+    paletteInspectorRgb: document.getElementById('palette-inspector-rgb'),
+    paletteInspectorHsl: document.getElementById('palette-inspector-hsl'),
+    paletteInspectorContext: document.getElementById('palette-inspector-context'),
+    storageStatus: document.getElementById('storage-status'),
     // 颜色复现模式元素
     recallCountdown: document.getElementById('recall-countdown'),
     recallProgressBar: document.getElementById('recall-progress-bar'),
@@ -110,6 +172,10 @@ const elements = {
     recallUserCodeDisplay: document.getElementById('recall-user-code-display'),
     hslWheel: document.getElementById('hsl-wheel'),
     hslWheelPointer: document.getElementById('hsl-wheel-pointer'),
+    hueSlider: document.getElementById('hue-slider'),
+    saturationSlider: document.getElementById('saturation-slider'),
+    hueValue: document.getElementById('hue-value'),
+    saturationValue: document.getElementById('saturation-value'),
     lightnessSlider: document.getElementById('lightness-slider'),
     lightnessValue: document.getElementById('lightness-value'),
     redSlider: document.getElementById('red-slider'),
@@ -122,6 +188,16 @@ const elements = {
     nextRecallBtn: document.getElementById('next-recall-btn'),
     restartRecallBtn: document.getElementById('restart-recall-btn'),
     recallRoundScore: document.getElementById('recall-round-score'),
+    recallRoundFeedback: document.getElementById('recall-round-feedback'),
+    scoreInfoButton: document.getElementById('score-info-button'),
+    scoreInfoDialog: document.getElementById('score-info-dialog'),
+    scoreInfoClose: document.getElementById('score-info-close'),
+    scoreInfoConfirm: document.getElementById('score-info-confirm'),
+    scoreInfoTitle: document.getElementById('score-info-title'),
+    scoreInfoScore: document.getElementById('score-info-score'),
+    scoreInfoDistance: document.getElementById('score-info-distance'),
+    scoreInfoRange: document.getElementById('score-info-range'),
+    scoreInfoInterpolation: document.getElementById('score-info-interpolation'),
     recallResultTarget: document.getElementById('recall-result-target'),
     recallResultUser: document.getElementById('recall-result-user'),
     recallTargetCode: document.getElementById('recall-target-code'),
@@ -130,12 +206,39 @@ const elements = {
 
 const soundPatterns = {
     correct: [660, 880],
-    wrong: [220, 165],
-    levelUp: [523, 659, 784]
+    wrong: [220, 165]
 };
+
+const recallFeedbackTiers = [
+    {
+        minScore: 9.7,
+        messages: ['你就是Color Master!', '这轮拿捏了！', '准得有点离谱！']
+    },
+    {
+        minScore: 9,
+        messages: ['这波专业操作！', '很准，再抠一点细节', '色彩DNA动了~']
+    },
+    {
+        minScore: 8,
+        messages: ['就差一点，稳住！', '大方向没毛病', '差一点点，继续冲！']
+    },
+    {
+        minScore: 6.5,
+        messages: ['感觉对了', '这波差了点运气', '有点接近了，再试试']
+    },
+    {
+        minScore: 4,
+        messages: ['小失误，再接再厉！', '展示一下容错', '问题不大，下一轮上大分！']
+    },
+    {
+        minScore: 0,
+        messages: ['色感加载中…', '没关系，重新找感觉', '先热个身，继续来']
+    }
+];
 
 const mainScreens = [
     elements.landingScreen,
+    elements.colorHistoryScreen,
     elements.modeSelectionScreen,
     elements.matchDifficultyScreen,
     elements.recallDifficultyScreen,
@@ -153,7 +256,11 @@ const recallSections = [
 ];
 
 let activeCountdownId = 0;
+let paletteRetryTimeoutId;
 let audioContext;
+let scoreInfoReturnFocus;
+let selectedHistoryHex;
+let clearHistoryConfirmationTimeoutId;
 
 const matchDifficultyConfig = {
     basic: {
@@ -164,8 +271,8 @@ const matchDifficultyConfig = {
         storageKey: 'colorMemoryBestMatchScore_basic',
         rules: [
             '每关将显示一个目标颜色，观察并记住它',
-            '6 秒后，屏幕上将出现 3×3 共 9 个颜色方块',
-            '从这些方块中找出与目标颜色完全相同的那个',
+            '5 秒后，屏幕上将出现 3×3 共 9 个颜色方块',
+            '干扰色按 Oklab 感知距离生成，并随关卡逐渐接近目标',
             '无论对错都会进入下一关',
             '完成 10 关后统计正确率，并保存基础模式最佳正确数'
         ]
@@ -178,8 +285,8 @@ const matchDifficultyConfig = {
         storageKey: 'colorMemoryBestMatchScore_advanced',
         rules: [
             '每关将显示一个目标颜色，观察并记住它',
-            '6 秒后，屏幕上将出现 4×4 共 16 个颜色方块',
-            '从更多干扰色中找出与目标颜色完全相同的那个',
+            '5 秒后，屏幕上将出现 4×4 共 16 个颜色方块',
+            '干扰色按更窄的 Oklab 感知距离生成，并随关卡逐渐接近目标',
             '无论对错都会进入下一关',
             '完成 10 关后统计正确率，并保存进阶模式最佳正确数'
         ]
@@ -192,7 +299,8 @@ const matchDifficultyConfig = {
         storageKey: 'colorMemoryBestMatchScore_master',
         rules: [
             '每关将显示一个目标颜色，观察并记住它',
-            '6 秒后，屏幕上将出现 4×4 共 16 个颜色方块',
+            '5 秒后，屏幕上将出现 4×4 共 16 个颜色方块',
+            'Oklab 感知距离会持续收窄，直到大师难度下限',
             '答对得 1 分并进入下一关；答错后继续本关',
             '共有 3 条生命，每次答错会失去 1 条生命',
             '生命归零后游戏结束，并保存大师模式最佳分数'
@@ -205,39 +313,39 @@ const recallDifficultyConfig = {
         name: '基础',
         controlName: 'HSL 控制',
         preview: true,
-        storageKey: 'colorMemoryBestRecallScore_basic',
+        storageKey: 'colorMemoryBestRecallScore_basic_oklab_v2',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
-            '6 秒后目标颜色隐藏，进入复现环节',
-            '使用 HSL 色轮和明度滑杆调整颜色',
+            '5 秒后目标颜色隐藏，进入复现环节',
+            '使用 HSL 色轮或色相、饱和度、明度滑杆调整颜色',
             '调整时可以实时看到当前复现颜色',
-            '每轮满分 10 分，共 10 轮；按总分保存基础模式最佳纪录'
+            '每轮按 Oklab 感知色差计分，满分 10 分，共 10 轮'
         ]
     },
     advanced: {
         name: '进阶',
         controlName: 'RGB 控制',
         preview: true,
-        storageKey: 'colorMemoryBestRecallScore_advanced',
+        storageKey: 'colorMemoryBestRecallScore_advanced_oklab_v2',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
-            '6 秒后目标颜色隐藏，进入复现环节',
+            '5 秒后目标颜色隐藏，进入复现环节',
             '使用 R、G、B 三个滑杆调整颜色',
             '调整时可以实时看到当前复现颜色',
-            '每轮满分 10 分，共 10 轮；按总分保存进阶模式最佳纪录'
+            '每轮按 Oklab 感知色差计分，满分 10 分，共 10 轮'
         ]
     },
     master: {
         name: '大师',
         controlName: 'RGB 盲调',
         preview: false,
-        storageKey: 'colorMemoryBestRecallScore_master',
+        storageKey: 'colorMemoryBestRecallScore_master_oklab_v2',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
-            '6 秒后目标颜色隐藏，进入复现环节',
+            '5 秒后目标颜色隐藏，进入复现环节',
             '只使用 R、G、B 三个滑杆调整参数',
             '调整时不会显示实时颜色预览',
-            '每轮满分 10 分，共 10 轮；按总分保存大师模式最佳纪录'
+            '每轮按 Oklab 感知色差计分，满分 10 分，共 10 轮'
         ]
     }
 };
@@ -248,7 +356,6 @@ function showScreen(screen) {
     });
     updateBrandState(screen);
     updateStatsVisibility(screen);
-    updateSupportingVisibility(screen);
     window.scrollTo(0, 0);
 }
 
@@ -259,30 +366,32 @@ function updateBrandState(screen) {
     elements.brandHeader.classList.toggle('hidden', screen === elements.landingScreen || isActiveGameScreen);
 }
 
-function updateSupportingVisibility(screen) {
-    const isFinalResult = screen === elements.resultScreen && !gameState.isGameActive;
-    const shouldShow = screen === elements.landingScreen
-        || screen === elements.modeSelectionScreen
-        || isFinalResult;
-    elements.supportingContent.classList.toggle('hidden', !shouldShow);
-}
-
 function showRecallSection(section) {
     recallSections.forEach((item) => {
         item.classList.toggle('hidden', item !== section);
     });
-    requestAnimationFrame(() => section.scrollIntoView({ block: 'start' }));
+    requestAnimationFrame(() => {
+        if (section.classList.contains('hidden')) return;
+        section.querySelector('h2')?.focus({ preventScroll: true });
+        section.scrollIntoView({ block: 'start' });
+    });
 }
 
 function stopActiveCountdown() {
     activeCountdownId++;
+    if (paletteRetryTimeoutId) {
+        clearTimeout(paletteRetryTimeoutId);
+        paletteRetryTimeoutId = undefined;
+    }
 }
 
 function resetRecallAttemptState() {
     gameState.recallTotalScore = 0;
+    gameState.recallTotalScoreCenti = 0;
     gameState.recallRound = 1;
     gameState.recallRoundSubmitted = false;
     gameState.recallLastRoundScore = 0;
+    gameState.recallLastRoundDistance = 0;
     gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
     gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
     elements.nextRecallBtn.textContent = '下一轮';
@@ -301,9 +410,26 @@ function resetResultColorBlocks() {
     elements.resultSelectedColor.innerHTML = '';
 }
 
+function showMatchResultLayout() {
+    elements.matchResultSummary.classList.remove('hidden');
+    elements.recallFinalSummary.classList.add('hidden');
+    elements.resultChangeDifficulty.classList.add('hidden');
+    elements.continueButton.classList.remove('hidden');
+    elements.restartButton.classList.remove('recall-primary-action');
+    elements.restartButton.textContent = '重新开始';
+}
+
+function showRecallFinalLayout() {
+    elements.matchResultSummary.classList.add('hidden');
+    elements.recallFinalSummary.classList.remove('hidden');
+    elements.resultChangeDifficulty.classList.remove('hidden');
+    elements.restartButton.classList.add('recall-primary-action');
+    elements.restartButton.textContent = '再玩一次';
+}
+
 function loadColorHistory() {
     try {
-        const savedHistory = JSON.parse(localStorage.getItem(COLOR_HISTORY_STORAGE_KEY) || '[]');
+        const savedHistory = JSON.parse(getStorageItem(COLOR_HISTORY_STORAGE_KEY) || '[]');
         return Array.isArray(savedHistory) ? savedHistory.slice(-MAX_COLOR_HISTORY) : [];
     } catch {
         return [];
@@ -311,19 +437,31 @@ function loadColorHistory() {
 }
 
 function saveColorHistory() {
-    localStorage.setItem(COLOR_HISTORY_STORAGE_KEY, JSON.stringify(gameState.colorHistory));
+    setStorageItem(COLOR_HISTORY_STORAGE_KEY, JSON.stringify(gameState.colorHistory));
 }
 
 function updateStatsVisibility(screen) {
     const isMainMenu = screen === elements.landingScreen
-        || screen === elements.modeSelectionScreen;
+        || screen === elements.modeSelectionScreen
+        || screen === elements.colorHistoryScreen;
+    const isPreparationScreen = screen === elements.startScreen;
     const isDifficultyScreen = screen === elements.matchDifficultyScreen
         || screen === elements.recallDifficultyScreen;
+    const isRecallFinalResult = screen === elements.resultScreen
+        && gameState.gameMode === 'colorRecall'
+        && !gameState.isGameActive;
+    const isRecallGameplay = screen === elements.colorRecallScreen;
 
-    elements.gameInfoBar.classList.toggle('hidden', isMainMenu);
+    if (isRecallGameplay) {
+        elements.colorRecallScreen.prepend(elements.gameInfoBar);
+    } else {
+        elements.gameInfoAnchor.after(elements.gameInfoBar);
+    }
+    elements.gameInfoBar.classList.toggle('hidden', isMainMenu || isPreparationScreen || isRecallFinalResult);
+    elements.gameInfoBar.classList.toggle('recall-stats', isRecallGameplay);
     elements.gameStatsPanel.classList.toggle('hidden', isMainMenu || isDifficultyScreen);
     elements.modeBestOverview.classList.toggle('hidden', !isDifficultyScreen);
-    elements.gameInfoBar.style.gridTemplateColumns = '1fr auto';
+    elements.gameInfoBar.style.gridTemplateColumns = '1fr';
     elements.gameInfoBar.style.justifyContent = 'stretch';
 }
 
@@ -443,7 +581,6 @@ function initGame() {
     // 更新最佳分数显示
     updateBrandState(elements.landingScreen);
     updateStatsVisibility(elements.landingScreen);
-    updateSupportingVisibility(elements.landingScreen);
     updateBestOverviews();
     updateDisplays();
     updateColorHistoryDisplay();
@@ -451,11 +588,9 @@ function initGame() {
     // 设置HSL色轮交互
     setupHSLWheelInteraction();
     
-    // 设置音效状态
-    updateSoundIcon();
-    
     // 绑定事件监听器
     elements.enterGameButton.addEventListener('click', () => showScreen(elements.modeSelectionScreen));
+    elements.colorHistoryEntry.addEventListener('click', openColorHistory);
     bindCardActivation(elements.colorMatchMode, () => showDifficultyScreen(elements.matchDifficultyScreen, 'colorMatch'));
     elements.matchDifficultyCards.forEach((card) => {
         bindCardActivation(card, () => selectMatchDifficulty(card.dataset.matchDifficulty));
@@ -471,20 +606,41 @@ function initGame() {
     elements.backButtons.forEach((button) => {
         button.addEventListener('click', () => handleBackNavigation(button.dataset.backTarget));
     });
-    elements.clearHistoryBtn.addEventListener('click', clearGlobalColorHistory);
-    elements.soundToggle.addEventListener('click', toggleSound);
+    elements.clearHistoryBtn.addEventListener('click', handleClearHistoryRequest);
+    elements.clearHistoryCancel.addEventListener('click', () => {
+        resetClearHistoryConfirmation();
+        elements.clearHistoryBtn.focus();
+    });
+    elements.resultChangeDifficulty.addEventListener('click', returnToRecallDifficultySelection);
+    elements.scoreInfoButton.addEventListener('click', openScoreInfoDialog);
+    elements.scoreInfoClose.addEventListener('click', closeScoreInfoDialog);
+    elements.scoreInfoConfirm.addEventListener('click', closeScoreInfoDialog);
+    elements.scoreInfoDialog.addEventListener('click', (event) => {
+        if (event.target === elements.scoreInfoDialog) closeScoreInfoDialog();
+    });
+    elements.scoreInfoDialog.addEventListener('keydown', handleScoreInfoDialogKeydown);
     // 倒计时期间不允许点击跳过，确保每轮观察时间一致。
 }
 
 function renderRules(rules) {
     elements.rulesList.innerHTML = rules
-        .map((rule) => `<li><i class="fa fa-circle text-xs mr-2"></i> ${rule}</li>`)
+        .map((rule) => `<li>${iconMarkup('circle', 'rule-icon')} ${rule}</li>`)
         .join('');
+}
+
+function iconMarkup(name, className = '') {
+    return `<svg class="ui-icon ${className}" aria-hidden="true"><use href="#icon-${name}"></use></svg>`;
 }
 
 function showDifficultyScreen(screen, type = gameState.gameMode) {
     updateBestOverviews(type);
     showScreen(screen);
+}
+
+function openColorHistory() {
+    updateColorHistoryDisplay();
+    showScreen(elements.colorHistoryScreen);
+    requestAnimationFrame(() => elements.colorHistoryTitle.focus({ preventScroll: true }));
 }
 
 function selectMatchDifficulty(difficulty) {
@@ -502,6 +658,7 @@ function selectRecallDifficulty(difficulty) {
     gameState.gameMode = 'colorRecall';
     gameState.recallDifficulty = difficulty;
     gameState.recallTotalScore = 0;
+    gameState.recallTotalScoreCenti = 0;
     gameState.recallRound = 1;
     renderRules(config.rules);
     updateDisplays();
@@ -517,9 +674,13 @@ function handleBackNavigation(target) {
     stopActiveCountdown();
 
     if (target === 'landing') {
+        const returnsFromPalette = !elements.colorHistoryScreen.classList.contains('hidden');
         gameState.gameMode = null;
         showScreen(elements.landingScreen);
         updateDisplays();
+        if (returnsFromPalette) {
+            requestAnimationFrame(() => elements.colorHistoryEntry.focus({ preventScroll: true }));
+        }
         return;
     }
 
@@ -578,9 +739,18 @@ function restartCurrentRecallDifficulty() {
     showScreen(elements.startScreen);
 }
 
+function returnToRecallDifficultySelection() {
+    stopActiveCountdown();
+    gameState.isGameActive = false;
+    gameState.gameMode = 'colorRecall';
+    resetResultColorBlocks();
+    resetRecallAttemptState();
+    showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
+}
+
 function handleRestartButton() {
     if (gameState.gameMode === 'colorRecall') {
-        restartCurrentRecallDifficulty();
+        startGame();
         return;
     }
 
@@ -623,6 +793,11 @@ function startGame() {
 // 显示目标颜色
 function showTargetColor() {
     showScreen(elements.targetColorScreen);
+    if (paletteRetryTimeoutId) {
+        clearTimeout(paletteRetryTimeoutId);
+        paletteRetryTimeoutId = undefined;
+    }
+    gameState.matchRoundSubmitted = false;
     
     // 生成目标颜色
     gameState.currentTargetColor = generateColor(gameState.level);
@@ -633,7 +808,7 @@ function showTargetColor() {
     runCountdown({
         counter: elements.countdown,
         progressBar: elements.progressBar,
-        durationMs: 6000,
+        durationMs: OBSERVATION_DURATION_MS,
         onComplete: showColorGrid
     });
 }
@@ -649,16 +824,41 @@ function showColorGrid() {
     elements.colorGrid.className = 'grid gap-3 sm:gap-4';
     elements.colorGrid.style.gridTemplateColumns = `repeat(${config.gridSize}, minmax(0, 1fr))`;
     
-    // 生成颜色，其中一个是目标颜色
-    const colors = [gameState.currentTargetColor];
-    
-    // 生成其他不同的颜色
-    while (colors.length < gridTotal) {
-        const newColor = generateSimilarColor(gameState.currentTargetColor, gameState.level);
-        if (!colors.includes(newColor)) {
-            colors.push(newColor);
+    // 按当前难度的 Oklab 距离带一次性生成整组干扰色。
+    let distractors;
+    try {
+        distractors = generatePerceptualDistractors(
+            gameState.currentTargetColor,
+            gridTotal - 1,
+            {
+                difficulty: gameState.matchDifficulty,
+                level: gameState.level
+            }
+        );
+    } catch (error) {
+        console.warn('Retrying color palette with relaxed pair spacing.', error);
+        try {
+            distractors = generatePerceptualDistractors(
+                gameState.currentTargetColor,
+                gridTotal - 1,
+                {
+                    difficulty: gameState.matchDifficulty,
+                    level: gameState.level,
+                    maxAttempts: 16000,
+                    pairDistanceScale: 0.75
+                }
+            );
+        } catch (retryError) {
+            console.error('Unable to generate the color palette.', retryError);
+            elements.colorGrid.innerHTML = '<p class="col-span-full py-8 text-center text-gray-300">本轮色板生成失败，正在重新出题…</p>';
+            paletteRetryTimeoutId = setTimeout(() => {
+                paletteRetryTimeoutId = undefined;
+                showTargetColor();
+            }, 1000);
+            return;
         }
     }
+    const colors = [gameState.currentTargetColor, ...distractors];
     
     // 随机打乱颜色顺序
     shuffleArray(colors);
@@ -678,6 +878,9 @@ function showColorGrid() {
 
 // 检查颜色选择
 function checkColorSelection(selectedColor) {
+    if (gameState.matchRoundSubmitted) return;
+    gameState.matchRoundSubmitted = true;
+    showMatchResultLayout();
     showScreen(elements.resultScreen);
     resetResultColorBlocks();
     elements.resultDetail.innerHTML = '';
@@ -695,7 +898,7 @@ function checkColorSelection(selectedColor) {
     
     // 增加总答题数
     gameState.totalAnswers++;
-    const isCorrect = selectedColor === gameState.currentTargetColor;
+    const isCorrect = rgbToHex(selectedColor) === rgbToHex(gameState.currentTargetColor);
     const config = matchDifficultyConfig[gameState.matchDifficulty];
     
     // 判断选择是否正确
@@ -706,20 +909,15 @@ function checkColorSelection(selectedColor) {
         gameState.correctAnswers++;
         
         elements.resultIcon.className = 'text-6xl mb-4 text-success';
-        elements.resultIcon.innerHTML = '<i class="fa fa-check-circle"></i>';
+        elements.resultIcon.innerHTML = iconMarkup('check-circle');
         elements.resultText.textContent = '回答正确';
         elements.resultText.className = 'text-3xl font-bold mb-6 text-success';
-        
-        // 如果得分是5的倍数，播放升级音效
-        if (gameState.score % 5 === 0) {
-            playSound('levelUp');
-        }
+
     } else {
         // 选择错误
         playSound('wrong');
-        
         elements.resultIcon.className = 'text-6xl mb-4 text-danger';
-        elements.resultIcon.innerHTML = '<i class="fa fa-times-circle"></i>';
+        elements.resultIcon.innerHTML = iconMarkup('x-circle');
         elements.resultText.textContent = '没有选中目标色';
         elements.resultText.className = 'text-3xl font-bold mb-6 text-danger';
         
@@ -765,6 +963,7 @@ function nextLevel() {
 // 显示游戏结束
 function showGameEnd() {
     gameState.isGameActive = false;
+    showMatchResultLayout();
     showScreen(elements.resultScreen);
     elements.resultDetail.classList.add('hidden');
     elements.resultDetail.innerHTML = '';
@@ -772,7 +971,7 @@ function showGameEnd() {
     const isNewRecord = gameState.score > gameState.matchBestScores[gameState.matchDifficulty];
     if (isNewRecord) {
         gameState.matchBestScores[gameState.matchDifficulty] = gameState.score;
-        localStorage.setItem(config.storageKey, gameState.score.toString());
+        setStorageItem(config.storageKey, gameState.score.toString());
         updateBestOverviews();
     }
     
@@ -784,7 +983,7 @@ function showGameEnd() {
             : 0;
         
         elements.resultIcon.className = 'text-6xl mb-4 text-primary';
-        elements.resultIcon.innerHTML = '<i class="fa fa-trophy"></i>';
+        elements.resultIcon.innerHTML = iconMarkup('trophy');
         elements.resultText.textContent = `${config.name}颜色匹配完成！`;
         elements.resultText.className = 'text-3xl font-bold mb-6 text-primary';
         
@@ -800,7 +999,7 @@ function showGameEnd() {
     } else {
         // 大师无尽模式结束
         elements.resultIcon.className = 'text-6xl mb-4 text-secondary';
-        elements.resultIcon.innerHTML = '<i class="fa fa-star"></i>';
+        elements.resultIcon.innerHTML = iconMarkup('star');
         elements.resultText.textContent = '大师颜色匹配结束！';
         elements.resultText.className = 'text-3xl font-bold mb-6 text-secondary';
         
@@ -900,8 +1099,9 @@ function addToColorHistory(color) {
         hslText: details.hslText,
         context: getCurrentHistoryContext()
     });
+    selectedHistoryHex = details.hex;
     
-    // 最多显示50个历史颜色，满了按遇到顺序替换最旧的颜色。
+    // 最多保留100个历史颜色，满了按遇到顺序替换最旧的颜色。
     if (gameState.colorHistory.length > MAX_COLOR_HISTORY) {
         gameState.colorHistory.shift();
     }
@@ -926,71 +1126,72 @@ function getCurrentHistoryContext() {
 
 // 更新颜色历史显示
 function updateColorHistoryDisplay() {
-    elements.colorHistory.innerHTML = '';
-    
-    gameState.colorHistory.forEach((item, index) => {
+    elements.colorHistory.replaceChildren();
+    const historyCount = gameState.colorHistory.length;
+    const isEmpty = historyCount === 0;
+    elements.landingHistoryCount.textContent = historyCount;
+    elements.colorHistorySummary.textContent = `${historyCount} / ${MAX_COLOR_HISTORY}`;
+    elements.colorHistoryEmpty.classList.toggle('hidden', !isEmpty);
+    elements.colorHistoryCollection.classList.toggle('hidden', isEmpty);
+    elements.clearHistoryBtn.disabled = isEmpty;
+    resetClearHistoryConfirmation();
+    if (isEmpty) {
+        selectedHistoryHex = undefined;
+        return;
+    }
+
+    const displayedHistory = [...gameState.colorHistory].reverse();
+    if (!displayedHistory.some((item) => item.hex === selectedHistoryHex)) {
+        selectedHistoryHex = displayedHistory[0].hex;
+    }
+    const selectedItem = displayedHistory.find((item) => item.hex === selectedHistoryHex);
+    updateColorHistoryInspector(selectedItem);
+
+    displayedHistory.forEach((item, index) => {
         const colorBlock = document.createElement('button');
         colorBlock.type = 'button';
-        colorBlock.className = 'history-color w-11 h-11 rounded-full shadow-md cursor-pointer transition-transform hover:scale-110';
+        colorBlock.className = 'history-color';
         colorBlock.style.backgroundColor = item.color;
         colorBlock.title = `${item.hex} · ${item.context || '历史颜色'}`;
-        colorBlock.setAttribute('aria-label', `查看历史颜色 ${index + 1}：${item.hex}`);
-        
-        // 点击显示颜色代码
+        colorBlock.dataset.historyHex = item.hex;
+        colorBlock.classList.toggle('is-selected', item.hex === selectedHistoryHex);
+        colorBlock.setAttribute('aria-pressed', item.hex === selectedHistoryHex ? 'true' : 'false');
+        colorBlock.setAttribute('aria-label', `查看最近第 ${index + 1} 张色卡：${item.hex}`);
         colorBlock.addEventListener('click', () => {
-            showColorCodeTooltip(colorBlock, item);
+            selectColorHistoryItem(item);
         });
-        
+
         elements.colorHistory.appendChild(colorBlock);
     });
+
+    const visibleSlotCount = Math.min(
+        MAX_COLOR_HISTORY,
+        Math.max(10, Math.ceil(historyCount / 10) * 10)
+    );
+    for (let index = historyCount; index < visibleSlotCount; index++) {
+        const emptySlot = document.createElement('span');
+        emptySlot.className = 'palette-slot-empty';
+        emptySlot.setAttribute('aria-hidden', 'true');
+        elements.colorHistory.appendChild(emptySlot);
+    }
 }
 
-// 显示颜色代码提示
-function showColorCodeTooltip(element, item) {
-    // 检查是否已存在提示框
-    let tooltip = document.getElementById('color-tooltip');
-    if (tooltip) {
-        tooltip.remove();
-    }
-    
-    // 创建新的提示框
-    tooltip = document.createElement('div');
-    tooltip.id = 'color-tooltip';
-    tooltip.className = 'fixed z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-3 animate-fade-in';
-    
-    // 提示框内容
-    tooltip.innerHTML = `
-        <div class="flex items-center space-x-3">
-            <div class="w-6 h-6 rounded-full" style="background-color: ${element.style.backgroundColor}"></div>
-            <div>
-                <p class="text-xs text-gray-400">${item.context || '历史颜色'}</p>
-                <p class="font-mono text-sm">${item.hex}</p>
-                <p class="font-mono text-xs text-gray-300">${item.rgbText}</p>
-                <p class="font-mono text-xs text-gray-300">${item.hslText}</p>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(tooltip);
-    const elementRect = element.getBoundingClientRect();
-    const tooltipRect = tooltip.getBoundingClientRect();
-    const centeredLeft = elementRect.left + (elementRect.width - tooltipRect.width) / 2;
-    const maxLeft = Math.max(8, window.innerWidth - tooltipRect.width - 8);
-    const left = Math.min(Math.max(8, centeredLeft), maxLeft);
-    const preferredTop = elementRect.top - tooltipRect.height - 8;
-    const top = preferredTop >= 8 ? preferredTop : elementRect.bottom + 8;
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
-    
-    // 点击其他地方关闭提示框
-    setTimeout(() => {
-        document.addEventListener('click', function closeTooltip(e) {
-            if (!tooltip.contains(e.target) && e.target !== element) {
-                tooltip.remove();
-                document.removeEventListener('click', closeTooltip);
-            }
-        });
-    }, 100);
+function updateColorHistoryInspector(item) {
+    elements.paletteInspectorSwatch.style.backgroundColor = item.color;
+    elements.paletteInspectorHex.textContent = item.hex;
+    elements.paletteInspectorRgb.textContent = item.rgbText;
+    elements.paletteInspectorHsl.textContent = item.hslText;
+    elements.paletteInspectorContext.textContent = item.context || '历史颜色';
+}
+
+function selectColorHistoryItem(item) {
+    selectedHistoryHex = item.hex;
+    updateColorHistoryInspector(item);
+    elements.colorHistory.querySelectorAll('.history-color').forEach((colorBlock) => {
+        const isSelected = colorBlock.dataset.historyHex === selectedHistoryHex;
+        colorBlock.classList.toggle('is-selected', isSelected);
+        colorBlock.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    });
 }
 
 // ============ 颜色复现模式函数 ============
@@ -999,18 +1200,23 @@ function showColorCodeTooltip(element, item) {
 function startColorRecallRound() {
     gameState.recallRoundSubmitted = false;
     gameState.recallLastRoundScore = 0;
+    gameState.recallLastRoundDistance = 0;
     elements.nextRecallBtn.textContent = '下一轮';
     updateDisplays();
     configureRecallControlPanel();
 
     // 生成随机目标颜色
     const targetColor = generateColor(gameState.recallRound);
-    const [, h, s, l] = targetColor.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/).map(Number);
-    gameState.recallTargetHSL = { h, s, l };
-    gameState.recallTargetRGB = hslToRgb(h, s, l);
+    const generatedRgb = parseColorToRgb(targetColor);
+    const targetHsl = rgbToHsl(generatedRgb);
+    const targetRgb = gameState.recallDifficulty === 'basic'
+        ? hslToRgb(targetHsl.h, targetHsl.s, targetHsl.l)
+        : generatedRgb;
+    gameState.recallTargetHSL = targetHsl;
+    gameState.recallTargetRGB = targetRgb;
     
     // 设置目标颜色显示
-    elements.recallTargetColor.style.backgroundColor = targetColor;
+    elements.recallTargetColor.style.backgroundColor = rgbToCss(targetRgb);
     
     // 显示目标区域，隐藏控制和结果区域
     showScreen(elements.colorRecallScreen);
@@ -1019,6 +1225,8 @@ function startColorRecallRound() {
     // 重置用户颜色
     gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
     gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
+    elements.hueSlider.value = 0;
+    elements.saturationSlider.value = 100;
     elements.lightnessSlider.value = 50;
     elements.lightnessValue.textContent = '50%';
     elements.redSlider.value = 128;
@@ -1030,8 +1238,11 @@ function startColorRecallRound() {
     runCountdown({
         counter: elements.recallCountdown,
         progressBar: elements.recallProgressBar,
-        durationMs: 6000,
-        onComplete: () => showRecallSection(elements.recallControlSection)
+        durationMs: OBSERVATION_DURATION_MS,
+        onComplete: () => {
+            showRecallSection(elements.recallControlSection);
+            requestAnimationFrame(updateHSLPointerPosition);
+        }
     });
 }
 
@@ -1078,7 +1289,12 @@ function updateRecallUserColor() {
     const { h, s, l } = gameState.recallUserHSL;
     const { r, g, b } = gameState.recallUserRGB;
 
+    elements.hueSlider.value = h;
+    elements.saturationSlider.value = s;
+    elements.hueValue.textContent = `${h}°`;
+    elements.saturationValue.textContent = `${s}%`;
     elements.lightnessValue.textContent = `${l}%`;
+    elements.saturationSlider.style.backgroundImage = `linear-gradient(to right, hsl(${h}, 0%, ${l}%), hsl(${h}, 100%, ${l}%))`;
     elements.redValue.textContent = r;
     elements.greenValue.textContent = g;
     elements.blueValue.textContent = b;
@@ -1093,25 +1309,119 @@ function updateRecallUserColor() {
     elements.recallUserCodeDisplay.textContent = `rgb(${r}, ${g}, ${b})`;
 }
 
+function getRecallFeedback(score, round = 1) {
+    const safeScore = Math.max(0, Math.min(10, Number(score) || 0));
+    const tier = recallFeedbackTiers.find(({ minScore }) => safeScore >= minScore)
+        || recallFeedbackTiers[recallFeedbackTiers.length - 1];
+    const messageIndex = (Math.max(1, Number(round) || 1) - 1) % tier.messages.length;
+    return tier.messages[messageIndex];
+}
+
+function getScoreBracket(distance) {
+    const safeDistance = Math.max(0, Number(distance) || 0);
+    const exactAnchor = OKLAB_SCORE_ANCHORS.find((anchor) => (
+        Math.abs(anchor.distance - safeDistance) < 1e-9
+    ));
+    if (exactAnchor) return { lower: exactAnchor, upper: exactAnchor };
+
+    for (let index = 1; index < OKLAB_SCORE_ANCHORS.length; index++) {
+        const upper = OKLAB_SCORE_ANCHORS[index];
+        if (safeDistance < upper.distance) {
+            return { lower: OKLAB_SCORE_ANCHORS[index - 1], upper };
+        }
+    }
+
+    const lastAnchor = OKLAB_SCORE_ANCHORS[OKLAB_SCORE_ANCHORS.length - 1];
+    return { lower: lastAnchor, upper: null };
+}
+
+function updateScoreInfoDialog() {
+    const score = gameState.recallLastRoundScore;
+    const distance = gameState.recallLastRoundDistance;
+    const { lower, upper } = getScoreBracket(distance);
+
+    elements.scoreInfoTitle.textContent = `这 ${score.toFixed(2)} 分是怎么来的？`;
+    elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
+    elements.scoreInfoDistance.textContent = distance.toFixed(1);
+
+    if (!upper) {
+        elements.scoreInfoRange.textContent = `本轮色差 ${distance.toFixed(1)}，超过最后一个评分锚点 ${lower.distance}。`;
+        elements.scoreInfoInterpolation.textContent = `色差达到 ${lower.distance} 或更高时，本轮得分为 ${score.toFixed(2)}。`;
+        return;
+    }
+
+    if (lower === upper) {
+        elements.scoreInfoRange.textContent = `本轮色差 ${distance.toFixed(1)}，正好落在评分锚点上。`;
+        elements.scoreInfoInterpolation.textContent = `这个锚点对应 ${lower.score.toFixed(1)} 分，本轮最终得分为 ${score.toFixed(2)}。`;
+        return;
+    }
+
+    elements.scoreInfoRange.textContent = `本轮色差 ${distance.toFixed(1)}，位于 ${lower.distance} 和 ${upper.distance} 之间。`;
+    elements.scoreInfoInterpolation.textContent = `对应分数从 ${lower.score.toFixed(1)} 到 ${upper.score.toFixed(1)} 线性换算，本轮最终得分为 ${score.toFixed(2)}。`;
+}
+
+function openScoreInfoDialog() {
+    updateScoreInfoDialog();
+    scoreInfoReturnFocus = elements.scoreInfoButton;
+    elements.scoreInfoDialog.classList.remove('hidden');
+    elements.scoreInfoDialog.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    elements.scoreInfoClose.focus();
+}
+
+function closeScoreInfoDialog() {
+    if (elements.scoreInfoDialog.classList.contains('hidden')) return;
+    elements.scoreInfoDialog.classList.add('hidden');
+    elements.scoreInfoDialog.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (scoreInfoReturnFocus?.isConnected) scoreInfoReturnFocus.focus();
+    scoreInfoReturnFocus = undefined;
+}
+
+function handleScoreInfoDialogKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeScoreInfoDialog();
+        return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const focusable = [elements.scoreInfoClose, elements.scoreInfoConfirm];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+    }
+}
+
 // 提交颜色复现答案
 function submitRecallAnswer() {
     if (gameState.recallRoundSubmitted) return;
 
     const target = gameState.recallTargetRGB;
     const user = getRecallUserRGB();
-    const score = parseFloat(calculateRgbSimilarity(target, user));
+    const distance = calculatePerceptualDistance(target, user);
+    const scoreCenti = Math.round(calculatePerceptualScore(target, user) * 100);
+    const score = scoreCenti / 100;
     addToColorHistory(`rgb(${target.r}, ${target.g}, ${target.b})`);
     
     // 累计得分
-    gameState.recallTotalScore += score;
+    gameState.recallTotalScoreCenti += scoreCenti;
+    gameState.recallTotalScore = gameState.recallTotalScoreCenti / 100;
     gameState.recallRoundSubmitted = true;
     gameState.recallLastRoundScore = score;
+    gameState.recallLastRoundDistance = distance;
     
     // 显示结果
     showRecallSection(elements.recallResultSection);
     
     // 显示本轮得分
     elements.recallRoundScore.textContent = score.toFixed(2);
+    elements.recallRoundFeedback.textContent = getRecallFeedback(score, gameState.recallRound);
     
     // 显示目标颜色和用户复现
     elements.recallResultTarget.style.backgroundColor = `rgb(${target.r}, ${target.g}, ${target.b})`;
@@ -1128,28 +1438,28 @@ function submitRecallAnswer() {
     if (gameState.recallRound >= gameState.recallTotalRounds) {
         elements.nextRecallBtn.textContent = '查看结果';
     }
-    
-    // 播放音效
+
     playSound('correct');
 }
 
 // 下一轮或结束
 function nextRecallRoundOrEnd() {
-    gameState.recallRound++;
-    
-    if (gameState.recallRound > gameState.recallTotalRounds) {
-        // 游戏结束
+    if (!gameState.isGameActive || !gameState.recallRoundSubmitted) return;
+
+    if (gameState.recallRound >= gameState.recallTotalRounds) {
         showColorRecallResult();
-    } else {
-        // 下一轮
-        elements.nextRecallBtn.textContent = '下一轮';
-        startColorRecallRound();
+        return;
     }
+
+    gameState.recallRound++;
+    elements.nextRecallBtn.textContent = '下一轮';
+    startColorRecallRound();
 }
 
 // 显示颜色复现游戏结果
 function showColorRecallResult() {
     gameState.isGameActive = false;
+    showRecallFinalLayout();
     showScreen(elements.resultScreen);
     resetResultColorBlocks();
     elements.resultDetail.innerHTML = '';
@@ -1157,35 +1467,43 @@ function showColorRecallResult() {
     const config = recallDifficultyConfig[gameState.recallDifficulty];
     
     // 检查是否是新纪录
-    const isNewRecord = gameState.recallTotalScore > gameState.recallBestScores[gameState.recallDifficulty];
+    const previousBest = gameState.recallBestScores[gameState.recallDifficulty];
+    const isNewRecord = gameState.recallTotalScore > previousBest;
     if (isNewRecord) {
         gameState.recallBestScores[gameState.recallDifficulty] = gameState.recallTotalScore;
-        localStorage.setItem(config.storageKey, gameState.recallTotalScore.toString());
+        setStorageItem(config.storageKey, gameState.recallTotalScore.toString());
         updateBestOverviews();
     }
     
     elements.resultIcon.className = 'text-6xl mb-4 text-primary';
-    elements.resultIcon.innerHTML = '<i class="fa fa-palette"></i>';
+    elements.resultIcon.innerHTML = iconMarkup('paint-brush');
     elements.resultText.textContent = `${config.name}颜色复现完成！`;
     elements.resultText.className = 'text-3xl font-bold mb-6 text-primary';
-    
-    elements.resultLevel.textContent = gameState.recallTotalRounds;
-    elements.resultLevelLabel.textContent = '完成轮数';
-    elements.resultScore.textContent = gameState.recallTotalScore.toFixed(2);
-    
-    elements.resultTargetColor.style.backgroundColor = 'transparent';
-    elements.resultTargetColor.style.border = '2px solid #5ec8c2';
-    elements.resultTargetColor.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
-    elements.resultTargetColor.innerHTML = `<p class="text-sm">累计得分</p><p class="text-2xl font-bold text-primary">${gameState.recallTotalScore.toFixed(2)}</p>`;
-    document.getElementById('target-color-code').textContent = '';
-    
-    elements.resultSelectedColor.style.backgroundColor = 'transparent';
-    elements.resultSelectedColor.style.border = '2px solid #f36f63';
-    elements.resultSelectedColor.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
-    elements.resultSelectedColor.innerHTML = `<p class="text-sm">${isNewRecord ? '新纪录' : `${config.name}最佳`}</p><p class="text-2xl font-bold text-success">${gameState.recallBestScores[gameState.recallDifficulty].toFixed(2)}</p>`;
-    document.getElementById('selected-color-code').textContent = '';
-    
+
+    const totalScore = gameState.recallTotalScore;
+    const bestScore = gameState.recallBestScores[gameState.recallDifficulty];
+    const averageScore = totalScore / gameState.recallTotalRounds;
+
+    elements.recallFinalScore.textContent = totalScore.toFixed(2);
+    elements.recallFinalMax.textContent = `/ ${gameState.recallTotalRounds * 10}`;
+    elements.recallFinalAverage.textContent = averageScore.toFixed(2);
+    elements.recallFinalBest.textContent = bestScore.toFixed(2);
+    elements.recallFinalRounds.textContent = gameState.recallTotalRounds;
+
+    if (isNewRecord && previousBest > 0) {
+        elements.recallFinalRecordNote.textContent = `刷新个人最佳，比上次提高 ${(totalScore - previousBest).toFixed(2)} 分`;
+    } else if (isNewRecord) {
+        elements.recallFinalRecordNote.textContent = '首次完成，已记录为个人最佳';
+    } else if (totalScore === previousBest) {
+        elements.recallFinalRecordNote.textContent = '追平个人最佳';
+    } else {
+        elements.recallFinalRecordNote.textContent = `距离个人最佳还差 ${(previousBest - totalScore).toFixed(2)} 分`;
+    }
+
+    updateDisplays();
     elements.continueButton.classList.add('hidden');
+    elements.restartButton.classList.remove('hidden');
+    requestAnimationFrame(() => elements.resultText.focus({ preventScroll: true }));
 }
 
 // 设置HSL色轮交互
@@ -1253,6 +1571,15 @@ function setupHSLWheelInteraction() {
     });
     
     // 亮度滑块
+    const syncHslSliders = () => {
+        gameState.recallUserHSL.h = parseInt(elements.hueSlider.value);
+        gameState.recallUserHSL.s = parseInt(elements.saturationSlider.value);
+        updateHSLPointerPosition();
+        updateRecallUserColor();
+    };
+    elements.hueSlider.addEventListener('input', syncHslSliders);
+    elements.saturationSlider.addEventListener('input', syncHslSliders);
+
     elements.lightnessSlider.addEventListener('input', (e) => {
         gameState.recallUserHSL.l = parseInt(e.target.value);
         updateRecallUserColor();
@@ -1277,55 +1604,80 @@ function setupHSLWheelInteraction() {
     elements.nextRecallBtn.addEventListener('click', nextRecallRoundOrEnd);
 }
 
+function handleClearHistoryRequest() {
+    if (!elements.clearHistoryBtn.classList.contains('is-confirming')) {
+        elements.clearHistoryBtn.classList.add('is-confirming');
+        elements.clearHistoryBtn.textContent = '确认清空';
+        elements.clearHistoryCancel.classList.remove('hidden');
+        clearHistoryConfirmationTimeoutId = setTimeout(resetClearHistoryConfirmation, 5000);
+        return;
+    }
+
+    clearGlobalColorHistory();
+}
+
+function resetClearHistoryConfirmation() {
+    const shouldReturnFocus = document.activeElement === elements.clearHistoryCancel;
+    clearTimeout(clearHistoryConfirmationTimeoutId);
+    clearHistoryConfirmationTimeoutId = undefined;
+    elements.clearHistoryBtn.classList.remove('is-confirming');
+    elements.clearHistoryBtn.textContent = '清空全部色卡';
+    elements.clearHistoryCancel.classList.add('hidden');
+    if (shouldReturnFocus) elements.clearHistoryBtn.focus();
+}
+
 function clearGlobalColorHistory() {
     gameState.colorHistory = [];
-    localStorage.removeItem(COLOR_HISTORY_STORAGE_KEY);
+    selectedHistoryHex = undefined;
+    removeStorageItem(COLOR_HISTORY_STORAGE_KEY);
     updateColorHistoryDisplay();
-    const tooltip = document.getElementById('color-tooltip');
-    if (tooltip) tooltip.remove();
+    requestAnimationFrame(() => elements.colorHistoryTitle.focus({ preventScroll: true }));
 }
 
-// 切换音效
-function toggleSound() {
-    gameState.isSoundEnabled = !gameState.isSoundEnabled;
-    localStorage.setItem('colorMemorySound', gameState.isSoundEnabled);
-    updateSoundIcon();
+function disableAudioAfterFailure() {
+    audioContext = undefined;
 }
 
-// 更新音效图标
-function updateSoundIcon() {
-    elements.soundIcon.className = gameState.isSoundEnabled ? 'fa fa-volume-up text-xl' : 'fa fa-volume-off text-xl';
-    elements.soundToggle.setAttribute('aria-label', gameState.isSoundEnabled ? '关闭音效' : '开启音效');
-}
-
-// 播放音效
 function playSound(soundName) {
     const notes = soundPatterns[soundName];
     const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!gameState.isSoundEnabled || !notes || !AudioContext) return;
+    if (!notes || !AudioContext) return;
 
-    if (!audioContext) audioContext = new AudioContext();
+    try {
+        if (!audioContext) audioContext = new AudioContext();
+    } catch {
+        disableAudioAfterFailure();
+        return;
+    }
 
     const playNotes = () => {
-        const now = audioContext.currentTime;
-        notes.forEach((frequency, index) => {
-            const start = now + index * 0.1;
-            const oscillator = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            oscillator.type = soundName === 'wrong' ? 'triangle' : 'sine';
-            oscillator.frequency.setValueAtTime(frequency, start);
-            gain.gain.setValueAtTime(0.0001, start);
-            gain.gain.exponentialRampToValueAtTime(0.12, start + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
-            oscillator.connect(gain);
-            gain.connect(audioContext.destination);
-            oscillator.start(start);
-            oscillator.stop(start + 0.15);
-        });
+        try {
+            const now = audioContext.currentTime;
+            notes.forEach((frequency, index) => {
+                const start = now + index * 0.1;
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                oscillator.type = soundName === 'wrong' ? 'triangle' : 'sine';
+                oscillator.frequency.setValueAtTime(frequency, start);
+                gain.gain.setValueAtTime(0.0001, start);
+                gain.gain.exponentialRampToValueAtTime(0.12, start + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
+                oscillator.connect(gain);
+                gain.connect(audioContext.destination);
+                oscillator.start(start);
+                oscillator.stop(start + 0.15);
+            });
+        } catch {
+            disableAudioAfterFailure();
+        }
     };
 
     if (audioContext.state === 'suspended') {
-        audioContext.resume().then(playNotes).catch(() => {});
+        try {
+            Promise.resolve(audioContext.resume()).then(playNotes).catch(disableAudioAfterFailure);
+        } catch {
+            disableAudioAfterFailure();
+        }
     } else {
         playNotes();
     }

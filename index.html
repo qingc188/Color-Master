@@ -7,56 +7,39 @@
     <meta name="theme-color" content="#071820">
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
-    <!-- Tailwind CSS v3 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- 统一的 Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#5ec8c2',
-                        secondary: '#f36f63',
-                        success: '#5ec8c2',
-                        danger: '#f36f63',
-                        dark: '#071820',
-                        light: '#f4efe6'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'bounce-fast': 'bounce 0.5s infinite',
-                        'fade-in': 'fadeIn 0.5s ease-in-out',
-                        'scale-in': 'scaleIn 0.3s ease-in-out',
-                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        scaleIn: {
-                            '0%': { transform: 'scale(0.9)', opacity: '0' },
-                            '100%': { transform: 'scale(1)', opacity: '1' },
-                        },
-                        shake: {
-                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
-                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
-                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
-                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <link rel="stylesheet" href="tailwind.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
+    <svg class="icon-sprite" aria-hidden="true">
+        <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 5 3 12l7 7"></path><path d="M3 12h18"></path>
+        </symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m5 12.5 4.2 4.2L19 7"></path>
+        </symbol>
+        <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="m6 6 12 12M18 6 6 18"></path>
+        </symbol>
+        <symbol id="icon-circle" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <circle cx="12" cy="12" r="3"></circle>
+        </symbol>
+        <symbol id="icon-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.7 2.7L16.5 9"></path>
+        </symbol>
+        <symbol id="icon-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6M15 9l-6 6"></path>
+        </symbol>
+        <symbol id="icon-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"></path><path d="M8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 12v5M8 21h8M9 17h6"></path>
+        </symbol>
+        <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+            <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path>
+        </symbol>
+        <symbol id="icon-paint-brush" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m14 4 6 6-8.5 8.5H5.5v-6L14 4Z"></path><path d="m11 7 6 6M5.5 18.5 3 21"></path>
+        </symbol>
+    </svg>
     <!-- 游戏容器 -->
     <div class="app-container container mx-auto px-4 py-8 max-w-4xl">
         <!-- 游戏内品牌条，独立首页中隐藏 -->
@@ -71,8 +54,9 @@
         </header>
 
         <!-- 游戏信息栏 -->
-        <div id="game-info-bar" class="glass-dark rounded-xl p-3 sm:p-4 mb-6 grid grid-cols-[1fr_auto] items-center gap-3 sm:gap-4 animate-fade-in border border-white/10 shadow-lg">
-            <div id="game-stats-panel" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <span id="game-info-anchor" hidden></span>
+        <div id="game-info-bar" class="glass-dark rounded-xl p-3 sm:p-4 mb-6 grid grid-cols-1 items-center gap-3 sm:gap-4 animate-fade-in border border-white/10 shadow-lg">
+            <div id="game-stats-panel" class="grid grid-cols-3 gap-3">
                 <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
                     <p id="level-label" class="text-sm text-gray-400">当前关卡</p>
                     <p id="level" class="text-2xl font-bold text-white">1</p>
@@ -104,11 +88,6 @@
                     <p id="overview-best-master" class="text-xl sm:text-2xl font-bold text-white">0</p>
                 </div>
             </div>
-            <div>
-                <button id="sound-toggle" type="button" aria-label="关闭音效" class="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 hover:bg-gray-700 transition-colors duration-300">
-                    <i id="sound-icon" class="fa fa-volume-up text-xl text-white"></i>
-                </button>
-            </div>
         </div>
 
         <!-- 游戏主区域 -->
@@ -129,7 +108,75 @@
                 </div>
                 <div class="landing-actions">
                     <button id="enter-game-button" type="button" class="landing-primary">开始挑战</button>
-                    <a href="#game-guide" class="landing-secondary">了解玩法</a>
+                    <button id="color-history-entry" type="button" class="landing-palette-link">
+                        <span class="landing-palette-dot" aria-hidden="true"></span>
+                        <span>我的色卡</span>
+                        <span id="landing-history-count" class="landing-history-count">0</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 我的色卡 -->
+            <section id="color-history-screen" class="hidden glass-dark rounded-2xl animate-fade-in palette-screen" aria-labelledby="color-history-title">
+                <header class="palette-archive-header">
+                    <button class="back-button" data-back-target="landing">
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+                        <span>返回首页</span>
+                    </button>
+                    <div class="palette-title-block">
+                        <p class="screen-eyebrow">COLOR ARCHIVE · 100 SLOTS</p>
+                        <h2 id="color-history-title" tabindex="-1">我的色卡</h2>
+                        <p>把挑战中遇到的颜色，收进自己的色样档案</p>
+                    </div>
+                    <div class="palette-capacity">
+                        <span>已收录</span>
+                        <strong id="color-history-summary" aria-live="polite">0 / 100</strong>
+                    </div>
+                </header>
+
+                <div class="palette-workspace">
+                    <div id="color-history-empty" class="palette-empty" role="status" aria-live="polite">
+                        <div class="palette-empty-swatches" aria-hidden="true">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <h3>还没有收录颜色</h3>
+                        <p>完成一次挑战后，遇到的颜色会自动出现在这里</p>
+                    </div>
+
+                    <div id="color-history-collection" class="palette-collection hidden">
+                        <section class="palette-inspector" aria-live="polite" aria-atomic="true" aria-labelledby="palette-inspector-title">
+                            <div id="palette-inspector-swatch" class="palette-inspector-swatch" aria-hidden="true"></div>
+                            <div class="palette-inspector-copy">
+                                <p class="palette-utility-label">CURRENT SAMPLE</p>
+                                <h3 id="palette-inspector-title">当前查看</h3>
+                                <strong id="palette-inspector-hex">#000000</strong>
+                                <div class="palette-inspector-values">
+                                    <span id="palette-inspector-rgb">rgb(0, 0, 0)</span>
+                                    <span id="palette-inspector-hsl">hsl(0, 0%, 0%)</span>
+                                </div>
+                                <p id="palette-inspector-context">历史颜色</p>
+                            </div>
+                        </section>
+
+                        <section class="palette-tray" aria-labelledby="palette-tray-title">
+                            <header class="palette-tray-header">
+                                <div>
+                                    <p class="palette-utility-label">ARCHIVE TRAY</p>
+                                    <h3 id="palette-tray-title">色样档案</h3>
+                                </div>
+                                <p>最近收录排在前面</p>
+                            </header>
+                            <div id="color-history" class="palette-grid" aria-label="色样档案"></div>
+                        </section>
+
+                        <footer class="palette-footer">
+                            <p>收满 100 张后，将自动替换最早收录的颜色</p>
+                            <div class="palette-clear-actions">
+                                <button id="clear-history-cancel" type="button" class="palette-clear-cancel hidden">取消</button>
+                                <button id="clear-history-btn" type="button" class="palette-clear-button" disabled>清空全部色卡</button>
+                            </div>
+                        </footer>
+                    </div>
                 </div>
             </section>
 
@@ -137,12 +184,11 @@
             <div id="mode-selection-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
                 <div class="screen-heading">
                     <button class="back-button" data-back-target="landing">
-                        <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>返回首页</span>
                     </button>
                     <p class="screen-eyebrow">CHOOSE MODE</p>
                     <h2 class="text-3xl font-bold">选择游戏模式</h2>
-                    <p>先决定你想训练辨色，还是练习凭记忆还原颜色。</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                     <!-- 颜色匹配模式 -->
@@ -160,9 +206,9 @@
                         <h3 class="text-xl font-bold mb-3 text-white">颜色匹配</h3>
                         <p class="text-gray-300 mb-4">选择不同难度，从颜色池中找出目标颜色</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> 基础 / 进阶 / 大师</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 3×3 到 4×4 色池</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 独立最佳记录</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 基础 / 进阶 / 大师</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 3×3 到 4×4 色池</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 独立最佳记录</li>
                         </ul>
                     </div>
                     <!-- 颜色复现模式 -->
@@ -180,9 +226,9 @@
                         <h3 class="text-xl font-bold mb-3 text-white">颜色复现</h3>
                         <p class="text-gray-300 mb-4">选择不同难度，用 HSL 或 RGB 复现颜色</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> 共10轮</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 基础 / 进阶 / 大师</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 独立最佳记录</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共10轮</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 基础 / 进阶 / 大师</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> Oklab 感知色差评分</li>
                         </ul>
                     </div>
                 </div>
@@ -192,7 +238,7 @@
             <div id="match-difficulty-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="mode-selection">
-                        <i class="fa fa-arrow-left"></i>
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>返回</span>
                     </button>
                 </div>
@@ -201,29 +247,29 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-match-difficulty="basic">
                         <h3 class="text-xl font-bold mb-3 text-white">基础</h3>
-                        <p class="text-gray-300 mb-4">3×3 色池，完成 10 关，适合热身。</p>
+                        <p class="text-gray-300 mb-4">3×3 色池，感知差异较宽，适合热身。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> 9 个颜色方块</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 共 10 关</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 记录最佳正确数</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 9 个颜色方块</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共 10 关</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 记录最佳正确数</li>
                         </ul>
                     </div>
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-match-difficulty="advanced">
                         <h3 class="text-xl font-bold mb-3 text-white">进阶</h3>
-                        <p class="text-gray-300 mb-4">4×4 色池，完成 10 关，干扰色更多。</p>
+                        <p class="text-gray-300 mb-4">4×4 色池，干扰色更多且更接近目标。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> 16 个颜色方块</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 共 10 关</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 记录最佳正确数</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 16 个颜色方块</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共 10 关</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 记录最佳正确数</li>
                         </ul>
                     </div>
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-match-difficulty="master">
                         <h3 class="text-xl font-bold mb-3 text-white">大师</h3>
                         <p class="text-gray-300 mb-4">4×4 色池，无尽挑战，三次失误后结束。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> 16 个颜色方块</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 3 条生命</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 挑战极限分数</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 16 个颜色方块</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 3 条生命</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 挑战极限分数</li>
                         </ul>
                     </div>
                 </div>
@@ -233,7 +279,7 @@
             <div id="recall-difficulty-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="mode-selection">
-                        <i class="fa fa-arrow-left"></i>
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>返回</span>
                     </button>
                 </div>
@@ -242,29 +288,29 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="basic">
                         <h3 class="text-xl font-bold mb-3 text-white">基础</h3>
-                        <p class="text-gray-300 mb-4">使用 HSL 色轮和明度滑杆复现颜色，并实时预览。</p>
+                        <p class="text-gray-300 mb-4">使用 HSL 色轮或三个精确滑杆复现颜色，并实时预览。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> HSL 控制</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 实时看到复现颜色</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 适合建立色相感觉</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> HSL 控制</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 实时看到复现颜色</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 适合建立色相感觉</li>
                         </ul>
                     </div>
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="advanced">
                         <h3 class="text-xl font-bold mb-3 text-white">进阶</h3>
                         <p class="text-gray-300 mb-4">使用 RGB 三个滑杆复现颜色，并实时预览。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> RGB 控制</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 实时看到复现颜色</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 训练通道理解</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> RGB 控制</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 实时看到复现颜色</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 训练通道理解</li>
                         </ul>
                     </div>
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="master">
                         <h3 class="text-xl font-bold mb-3 text-white">大师</h3>
                         <p class="text-gray-300 mb-4">只使用 RGB 滑杆，不显示实时颜色预览。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><i class="fa fa-check text-success mr-2"></i> RGB 控制</li>
-                            <li><i class="fa fa-times text-danger mr-2" aria-hidden="true"></i> 无实时预览</li>
-                            <li><i class="fa fa-check text-success mr-2"></i> 考验参数直觉</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> RGB 控制</li>
+                            <li><svg class="ui-icon text-danger mr-2" aria-hidden="true"><use href="#icon-x"></use></svg> 无实时预览</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 考验参数直觉</li>
                         </ul>
                     </div>
                 </div>
@@ -274,7 +320,7 @@
             <div id="start-screen" class="glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in hidden">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="mode-selection-or-difficulty">
-                        <i class="fa fa-arrow-left"></i>
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>返回</span>
                     </button>
                 </div>
@@ -294,13 +340,13 @@
             <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="start">
-                        <i class="fa fa-arrow-left"></i>
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>退出本局</span>
                     </button>
                 </div>
                 <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
                 <div class="mb-6">
-                    <div id="countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
+                    <div id="countdown" class="text-5xl font-bold mb-4 text-primary">5</div>
                     <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4">
                         <div id="progress-bar" class="bg-primary h-2.5 rounded-full progress-bar" style="width: 100%"></div>
                     </div>
@@ -313,7 +359,7 @@
             <div id="color-grid-screen" class="hidden animate-fade-in">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="start">
-                        <i class="fa fa-arrow-left"></i>
+                        <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>退出本局</span>
                     </button>
                 </div>
@@ -324,15 +370,15 @@
             <!-- 颜色复现游戏区域 -->
             <div id="color-recall-screen" class="hidden animate-fade-in">
                 <!-- 目标颜色展示区域 -->
-                <div id="recall-target-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center mb-6">
+                <div id="recall-target-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center">
                     <div class="flex justify-start mb-4">
                         <button class="back-button" data-back-target="start">
-                            <i class="fa fa-arrow-left"></i>
+                            <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                             <span>退出本局</span>
                         </button>
                     </div>
-                    <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
-                    <div id="recall-countdown" class="text-5xl font-bold mb-4 text-primary">6</div>
+                    <h2 id="recall-target-title" class="text-2xl font-bold mb-4" tabindex="-1">记住这个颜色</h2>
+                    <div id="recall-countdown" class="text-5xl font-bold mb-4 text-primary">5</div>
                     <div class="w-full bg-gray-700 rounded-full h-2.5 mb-4">
                         <div id="recall-progress-bar" class="bg-primary h-2.5 rounded-full progress-bar" style="width: 100%"></div>
                     </div>
@@ -342,31 +388,49 @@
 
                 <!-- HSL控制区域 -->
                 <div id="recall-control-section" class="glass-dark rounded-2xl p-4 sm:p-8 hidden">
-                    <div class="flex justify-start mb-4">
+                    <div class="recall-control-toolbar">
                         <button class="back-button" data-back-target="start">
-                            <i class="fa fa-arrow-left"></i>
+                            <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                             <span>退出本局</span>
                         </button>
                     </div>
-                    <h2 id="recall-control-title" class="text-2xl font-bold mb-6 text-center">你的复现</h2>
+                    <h2 id="recall-control-title" class="text-2xl font-bold mb-6 text-center" tabindex="-1">你的复现</h2>
                     
-                    <div class="flex flex-col md:flex-row items-center justify-center gap-8 mb-6">
+                    <div class="recall-workbench flex flex-col md:flex-row items-center justify-center gap-8 mb-6">
                         <!-- HSL 控制 -->
                         <div id="hsl-control-panel" class="flex flex-col items-center">
-                            <div class="flex flex-col items-center mb-6">
+                            <div class="hsl-wheel-block flex flex-col items-center mb-6">
                                 <p class="text-sm text-gray-400 mb-2">色相与饱和度</p>
                                 <div class="hsl-wheel-container relative" style="width: 200px; height: 200px;">
                                     <div id="hsl-wheel" class="hsl-wheel w-full h-full cursor-crosshair"></div>
                                     <div id="hsl-wheel-pointer" class="hsl-wheel-pointer absolute w-4 h-4 bg-white border-2 border-gray-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 pointer-events-none" style="top: 50%; left: 50%;"></div>
                                 </div>
                             </div>
-                            <div class="w-full max-w-md">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm text-gray-400">明度</span>
-                                    <span id="lightness-value" class="text-sm text-white font-mono">50%</span>
+                            <div class="hsl-slider-stack w-full max-w-md space-y-4">
+                                <div class="recall-control-row">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label for="hue-slider" class="text-sm text-gray-400">色相</label>
+                                        <span id="hue-value" class="text-sm text-white font-mono">0°</span>
+                                    </div>
+                                    <input type="range" id="hue-slider" min="0" max="359" value="0"
+                                           class="recall-slider hue-slider w-full rounded-lg appearance-none cursor-pointer">
                                 </div>
-                                <input type="range" id="lightness-slider" min="0" max="100" value="50" 
-                                       class="recall-slider w-full bg-gradient-to-r from-black via-gray-500 to-white rounded-lg appearance-none cursor-pointer">
+                                <div class="recall-control-row">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label for="saturation-slider" class="text-sm text-gray-400">饱和度</label>
+                                        <span id="saturation-value" class="text-sm text-white font-mono">100%</span>
+                                    </div>
+                                    <input type="range" id="saturation-slider" min="0" max="100" value="100"
+                                           class="recall-slider saturation-slider w-full rounded-lg appearance-none cursor-pointer">
+                                </div>
+                                <div class="recall-control-row">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label for="lightness-slider" class="text-sm text-gray-400">明度</label>
+                                        <span id="lightness-value" class="text-sm text-white font-mono">50%</span>
+                                    </div>
+                                    <input type="range" id="lightness-slider" min="0" max="100" value="50"
+                                           class="recall-slider w-full bg-gradient-to-r from-black via-gray-500 to-white rounded-lg appearance-none cursor-pointer">
+                                </div>
                             </div>
                         </div>
 
@@ -375,21 +439,21 @@
                             <div class="space-y-5">
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm text-red-300">R 红色通道</span>
+                                        <label for="red-slider" class="text-sm text-red-300">R 红色通道</label>
                                         <span id="red-value" class="text-sm text-white font-mono">128</span>
                                     </div>
                                     <input type="range" id="red-slider" min="0" max="255" value="128" class="rgb-slider rgb-red w-full">
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm text-green-300">G 绿色通道</span>
+                                        <label for="green-slider" class="text-sm text-green-300">G 绿色通道</label>
                                         <span id="green-value" class="text-sm text-white font-mono">128</span>
                                     </div>
                                     <input type="range" id="green-slider" min="0" max="255" value="128" class="rgb-slider rgb-green w-full">
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm text-blue-300">B 蓝色通道</span>
+                                        <label for="blue-slider" class="text-sm text-blue-300">B 蓝色通道</label>
                                         <span id="blue-value" class="text-sm text-white font-mono">128</span>
                                     </div>
                                     <input type="range" id="blue-slider" min="0" max="255" value="128" class="rgb-slider rgb-blue w-full">
@@ -405,7 +469,7 @@
                         </div>
                     </div>
                     
-                    <div class="flex justify-center">
+                    <div class="recall-submit-row flex justify-center">
                         <button id="submit-recall-btn" class="w-full max-w-md bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
                             提交答案
                         </button>
@@ -414,8 +478,15 @@
 
                 <!-- 复现结果区域 -->
                 <div id="recall-result-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center hidden">
-                    <h2 class="text-3xl font-bold mb-6">本轮得分</h2>
-                    <div id="recall-round-score" class="text-6xl font-bold text-primary mb-6">0.00</div>
+                    <h2 id="recall-result-title" class="text-3xl font-bold mb-6" tabindex="-1">本轮得分</h2>
+                    <div class="text-primary mb-2">
+                        <span id="recall-round-score" class="text-6xl font-bold">0.00</span>
+                        <span class="text-xl font-semibold">/ 10</span>
+                    </div>
+                    <div class="recall-feedback-row">
+                        <p id="recall-round-feedback">感觉对了</p>
+                        <button id="score-info-button" type="button" aria-label="查看评分说明" title="查看评分说明">?</button>
+                    </div>
                     <div class="result-color-grid grid grid-cols-2 gap-3 sm:gap-8 justify-center mb-8">
                         <div class="text-center min-w-0">
                             <div id="recall-result-target" class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto"></div>
@@ -442,78 +513,110 @@
             <!-- 结果反馈区域 -->
             <div id="result-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
                 <div id="result-icon" class="text-6xl mb-4"></div>
-                <h2 id="result-text" class="text-3xl font-bold mb-6"></h2>
+                <h2 id="result-text" class="text-3xl font-bold mb-6" tabindex="-1"></h2>
                 <div id="result-detail" class="mb-6 hidden"></div>
-                <div class="flex justify-center space-x-6 mb-8">
-                    <div class="text-center">
-                        <p id="result-level-label" class="text-sm text-gray-400">当前关卡</p>
-                        <p id="result-level" class="text-2xl font-bold">1</p>
+                <div id="match-result-summary">
+                    <div class="flex justify-center space-x-6 mb-8">
+                        <div class="text-center">
+                            <p id="result-level-label" class="text-sm text-gray-400">当前关卡</p>
+                            <p id="result-level" class="text-2xl font-bold">1</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-400">得分</p>
+                            <p id="result-score" class="text-2xl font-bold">0</p>
+                        </div>
                     </div>
-                    <div class="text-center">
-                        <p class="text-sm text-gray-400">得分</p>
-                        <p id="result-score" class="text-2xl font-bold">0</p>
+                    <div class="result-color-grid grid grid-cols-2 gap-3 sm:gap-8 justify-center">
+                        <div class="text-center min-w-0">
+                            <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto" id="result-target-color"></div>
+                            <p class="mt-2 text-sm text-gray-400">目标颜色</p>
+                            <p id="target-color-code" class="mt-1 font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded break-all"></p>
+                        </div>
+                        <div class="text-center min-w-0">
+                            <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto" id="result-selected-color"></div>
+                            <p class="mt-2 text-sm text-gray-400">选择颜色</p>
+                            <p id="selected-color-code" class="mt-1 font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded break-all"></p>
+                        </div>
                     </div>
                 </div>
-                <div class="result-color-grid grid grid-cols-2 gap-3 sm:gap-8 justify-center">
-                    <div class="text-center min-w-0">
-                        <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto" id="result-target-color"></div>
-                        <p class="mt-2 text-sm text-gray-400">目标颜色</p>
-                        <p id="target-color-code" class="mt-1 font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded break-all"></p>
+                <div id="recall-final-summary" class="recall-final-summary hidden" aria-live="polite">
+                    <div class="recall-final-score-panel">
+                        <p class="recall-final-score-line">
+                            <span id="recall-final-score">0.00</span>
+                            <span id="recall-final-max" class="recall-final-total">/ 100</span>
+                        </p>
                     </div>
-                    <div class="text-center min-w-0">
-                        <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto" id="result-selected-color"></div>
-                        <p class="mt-2 text-sm text-gray-400">选择颜色</p>
-                        <p id="selected-color-code" class="mt-1 font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded break-all"></p>
+                    <div class="recall-final-stats">
+                        <div class="recall-final-stat">
+                            <p>平均每轮</p>
+                            <strong><span id="recall-final-average">0.00</span> / 10</strong>
+                        </div>
+                        <div class="recall-final-stat">
+                            <p>个人最佳</p>
+                            <strong id="recall-final-best">0.00</strong>
+                        </div>
+                        <div class="recall-final-stat">
+                            <p>完成轮数</p>
+                            <strong id="recall-final-rounds">10</strong>
+                        </div>
                     </div>
+                    <p id="recall-final-record-note" class="recall-final-record-note"></p>
                 </div>
-                <div class="mt-8">
+                <div class="result-actions mt-8">
                     <button id="continue-button" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
                         下一关
                     </button>
                     <button id="restart-button" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg mt-4 md:mt-0 md:ml-4">
                         重新开始
                     </button>
+                    <button id="result-change-difficulty" class="hidden bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg">
+                        更换难度
+                    </button>
                 </div>
             </div>
         </main>
 
-        <section id="supporting-content" class="supporting-content">
-            <!-- 色彩历史记录 -->
-            <div class="support-card glass-dark rounded-xl p-4 animate-fade-in">
-                <div class="flex items-center justify-between gap-4 mb-4">
-                    <h3 class="text-xl font-semibold flex items-center">
-                        <span class="support-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6M4 4v4.6h4.6"></path><path d="M12 7.5V12l3 2"></path></svg>
-                        </span>
-                        色彩历史
-                    </h3>
-                    <button id="clear-history-btn" class="back-button danger-button">
-                        <i class="fa fa-trash" aria-hidden="true"></i>
-                        <span>清空</span>
-                    </button>
-                </div>
-                <div id="color-history" class="flex flex-wrap gap-2">
-                    <!-- 历史颜色将在这里动态添加 -->
-                </div>
-            </div>
+    </div>
 
-            <!-- 游戏说明 -->
-            <div id="game-guide" class="support-card glass-dark rounded-xl p-6 animate-fade-in">
-                <h3 class="text-xl font-semibold mb-4 flex items-center">
-                    <span class="support-icon support-icon--coral" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"></path><path d="M8.2 14.7A7 7 0 1 1 15.8 14.7 4 4 0 0 0 15 17H9a4 4 0 0 0-.8-2.3Z"></path></svg>
-                    </span>
-                    游戏技巧
-                </h3>
-                <div class="tips-list text-gray-300 space-y-3">
-                    <p><strong>先拆开看</strong>：先记它偏什么色，再留意是鲜艳还是发灰、偏亮还是偏暗</p>
-                    <p><strong>给颜色起个名字</strong>：像“偏灰的薄荷绿”或“很亮的橘红”，比硬记整块颜色更容易回想</p>
-                    <p><strong>匹配时分两步</strong>：先排除色相明显不对的方块，再比较剩下几个的明暗和鲜艳程度</p>
-                    <p><strong>RGB 先找主色</strong>：偏黄多看红和绿，偏青多看绿和蓝，偏紫多看红和蓝</p>
-                    <p><strong>复现时先粗后细</strong>：有预览时先确定大致方向再微调；无预览时先判断三个通道谁高谁低</p>
+    <div id="storage-status" class="storage-status hidden" role="status" aria-live="polite">
+        <strong>记录暂时无法保存</strong>
+        <span>本局仍可正常游戏</span>
+    </div>
+
+    <div id="score-info-dialog" class="score-info-dialog hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="score-info-title" aria-describedby="score-info-description">
+        <div class="score-info-panel">
+            <header class="score-info-header">
+                <div>
+                    <p class="score-info-eyebrow">评分说明</p>
+                    <h2 id="score-info-title">这 0.00 分是怎么来的？</h2>
+                </div>
+                <button id="score-info-close" type="button" class="score-info-close" aria-label="关闭评分说明">×</button>
+            </header>
+            <div class="score-info-body">
+                <p id="score-info-description">系统会先把目标颜色和你的复现转换到 Oklab。它比直接比较 RGB 数字更接近人眼对明暗、彩度和色相差异的感受。</p>
+                <div class="score-info-current" aria-label="本轮评分数据">
+                    <div><span>本轮得分</span><strong id="score-info-score">0.00 / 10</strong></div>
+                    <div><span>Oklab 色差</span><strong id="score-info-distance">0.0</strong></div>
+                </div>
+                <div class="score-info-explanation">
+                    <h3>本轮怎么算</h3>
+                    <p id="score-info-range"></p>
+                    <p id="score-info-interpolation"></p>
+                </div>
+                <div class="score-info-formula" aria-label="Oklab 色差公式">
+                    色差 = √[(ΔL)² + (Δa)² + (Δb)²] × 100
+                </div>
+                <div class="score-anchor-section">
+                    <h3>评分锚点</h3>
+                    <div class="score-anchor-grid" aria-label="Oklab 色差评分锚点">
+                        <span>0 → 10.0</span><span>2 → 9.8</span><span>5 → 9.3</span><span>10 → 8.2</span>
+                        <span>20 → 6.5</span><span>40 → 3.5</span><span>70 → 0.8</span><span>100+ → 0</span>
+                    </div>
+                    <p>相邻锚点之间按距离线性换算。色差越小，颜色看起来越接近。</p>
                 </div>
             </div>
-        </section>
+            <button id="score-info-confirm" type="button" class="score-info-confirm">知道了</button>
+        </div>
     </div>
 
     <!-- 游戏脚本 -->
