@@ -302,6 +302,49 @@ div.app-container {
     max-width: 70rem;
 }
 
+.site-footer {
+    display: flex;
+    width: min(100%, 34rem);
+    margin: 1.25rem auto 0;
+    padding: 0.75rem 1rem 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--subtle);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+}
+
+.site-footer-spectrum {
+    width: 2.5rem;
+    height: 1px;
+    flex: 0 0 auto;
+    background: linear-gradient(90deg, transparent, var(--cyan) 38%, var(--coral) 62%, transparent);
+    opacity: 0.72;
+}
+
+.site-footer p {
+    display: flex;
+    min-width: 0;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    text-align: center;
+}
+
+.site-footer-name {
+    color: var(--muted);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.site-footer-separator {
+    color: rgba(94, 200, 194, 0.48);
+}
+
 .site-body .text-white,
 .site-body .text-light {
     color: var(--cream);
