@@ -363,17 +363,28 @@ async function run() {
         const homepageMobileReport = await evaluate(client, `(() => {
             const primary = elements.enterGameButton.getBoundingClientRect();
             const paletteEntry = elements.colorHistoryEntry.getBoundingClientRect();
+            const footer = document.querySelector('.site-footer').getBoundingClientRect();
+            const brandName = document.querySelector('.brand-name');
             return {
                 viewportWidth: document.documentElement.clientWidth,
                 viewportHeight: window.visualViewport?.height || window.innerHeight,
                 scrollWidth: document.documentElement.scrollWidth,
                 primaryBottom: primary.bottom,
-                paletteBottom: paletteEntry.bottom
+                paletteBottom: paletteEntry.bottom,
+                footerTop: footer.top,
+                footerBottom: footer.bottom,
+                footerPosition: getComputedStyle(document.querySelector('.site-footer')).position,
+                brandNameColor: getComputedStyle(brandName).color,
+                brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color
             };
         })()`);
         if (homepageMobileReport.scrollWidth > homepageMobileReport.viewportWidth
             || homepageMobileReport.primaryBottom > homepageMobileReport.viewportHeight + 1
-            || homepageMobileReport.paletteBottom > homepageMobileReport.viewportHeight + 1) {
+            || homepageMobileReport.paletteBottom > homepageMobileReport.footerTop
+            || homepageMobileReport.footerPosition !== 'fixed'
+            || homepageMobileReport.footerBottom > homepageMobileReport.viewportHeight
+            || homepageMobileReport.footerBottom < homepageMobileReport.viewportHeight - 24
+            || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor) {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
@@ -1108,6 +1119,7 @@ async function run() {
                     const exit = document.querySelector('#recall-control-section [data-back-target="start"]').getBoundingClientRect();
                     const preview = elements.recallPreviewPanel.getBoundingClientRect();
                     const wheel = document.querySelector('.hsl-wheel-container').getBoundingClientRect();
+                    const footer = document.querySelector('.site-footer').getBoundingClientRect();
                     return {
                         difficulty: gameState.recallDifficulty,
                         viewportWidth: document.documentElement.clientWidth,
@@ -1125,7 +1137,10 @@ async function run() {
                         previewHidden: elements.recallPreviewPanel.classList.contains('hidden'),
                         previewWidth: preview.width,
                         previewHeight: preview.height,
-                        wheelWidth: wheel.width
+                        wheelWidth: wheel.width,
+                        footerTop: footer.top,
+                        footerBottom: footer.bottom,
+                        footerPosition: getComputedStyle(document.querySelector('.site-footer')).position
                     };
                 })()`);
                 mobileReports.push({ ...viewport, ...report });
@@ -1136,12 +1151,19 @@ async function run() {
                 if (report.scrollWidth > report.viewportWidth
                     || report.submitTop < 0
                     || report.submitBottom > report.viewportHeight + 1
+                    || report.submitBottom > report.footerTop
                     || report.exitTop < 0
                     || report.gameInfoHidden
                     || report.statsBottom > report.exitTop
                     || report.roundLabel !== '当前轮次'
                     || report.round !== '1'
                     || report.scoreLabel !== '累计得分'
+                    || report.footerPosition !== 'fixed'
+                    || report.footerBottom > report.viewportHeight
+                    || report.footerBottom < report.viewportHeight - 24
+                    || (viewport.width === 390
+                        && viewport.height === 844
+                        && Math.abs(report.footerBottom - homepageMobileReport.footerBottom) > 1)
                     || report.previewHidden === expectsPreview
                     || (expectsPreview && report.previewWidth <= report.previewHeight)
                     || (difficulty === 'basic' && (report.wheelWidth < 132 || report.wheelWidth > 148))) {
