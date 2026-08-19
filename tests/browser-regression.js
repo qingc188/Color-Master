@@ -364,6 +364,7 @@ async function run() {
             const primary = elements.enterGameButton.getBoundingClientRect();
             const paletteEntry = elements.colorHistoryEntry.getBoundingClientRect();
             const brandName = document.querySelector('.brand-name');
+            const footer = document.querySelector('.site-footer');
             return {
                 viewportWidth: document.documentElement.clientWidth,
                 viewportHeight: window.visualViewport?.height || window.innerHeight,
@@ -371,13 +372,15 @@ async function run() {
                 primaryBottom: primary.bottom,
                 paletteBottom: paletteEntry.bottom,
                 brandNameColor: getComputedStyle(brandName).color,
-                brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color
+                brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color,
+                footerPosition: getComputedStyle(footer).position
             };
         })()`);
         if (homepageMobileReport.scrollWidth > homepageMobileReport.viewportWidth
             || homepageMobileReport.primaryBottom > homepageMobileReport.viewportHeight + 1
             || homepageMobileReport.paletteBottom > homepageMobileReport.viewportHeight + 1
-            || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor) {
+            || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor
+            || homepageMobileReport.footerPosition !== 'static') {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
@@ -1235,8 +1238,8 @@ async function run() {
         if (client.remoteRequests.length
             || localStylesheets.length !== 2
             || !localStylesheets.every((href) => href.startsWith('file:'))
-            || !localStylesheets.some((href) => href.endsWith('/tailwind.css'))
-            || !localStylesheets.some((href) => href.endsWith('/styles.css'))
+            || !localStylesheets.some((href) => new URL(href).pathname.endsWith('/tailwind.css'))
+            || !localStylesheets.some((href) => new URL(href).pathname.endsWith('/styles.css'))
             || offlineReport.localIcons < 30
             || offlineReport.resultIcon !== '#icon-paint-brush'
             || offlineReport.resultIconWidth <= 0

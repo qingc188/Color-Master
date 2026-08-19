@@ -1804,6 +1804,12 @@ body.modal-open {
         padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
     }
 
+    .site-footer {
+        position: static;
+        inset: auto;
+        transform: none;
+    }
+
     .landing-screen {
         min-height: min(42rem, calc(100svh - 2.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
         gap: 0.8rem;

@@ -9,16 +9,17 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 test('production entry uses only packaged local resources', () => {
     const html = read('index.html');
     const resourceUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
+    const resourcePaths = resourceUrls.map((url) => url.split(/[?#]/, 1)[0]);
 
     assert.equal(/<script\b(?![^>]*\bsrc=)[^>]*>/i.test(html), false, 'Inline scripts are forbidden.');
     assert.equal(/\son[a-z]+\s*=/i.test(html), false, 'Inline event handlers are forbidden.');
     assert.equal(resourceUrls.some((url) => /^(?:https?:)?\/\//i.test(url)), false, 'Remote resources are forbidden.');
     assert.deepEqual(
-        resourceUrls.filter((url) => url.endsWith('.css')),
+        resourcePaths.filter((url) => url.endsWith('.css')),
         ['tailwind.css', 'styles.css']
     );
     assert.deepEqual(
-        resourceUrls.filter((url) => url.endsWith('.js')),
+        resourcePaths.filter((url) => url.endsWith('.js')),
         ['color-utils.js', 'app.js']
     );
 });
