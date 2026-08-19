@@ -353,6 +353,50 @@ async function run() {
             || !homepageReport.audioControlsRemoved) {
             throw new Error(`Homepage simplification failed: ${JSON.stringify(homepageReport)}`);
         }
+        const desktopShellReport = await evaluate(client, `(() => {
+            const footer = document.querySelector('.site-footer');
+            const main = document.querySelector('.app-container > main');
+            const screens = [
+                elements.landingScreen,
+                elements.modeSelectionScreen,
+                elements.matchDifficultyScreen,
+                elements.startScreen
+            ];
+            const measurements = screens.map((screen) => {
+                showScreen(screen);
+                const screenRect = screen.getBoundingClientRect();
+                const mainRect = main.getBoundingClientRect();
+                const footerRect = footer.getBoundingClientRect();
+                return {
+                    screen: screen.id,
+                    screenCenter: (screenRect.top + screenRect.bottom) / 2,
+                    mainCenter: (mainRect.top + mainRect.bottom) / 2,
+                    footerTop: footerRect.top,
+                    footerBottom: footerRect.bottom
+                };
+            });
+            showScreen(elements.landingScreen);
+            const backButtonHeights = Array.from(document.querySelectorAll('.back-button'))
+                .map((button) => parseFloat(getComputedStyle(button).minHeight));
+            return {
+                viewportHeight: window.innerHeight,
+                footerPosition: getComputedStyle(footer).position,
+                measurements,
+                backButtonHeights
+            };
+        })()`);
+        const desktopFooterTops = desktopShellReport.measurements.map(({ footerTop }) => footerTop);
+        if (desktopShellReport.footerPosition !== 'static'
+            || desktopShellReport.measurements.some(({ footerBottom }) => (
+                footerBottom > desktopShellReport.viewportHeight + 1
+            ))
+            || Math.max(...desktopFooterTops) - Math.min(...desktopFooterTops) > 1
+            || desktopShellReport.measurements.some(({ screenCenter, mainCenter }) => (
+                Math.abs(screenCenter - mainCenter) > 1
+            ))
+            || desktopShellReport.backButtonHeights.some((height) => height !== 36)) {
+            throw new Error(`Desktop shell layout failed: ${JSON.stringify(desktopShellReport)}`);
+        }
         await captureScreenshot(client, 'landing-desktop.png');
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 390,
@@ -373,14 +417,20 @@ async function run() {
                 paletteBottom: paletteEntry.bottom,
                 brandNameColor: getComputedStyle(brandName).color,
                 brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color,
-                footerPosition: getComputedStyle(footer).position
+                footerPosition: getComputedStyle(footer).position,
+                footerAfterMain: footer.offsetTop >= document.querySelector('.app-container > main').offsetTop
+                    + document.querySelector('.app-container > main').offsetHeight,
+                backButtonHeights: Array.from(document.querySelectorAll('.back-button'))
+                    .map((button) => parseFloat(getComputedStyle(button).minHeight))
             };
         })()`);
         if (homepageMobileReport.scrollWidth > homepageMobileReport.viewportWidth
             || homepageMobileReport.primaryBottom > homepageMobileReport.viewportHeight + 1
             || homepageMobileReport.paletteBottom > homepageMobileReport.viewportHeight + 1
             || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor
-            || homepageMobileReport.footerPosition !== 'static') {
+            || homepageMobileReport.footerPosition !== 'static'
+            || !homepageMobileReport.footerAfterMain
+            || homepageMobileReport.backButtonHeights.some((height) => height !== 40)) {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
@@ -555,7 +605,9 @@ async function run() {
                 first: gameState.colorHistory[0].hex,
                 last: gameState.colorHistory[gameState.colorHistory.length - 1].hex,
                 totalSlots: elements.colorHistory.children.length,
-                emptySlots: elements.colorHistory.querySelectorAll('.palette-slot-empty').length
+                emptySlots: elements.colorHistory.querySelectorAll('.palette-slot-empty').length,
+                footerAfterContent: document.querySelector('.site-footer').getBoundingClientRect().top
+                    >= elements.colorHistoryScreen.getBoundingClientRect().bottom
             };
         })()`);
         if (paletteCapReport.inMemory !== 100
@@ -563,7 +615,8 @@ async function run() {
             || paletteCapReport.first !== '#030000'
             || paletteCapReport.last !== '#660000'
             || paletteCapReport.totalSlots !== 100
-            || paletteCapReport.emptySlots !== 0) {
+            || paletteCapReport.emptySlots !== 0
+            || !paletteCapReport.footerAfterContent) {
             throw new Error(`Palette history cap failed: ${JSON.stringify(paletteCapReport)}`);
         }
         await evaluate(client, `elements.clearHistoryBtn.click()`);
@@ -1263,6 +1316,7 @@ async function run() {
             storageFailureReport,
             audioFailureReport,
             homepageReport,
+            desktopShellReport,
             homepageMobileReport,
             emptyPaletteReport,
             filledPaletteReport,

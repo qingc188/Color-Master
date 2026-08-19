@@ -298,8 +298,24 @@ body.site-body::before {
 }
 
 div.app-container {
+    display: flex;
     width: min(100%, 70rem);
     max-width: 70rem;
+    min-height: 100vh;
+    min-height: 100dvh;
+    flex-direction: column;
+}
+
+div.app-container > main {
+    display: flex;
+    min-height: 0;
+    flex: 1 0 auto;
+    flex-direction: column;
+}
+
+div.app-container > main > :not(.hidden) {
+    width: 100%;
+    margin-block: auto;
 }
 
 .site-footer {
@@ -309,6 +325,7 @@ div.app-container {
     padding: 0.75rem 1rem 0;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
     gap: 0.75rem;
     color: var(--subtle);
     font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
@@ -904,13 +921,23 @@ div.app-container {
 }
 
 .back-button {
-    min-height: 2.75rem;
-    padding: 0.55rem 0.85rem;
+    position: relative;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.65rem;
     color: var(--muted);
     border: 1px solid var(--line);
-    border-radius: 0.65rem;
+    border-radius: 0.55rem;
     background: rgba(4, 17, 22, 0.35);
+    font-size: 0.78rem;
     font-weight: 650;
+    line-height: 1;
+}
+
+.back-button::after {
+    content: "";
+    position: absolute;
+    inset: -0.25rem;
+    border-radius: inherit;
 }
 
 .back-button:hover {
@@ -1800,14 +1827,34 @@ body.modal-open {
 
 @media (max-width: 767px) {
     div.app-container {
+        display: block;
+        min-height: 0;
         padding-top: calc(1rem + env(safe-area-inset-top));
         padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    }
+
+    div.app-container > main {
+        display: block;
+    }
+
+    div.app-container > main > :not(.hidden) {
+        margin-block: 0;
     }
 
     .site-footer {
         position: static;
         inset: auto;
         transform: none;
+    }
+
+    .back-button {
+        min-height: 2.5rem;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .back-button::after {
+        inset: -0.125rem;
     }
 
     .landing-screen {
@@ -1924,11 +1971,6 @@ body.modal-open {
 
     .recall-control-toolbar {
         margin-bottom: 0.35rem;
-    }
-
-    .recall-control-toolbar .back-button {
-        min-height: 2.5rem;
-        padding: 0.35rem 0.65rem;
     }
 
     #recall-control-title {
