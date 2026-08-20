@@ -351,20 +351,20 @@ html[data-theme="ivory"] {
     --ink-800: #202a40;
     --ink-750: #2b3852;
     --line: #46536b;
-    --line-soft: rgba(155, 183, 230, 0.15);
-    --cyan: #9bb7e6;
+    --line-soft: rgba(153, 183, 232, 0.15);
+    --cyan: #99b7e8;
     --cyan-bright: #c2d2ee;
-    --cyan-soft: rgba(155, 183, 230, 0.12);
-    --coral: #f1a3b1;
+    --cyan-soft: rgba(153, 183, 232, 0.12);
+    --coral: #f3a1b0;
     --coral-bright: #ffc4cd;
-    --coral-soft: rgba(241, 163, 177, 0.12);
+    --coral-soft: rgba(243, 161, 176, 0.12);
     --cream: #f5f0f2;
     --muted: #bbb9c7;
     --subtle: #9499ad;
     --on-accent: #111522;
     --focus-ring: rgba(194, 210, 238, 0.94);
-    --accent-primary-rgb: 155, 183, 230;
-    --accent-secondary-rgb: 241, 163, 177;
+    --accent-primary-rgb: 153, 183, 232;
+    --accent-secondary-rgb: 243, 161, 176;
     --panel-rgb: 20, 27, 44;
     --card-rgb: 28, 36, 56;
     --card-hover-rgb: 37, 47, 72;
@@ -374,18 +374,18 @@ html[data-theme="ivory"] {
     --subtle-rgb: 148, 153, 173;
     --structure-rgb: 149, 171, 211;
     --cube-edge: #171c2b;
-    --cube-primary-1: #c3d3eb;
-    --cube-primary-2: #a7bfe1;
-    --cube-primary-3: #809ccc;
-    --cube-primary-4: #5b76ab;
-    --cube-secondary-1: #fbcad0;
-    --cube-secondary-2: #f1a6b3;
-    --cube-secondary-3: #dd8193;
-    --cube-secondary-4: #bd5a73;
+    --cube-primary-1: #c2d3ec;
+    --cube-primary-2: #a5bfe3;
+    --cube-primary-3: #7d9bcf;
+    --cube-primary-4: #5775af;
+    --cube-secondary-1: #fcc9cf;
+    --cube-secondary-2: #f3a4b2;
+    --cube-secondary-3: #df7f92;
+    --cube-secondary-4: #c05771;
     --cube-neutral-1: #faf5f4;
-    --cube-neutral-2: #f3dce0;
-    --cube-neutral-3: #e1b3bf;
-    --cube-neutral-4: #b5c6e5;
+    --cube-neutral-2: #f4dbe0;
+    --cube-neutral-3: #e3b1be;
+    --cube-neutral-4: #b4c6e7;
     --shadow-panel: 0 24px 70px rgba(4, 6, 12, 0.42);
     --shadow-card: 0 14px 34px rgba(4, 6, 12, 0.3);
 }
@@ -1004,8 +1004,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
 [data-theme-dot="cyan"] i:last-child { background: #f36f63; }
 [data-theme-dot="amethyst"] i:first-child { background: #a999ea; }
 [data-theme-dot="amethyst"] i:last-child { background: #e2cf8b; }
-[data-theme-dot="ivory"] i:first-child { background: #9bb7e6; }
-[data-theme-dot="ivory"] i:last-child { background: #f1a3b1; }
+[data-theme-dot="ivory"] i:first-child { background: #99b7e8; }
+[data-theme-dot="ivory"] i:last-child { background: #f3a1b0; }
 
 @supports (transform-style: preserve-3d) {
     .theme-cube-stage {
