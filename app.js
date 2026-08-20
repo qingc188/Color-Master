@@ -131,6 +131,7 @@ const elements = {
     gameInfoBar: document.getElementById('game-info-bar'),
     gameStatsPanel: document.getElementById('game-stats-panel'),
     modeBestOverview: document.getElementById('mode-best-overview'),
+    localRecordNote: document.getElementById('local-record-note'),
     overviewBestBasicLabel: document.getElementById('overview-best-basic-label'),
     overviewBestAdvancedLabel: document.getElementById('overview-best-advanced-label'),
     overviewBestMasterLabel: document.getElementById('overview-best-master-label'),
@@ -568,6 +569,7 @@ function updateStatsVisibility(screen) {
     elements.gameInfoBar.classList.toggle('recall-stats', isRecallGameplay);
     elements.gameStatsPanel.classList.toggle('hidden', isMainMenu || isDifficultyScreen);
     elements.modeBestOverview.classList.toggle('hidden', !isDifficultyScreen);
+    elements.localRecordNote.classList.toggle('hidden', !isDifficultyScreen);
     elements.gameInfoBar.style.gridTemplateColumns = '1fr';
     elements.gameInfoBar.style.justifyContent = 'stretch';
 }
@@ -1619,13 +1621,13 @@ function showColorRecallResult() {
     elements.recallFinalRounds.textContent = gameState.recallTotalRounds;
 
     if (isNewRecord && previousBest > 0) {
-        elements.recallFinalRecordNote.textContent = `刷新个人最佳，比上次提高 ${(totalScore - previousBest).toFixed(2)} 分`;
+        elements.recallFinalRecordNote.textContent = `刷新本机最佳，比上次提高 ${(totalScore - previousBest).toFixed(2)} 分`;
     } else if (isNewRecord) {
-        elements.recallFinalRecordNote.textContent = '首次完成，已记录为个人最佳';
+        elements.recallFinalRecordNote.textContent = '首次完成，已记录为本机最佳';
     } else if (totalScore === previousBest) {
-        elements.recallFinalRecordNote.textContent = '追平个人最佳';
+        elements.recallFinalRecordNote.textContent = '追平本机最佳';
     } else {
-        elements.recallFinalRecordNote.textContent = `距离个人最佳还差 ${(previousBest - totalScore).toFixed(2)} 分`;
+        elements.recallFinalRecordNote.textContent = `距离本机最佳还差 ${(previousBest - totalScore).toFixed(2)} 分`;
     }
 
     updateDisplays();

@@ -1044,6 +1044,16 @@ async function run() {
         await waitFor(client, `!document.querySelector('#mode-selection-screen').classList.contains('hidden')`);
         await evaluate(client, `document.querySelector('#color-match-mode').click()`);
         await waitFor(client, `!document.querySelector('#match-difficulty-screen').classList.contains('hidden')`);
+        const localRecordDisclosureReport = await evaluate(client, `({
+            bestOverviewVisible: !elements.modeBestOverview.classList.contains('hidden'),
+            noteVisible: !elements.localRecordNote.classList.contains('hidden'),
+            note: elements.localRecordNote.textContent
+        })`);
+        if (!localRecordDisclosureReport.bestOverviewVisible
+            || !localRecordDisclosureReport.noteVisible
+            || localRecordDisclosureReport.note !== '成绩仅保存在当前设备的本地缓存；清理缓存或更换设备后会重置。') {
+            throw new Error(`Local record disclosure failed: ${JSON.stringify(localRecordDisclosureReport)}`);
+        }
         await evaluate(client, `document.querySelector('[data-match-difficulty="basic"]').click()`);
         await waitFor(client, `!document.querySelector('#start-screen').classList.contains('hidden')`);
         const matchPreparationReport = await evaluate(client, `({
@@ -1348,6 +1358,8 @@ async function run() {
             best: gameState.recallBestScores.advanced,
             storedV2: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v2'),
             legacyValue: localStorage.getItem('colorMemoryBestRecallScore_advanced'),
+            bestLabel: document.querySelector('#recall-final-summary .recall-final-stat:nth-child(2) p').textContent,
+            recordNote: elements.recallFinalRecordNote.textContent,
             focused: document.activeElement.id
         })`);
         if (persistenceReport.total !== 100
@@ -1356,6 +1368,8 @@ async function run() {
             || persistenceReport.best !== 100
             || persistenceReport.storedV2 !== '100'
             || persistenceReport.legacyValue !== '99'
+            || persistenceReport.bestLabel !== '本机最佳'
+            || persistenceReport.recordNote !== '首次完成，已记录为本机最佳'
             || persistenceReport.focused !== 'result-text') {
             throw new Error(`Score persistence regression failed: ${JSON.stringify(persistenceReport)}`);
         }

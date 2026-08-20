@@ -86,7 +86,7 @@ Back and exit controls stay visually compact while retaining an expanded touch t
 
 Mode and difficulty cards use theme-tinted surfaces, thin structural borders, technical labels, and restrained elevation. Their hover and keyboard-focus treatments must communicate the same interactive state.
 
-Statistics use compact bordered cells and monospace values. Do not add decorative charts or extra metrics that compete with the current round, score, best record, or lives.
+Statistics use compact bordered cells and monospace values. Do not add decorative charts or extra metrics that compete with the current round, score, best record, or lives. When difficulty-level best records are shown, keep the adjacent note that identifies them as device-local cache and names the two common reset conditions: clearing cache and changing devices.
 
 ## Motion
 

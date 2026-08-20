@@ -1358,6 +1358,14 @@ html[data-theme="ivory"] .theme-cube-face--left {
     background: rgba(var(--deep-rgb), 0.08);
 }
 
+.local-record-note {
+    margin: -0.15rem 0 0;
+    color: var(--subtle);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
 #game-stats-panel.has-lives {
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
