@@ -223,7 +223,6 @@ const elements = {
     scoreInfoButton: document.getElementById('score-info-button'),
     scoreInfoDialog: document.getElementById('score-info-dialog'),
     scoreInfoClose: document.getElementById('score-info-close'),
-    scoreInfoConfirm: document.getElementById('score-info-confirm'),
     scoreInfoTitle: document.getElementById('score-info-title'),
     scoreInfoScore: document.getElementById('score-info-score'),
     scoreInfoDistance: document.getElementById('score-info-distance'),
@@ -747,7 +746,6 @@ function initGame() {
     elements.resultChangeDifficulty.addEventListener('click', returnToRecallDifficultySelection);
     elements.scoreInfoButton.addEventListener('click', openScoreInfoDialog);
     elements.scoreInfoClose.addEventListener('click', closeScoreInfoDialog);
-    elements.scoreInfoConfirm.addEventListener('click', closeScoreInfoDialog);
     elements.scoreInfoDialog.addEventListener('click', (event) => {
         if (event.target === elements.scoreInfoDialog) closeScoreInfoDialog();
     });
@@ -1558,8 +1556,8 @@ function updateScoreInfoDialog() {
     elements.scoreInfoUserCode.textContent = rgbToCss(user);
     elements.scoreInfoGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
-        ? `其中一种颜色接近灰色，饱和度差异较大，因此再增加 ${neutralPenalty.toFixed(1)}。`
-        : '这轮没有出现明显的灰色情况，因此不增加差异。';
+        ? `当复现接近灰色、但明度刚好接近目标时，基础差异可能仍然不大。为了避免饱和度几乎丢失却拿到过高分，这一步再增加 ${neutralPenalty.toFixed(1)}。`
+        : '这一步用来防止明度接近的灰色拿到过高分。本轮没有明显灰色情况，所以不增加差异。';
 
     if (!upper) {
         elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(1)}，已经达到 ${lower.distance} 以上。`;
@@ -1604,17 +1602,8 @@ function handleScoreInfoDialogKeydown(event) {
         return;
     }
     if (event.key !== 'Tab') return;
-
-    const focusable = [elements.scoreInfoClose, elements.scoreInfoConfirm];
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && (document.activeElement === first || document.activeElement === elements.scoreInfoTitle)) {
-        event.preventDefault();
-        last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-    }
+    event.preventDefault();
+    elements.scoreInfoClose.focus();
 }
 
 // 提交颜色复现答案

@@ -1270,11 +1270,13 @@ async function run() {
             range: document.querySelector('#score-info-range').textContent,
             interpolation: document.querySelector('#score-info-interpolation').textContent,
             processSteps: document.querySelectorAll('.score-calculation li').length,
+            grayStepTitle: document.querySelector('.score-calculation li:nth-child(2) strong').textContent,
             genericCardsRemoved: !document.querySelector('.score-info-current')
                 && !document.querySelector('.score-info-formula')
                 && !document.querySelector('.score-anchor-section')
                 && !document.querySelector('.score-anchor-grid'),
-            confirmText: elements.scoreInfoConfirm.textContent,
+            singleCloseControl: document.querySelectorAll('.score-info-panel button').length === 1
+                && !document.querySelector('#score-info-confirm'),
             helpHitWidth: elements.scoreInfoButton.getBoundingClientRect().width,
             helpVisualWidth: parseFloat(getComputedStyle(elements.scoreInfoButton, '::before').width),
             focused: document.activeElement.id,
@@ -1287,7 +1289,7 @@ async function run() {
             || dialogReport.distance !== '0.0'
             || dialogReport.description !== '先用 Oklab 看两种颜色差多少，再换成 10 分制。差异越小，分数越高。'
             || dialogReport.description.includes('彩度')
-            || dialogReport.adjustment !== '这轮没有出现明显的灰色情况，因此不增加差异。'
+            || dialogReport.adjustment !== '这一步用来防止明度接近的灰色拿到过高分。本轮没有明显灰色情况，所以不增加差异。'
             || dialogReport.baseDistance !== '0.0'
             || !dialogReport.oklabExplanation.includes('RGB 是屏幕的红绿蓝数值')
             || !dialogReport.oklabExplanation.includes('Oklab 更接近人眼对明度、饱和度和色相变化的感受')
@@ -1297,8 +1299,9 @@ async function run() {
             || dialogReport.range !== '最终差异是 0，表示两种颜色一致。'
             || dialogReport.interpolation !== '差异越小，分数越高。'
             || dialogReport.processSteps !== 3
+            || dialogReport.grayStepTitle !== '防止灰色得到虚高分'
             || !dialogReport.genericCardsRemoved
-            || dialogReport.confirmText !== '关闭说明'
+            || !dialogReport.singleCloseControl
             || dialogReport.helpHitWidth !== 44
             || dialogReport.helpVisualWidth !== 28
             || dialogReport.focused !== 'score-info-title'
@@ -1308,7 +1311,9 @@ async function run() {
             throw new Error(`Score dialog regression failed: ${JSON.stringify(dialogReport)}`);
         }
         await captureScreenshot(client, 'score-dialog-desktop.png');
-        await evaluate(client, `elements.scoreInfoConfirm.focus()`);
+        await client.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Tab', code: 'Tab' });
+        await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab' });
+        await waitFor(client, `document.activeElement.id === 'score-info-close'`);
         await client.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Tab', code: 'Tab' });
         await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab' });
         await waitFor(client, `document.activeElement.id === 'score-info-close'`);
