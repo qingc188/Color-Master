@@ -1,14 +1,14 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="cyan">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="忆色：一款在浏览器中练习颜色匹配与颜色复现的记忆游戏。">
-    <meta name="theme-color" content="#071820">
+    <meta id="theme-color-meta" name="theme-color" content="#071820">
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
     <link rel="stylesheet" href="tailwind.css">
-    <link rel="stylesheet" href="styles.css?v=20260820-layout">
+    <link rel="stylesheet" href="styles.css?v=20260820-theme-cube">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
     <svg class="icon-sprite" aria-hidden="true">
@@ -45,7 +45,22 @@
         <!-- 游戏内品牌条，独立首页中隐藏 -->
         <header id="brand-header" class="brand-header hidden">
             <div class="brand-lockup">
-                <img src="assets/yise-cube-mark.svg" alt="" aria-hidden="true" class="brand-mark" width="512" height="512">
+                <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+                    <g class="brand-cube" stroke="var(--cube-edge)" stroke-width="6" stroke-linejoin="round">
+                        <path class="brand-cube-top brand-cube-tone-1" d="M256 72 338 118 256 164 174 118Z"/>
+                        <path class="brand-cube-top brand-cube-tone-2" d="m338 118 82 46-82 46-82-46Z"/>
+                        <path class="brand-cube-top brand-cube-tone-3" d="m256 164 82 46-82 46-82-46Z"/>
+                        <path class="brand-cube-top brand-cube-tone-4" d="m174 118 82 46-82 46-82-46Z"/>
+                        <path class="brand-cube-primary brand-cube-tone-1" d="m92 164 82 46v92l-82-46Z"/>
+                        <path class="brand-cube-primary brand-cube-tone-2" d="m174 210 82 46v92l-82-46Z"/>
+                        <path class="brand-cube-primary brand-cube-tone-3" d="m92 256 82 46v92l-82-46Z"/>
+                        <path class="brand-cube-primary brand-cube-tone-4" d="m174 302 82 46v92l-82-46Z"/>
+                        <path class="brand-cube-secondary brand-cube-tone-1" d="m338 210 82-46v92l-82 46Z"/>
+                        <path class="brand-cube-secondary brand-cube-tone-2" d="m256 256 82-46v92l-82 46Z"/>
+                        <path class="brand-cube-secondary brand-cube-tone-3" d="m338 302 82-46v92l-82 46Z"/>
+                        <path class="brand-cube-secondary brand-cube-tone-4" d="m256 348 82-46v92l-82 46Z"/>
+                    </g>
+                </svg>
                 <div class="brand-copy">
                     <p class="brand-name"><span>忆色</span><small>ColorMaster</small></p>
                 </div>
@@ -55,7 +70,7 @@
 
         <!-- 游戏信息栏 -->
         <span id="game-info-anchor" hidden></span>
-        <div id="game-info-bar" class="glass-dark rounded-xl p-3 sm:p-4 mb-6 grid grid-cols-1 items-center gap-3 sm:gap-4 animate-fade-in border border-white/10 shadow-lg">
+        <div id="game-info-bar" class="glass-dark rounded-xl p-3 sm:p-4 mb-6 grid grid-cols-1 items-center gap-3 sm:gap-4 border border-white/10 shadow-lg">
             <div id="game-stats-panel" class="grid grid-cols-3 gap-3">
                 <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
                     <p id="level-label" class="text-sm text-gray-400">当前关卡</p>
@@ -93,13 +108,37 @@
         <!-- 游戏主区域 -->
         <main class="relative">
             <!-- 独立品牌首页 -->
-            <section id="landing-screen" class="landing-screen animate-fade-in" aria-labelledby="landing-title">
-                <div class="landing-orbit" aria-hidden="true">
-                    <span class="orbit-frame orbit-frame--outer"></span>
-                    <span class="orbit-frame orbit-frame--inner"></span>
-                    <span class="orbit-corner orbit-corner--cyan"></span>
-                    <span class="orbit-corner orbit-corner--coral"></span>
-                    <img src="assets/yise-cube-mark.svg" alt="" class="landing-mark" width="512" height="512">
+            <section id="landing-screen" class="landing-screen" aria-labelledby="landing-title">
+                <div class="landing-orbit">
+                    <span class="orbit-frame orbit-frame--outer" aria-hidden="true"></span>
+                    <span class="orbit-frame orbit-frame--inner" aria-hidden="true"></span>
+                    <span class="orbit-corner orbit-corner--cyan" aria-hidden="true"></span>
+                    <span class="orbit-corner orbit-corner--coral" aria-hidden="true"></span>
+                    <button id="theme-cube-button" type="button" class="theme-cube-button" aria-label="切换界面配色，当前青橙" aria-describedby="theme-cube-hint">
+                        <span class="theme-cube-glow" aria-hidden="true"></span>
+                        <span class="theme-cube-stage" aria-hidden="true">
+                            <span id="theme-cube" class="theme-cube">
+                                <span class="theme-cube-face theme-cube-face--front theme-cube-face--primary"><i></i><i></i><i></i><i></i></span>
+                                <span class="theme-cube-face theme-cube-face--back theme-cube-face--primary"><i></i><i></i><i></i><i></i></span>
+                                <span class="theme-cube-face theme-cube-face--right theme-cube-face--secondary"><i></i><i></i><i></i><i></i></span>
+                                <span class="theme-cube-face theme-cube-face--left theme-cube-face--secondary"><i></i><i></i><i></i><i></i></span>
+                                <span class="theme-cube-face theme-cube-face--top theme-cube-face--neutral"><i></i><i></i><i></i><i></i></span>
+                                <span class="theme-cube-face theme-cube-face--bottom theme-cube-face--neutral"><i></i><i></i><i></i><i></i></span>
+                            </span>
+                        </span>
+                        <span class="theme-cube-fallback" aria-hidden="true">
+                            <img src="assets/yise-cube-mark.svg" alt="" width="512" height="512">
+                        </span>
+                    </button>
+                    <div class="theme-switch-meta">
+                        <p id="theme-cube-hint">旋转魔方 · 切换配色</p>
+                        <span class="theme-palette-indicator" aria-hidden="true">
+                            <span data-theme-dot="cyan"><i></i><i></i></span>
+                            <span data-theme-dot="amethyst"><i></i><i></i></span>
+                            <span data-theme-dot="ivory"><i></i><i></i></span>
+                        </span>
+                    </div>
+                    <span id="theme-status" class="visually-hidden" role="status" aria-live="polite"></span>
                 </div>
                 <div class="landing-copy">
                     <p class="landing-english">ColorMaster</p>
@@ -117,7 +156,7 @@
             </section>
 
             <!-- 我的色卡 -->
-            <section id="color-history-screen" class="hidden glass-dark rounded-2xl animate-fade-in palette-screen" aria-labelledby="color-history-title">
+            <section id="color-history-screen" class="hidden glass-dark rounded-2xl palette-screen" aria-labelledby="color-history-title">
                 <header class="palette-archive-header">
                     <button class="back-button" data-back-target="landing">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -181,7 +220,7 @@
             </section>
 
             <!-- 模式选择屏幕 -->
-            <div id="mode-selection-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
+            <div id="mode-selection-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
                 <div class="screen-heading">
                     <button class="back-button" data-back-target="landing">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -235,7 +274,7 @@
             </div>
 
             <!-- 颜色匹配难度选择屏幕 -->
-            <div id="match-difficulty-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
+            <div id="match-difficulty-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="mode-selection">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -276,7 +315,7 @@
             </div>
 
             <!-- 颜色复现难度选择屏幕 -->
-            <div id="recall-difficulty-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
+            <div id="recall-difficulty-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="mode-selection">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -317,7 +356,7 @@
             </div>
 
         <!-- 开始游戏屏幕 -->
-            <div id="start-screen" class="glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in hidden">
+            <div id="start-screen" class="glass-dark rounded-2xl p-4 sm:p-8 text-center hidden">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="mode-selection-or-difficulty">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -325,6 +364,10 @@
                     </button>
                 </div>
                 <h2 class="text-3xl font-bold mb-6">准备好挑战了吗？</h2>
+                <div class="preparation-context" aria-label="本局设置">
+                    <span id="preparation-mode">颜色匹配</span>
+                    <span id="preparation-difficulty">基础 · 3×3 色池</span>
+                </div>
                 <div id="game-rules" class="mb-8 text-left max-w-lg mx-auto">
                     <h3 class="text-xl font-semibold mb-3 text-primary">游戏规则：</h3>
                     <ul id="rules-list" class="space-y-2 text-gray-300">
@@ -337,7 +380,7 @@
             </div>
 
             <!-- 目标颜色显示区域 -->
-            <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
+            <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="start">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -356,7 +399,7 @@
             </div>
 
             <!-- 颜色选择区域 -->
-            <div id="color-grid-screen" class="hidden animate-fade-in">
+            <div id="color-grid-screen" class="hidden">
                 <div class="flex justify-start mb-4">
                     <button class="back-button" data-back-target="start">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
@@ -368,7 +411,7 @@
             </div>
 
             <!-- 颜色复现游戏区域 -->
-            <div id="color-recall-screen" class="hidden animate-fade-in">
+            <div id="color-recall-screen" class="hidden">
                 <!-- 目标颜色展示区域 -->
                 <div id="recall-target-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center">
                     <div class="flex justify-start mb-4">
@@ -511,7 +554,7 @@
             </div>
 
             <!-- 结果反馈区域 -->
-            <div id="result-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center animate-fade-in">
+            <div id="result-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
                 <div id="result-icon" class="text-6xl mb-4"></div>
                 <h2 id="result-text" class="text-3xl font-bold mb-6" tabindex="-1"></h2>
                 <div id="result-detail" class="mb-6 hidden"></div>

@@ -72,3 +72,20 @@ test('container fallbacks avoid fragile native behavior', () => {
     assert.equal(/(?:sound-toggle|icon-volume-(?:up|off))/.test(html), false, 'Audio controls must stay removed until audio is available.');
     assert.match(app, /function playSound\s*\(/, 'Short Web Audio feedback should remain available.');
 });
+
+test('theme cube stays local, semantic, and WebView-safe', () => {
+    const html = read('index.html');
+    const app = read('app.js');
+    const styles = read('styles.css');
+    const cubeFaces = [...html.matchAll(/<span class="theme-cube-face[^"]*">((?:<i><\/i>){4})<\/span>/g)];
+
+    assert.match(html, /<button id="theme-cube-button"[^>]+aria-label="[^"]+"/);
+    assert.equal(cubeFaces.length, 6, 'The hero cube must expose six faces with four color tiles each.');
+    assert.match(app, /setStorageItem\(THEME_STORAGE_KEY,/);
+    assert.match(styles, /transform-style:\s*preserve-3d/);
+    assert.match(styles, /\.theme-cube-stage\s*{[^}]*display:\s*none;/s);
+    assert.match(styles, /\.theme-cube-fallback\s*{[^}]*display:\s*block;/s);
+    assert.match(styles, /@supports \(transform-style:\s*preserve-3d\)/);
+    assert.match(styles, /@media \(prefers-reduced-motion:\s*reduce\)/);
+    assert.equal(/\b(?:WebGL|THREE|canvas|getContext)\b/.test(`${html}\n${app}`), false);
+});

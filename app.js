@@ -1,7 +1,16 @@
 ﻿// 游戏状态
 const COLOR_HISTORY_STORAGE_KEY = 'colorMemoryGlobalColorHistory';
+const THEME_STORAGE_KEY = 'colorMemoryInterfaceTheme';
 const MAX_COLOR_HISTORY = 100;
 const OBSERVATION_DURATION_MS = 5000;
+const THEME_ROTATION_MS = 520;
+const THEME_SWAP_DELAY_MS = 260;
+const THEME_ORDER = ['cyan', 'amethyst', 'ivory'];
+const THEME_CONFIG = {
+    cyan: { name: '青橙', themeColor: '#071820' },
+    amethyst: { name: '紫晶黄铜', themeColor: '#12101B' },
+    ivory: { name: '象牙墨绿', themeColor: '#E9E1D3' }
+};
 let storageAvailable = true;
 
 function markStorageUnavailable() {
@@ -40,6 +49,17 @@ function removeStorageItem(key) {
         return false;
     }
 }
+
+function normalizeTheme(themeId) {
+    return THEME_ORDER.includes(themeId) ? themeId : THEME_ORDER[0];
+}
+
+let activeThemeIndex = THEME_ORDER.indexOf(normalizeTheme(getStorageItem(THEME_STORAGE_KEY)));
+let cubeRotationDegrees = activeThemeIndex * 120;
+let themeSwitching = false;
+let themeSwapTimeoutId;
+let themeFinishTimeoutId;
+document.documentElement.dataset.theme = THEME_ORDER[activeThemeIndex];
 
 const gameState = {
     level: 1,
@@ -82,6 +102,11 @@ const gameState = {
 
 // DOM 元素
 const elements = {
+    themeColorMeta: document.getElementById('theme-color-meta'),
+    themeCubeButton: document.getElementById('theme-cube-button'),
+    themeCube: document.getElementById('theme-cube'),
+    themeStatus: document.getElementById('theme-status'),
+    themeDots: document.querySelectorAll('[data-theme-dot]'),
     brandHeader: document.getElementById('brand-header'),
     landingScreen: document.getElementById('landing-screen'),
     enterGameButton: document.getElementById('enter-game-button'),
@@ -97,6 +122,8 @@ const elements = {
     recallDifficultyScreen: document.getElementById('recall-difficulty-screen'),
     recallDifficultyCards: document.querySelectorAll('[data-recall-difficulty]'),
     startScreen: document.getElementById('start-screen'),
+    preparationMode: document.getElementById('preparation-mode'),
+    preparationDifficulty: document.getElementById('preparation-difficulty'),
     targetColorScreen: document.getElementById('target-color-screen'),
     colorGridScreen: document.getElementById('color-grid-screen'),
     colorRecallScreen: document.getElementById('color-recall-screen'),
@@ -350,6 +377,87 @@ const recallDifficultyConfig = {
     }
 };
 
+function applyTheme(themeId, { persist = false, announce = false } = {}) {
+    const normalizedTheme = normalizeTheme(themeId);
+    const currentIndex = THEME_ORDER.indexOf(normalizedTheme);
+    const nextIndex = (currentIndex + 1) % THEME_ORDER.length;
+    const config = THEME_CONFIG[normalizedTheme];
+
+    activeThemeIndex = currentIndex;
+    document.documentElement.dataset.theme = normalizedTheme;
+    elements.themeColorMeta?.setAttribute('content', config.themeColor);
+    elements.themeDots.forEach((dot) => {
+        dot.classList.toggle('is-active', dot.dataset.themeDot === normalizedTheme);
+    });
+
+    if (elements.themeCubeButton) {
+        elements.themeCubeButton.setAttribute(
+            'aria-label',
+            `切换界面配色，当前${config.name}，下一套${THEME_CONFIG[THEME_ORDER[nextIndex]].name}`
+        );
+    }
+    if (persist) setStorageItem(THEME_STORAGE_KEY, normalizedTheme);
+    if (announce && elements.themeStatus) {
+        elements.themeStatus.textContent = `已切换为${config.name}配色`;
+    }
+}
+
+function setCubeRotationWithoutMotion(degrees) {
+    if (!elements.themeCube) return;
+    elements.themeCube.classList.add('is-resetting');
+    elements.themeCube.style.setProperty('--cube-turn', `${degrees}deg`);
+    // Commit the equivalent 360° reset before another activation can start.
+    elements.themeCube.getBoundingClientRect();
+    elements.themeCube.classList.remove('is-resetting');
+}
+
+function finishThemeSwitch() {
+    if (cubeRotationDegrees >= 360) {
+        cubeRotationDegrees %= 360;
+        setCubeRotationWithoutMotion(cubeRotationDegrees);
+    }
+    themeSwitching = false;
+    document.documentElement.classList.remove('theme-transitioning');
+    elements.themeCubeButton?.classList.remove('is-turning');
+    elements.themeCubeButton?.removeAttribute('aria-busy');
+}
+
+function switchTheme() {
+    if (themeSwitching) return;
+
+    const nextThemeIndex = (activeThemeIndex + 1) % THEME_ORDER.length;
+    const nextTheme = THEME_ORDER[nextThemeIndex];
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const supports3d = window.CSS?.supports?.('transform-style', 'preserve-3d');
+
+    cubeRotationDegrees += 120;
+    if (reduceMotion || !supports3d) {
+        cubeRotationDegrees %= 360;
+        setCubeRotationWithoutMotion(cubeRotationDegrees);
+        applyTheme(nextTheme, { persist: true, announce: true });
+        return;
+    }
+
+    themeSwitching = true;
+    clearTimeout(themeSwapTimeoutId);
+    clearTimeout(themeFinishTimeoutId);
+    document.documentElement.classList.add('theme-transitioning');
+    elements.themeCubeButton.classList.add('is-turning');
+    elements.themeCubeButton.setAttribute('aria-busy', 'true');
+    elements.themeCube.style.setProperty('--cube-turn', `${cubeRotationDegrees}deg`);
+
+    themeSwapTimeoutId = setTimeout(() => {
+        applyTheme(nextTheme, { persist: true, announce: true });
+    }, THEME_SWAP_DELAY_MS);
+    themeFinishTimeoutId = setTimeout(finishThemeSwitch, THEME_ROTATION_MS);
+}
+
+function initializeThemeSwitcher() {
+    applyTheme(THEME_ORDER[activeThemeIndex]);
+    setCubeRotationWithoutMotion(cubeRotationDegrees);
+    elements.themeCubeButton?.addEventListener('click', switchTheme);
+}
+
 function showScreen(screen) {
     mainScreens.forEach((item) => {
         item.classList.toggle('hidden', item !== screen);
@@ -370,10 +478,10 @@ function showRecallSection(section) {
     recallSections.forEach((item) => {
         item.classList.toggle('hidden', item !== section);
     });
+    section.querySelector('h2')?.focus({ preventScroll: true });
     requestAnimationFrame(() => {
         if (section.classList.contains('hidden')) return;
-        section.querySelector('h2')?.focus({ preventScroll: true });
-        section.scrollIntoView({ block: 'start' });
+        window.scrollTo(0, 0);
     });
 }
 
@@ -405,7 +513,6 @@ function resetResultColorBlocks() {
     elements.resultTargetColor.innerHTML = '';
     elements.resultSelectedColor.style.backgroundColor = '';
     elements.resultSelectedColor.style.border = '';
-    elements.resultSelectedColor.classList.remove('animate-shake');
     elements.resultSelectedColor.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
     elements.resultSelectedColor.innerHTML = '';
 }
@@ -543,6 +650,8 @@ function rgbToHslText(r, g, b) {
 function runCountdown({ counter, progressBar, durationMs, onComplete }) {
     const countdownId = ++activeCountdownId;
     const startTime = performance.now();
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let previousSeconds;
 
     function update(now) {
         if (countdownId !== activeCountdownId) return;
@@ -551,8 +660,13 @@ function runCountdown({ counter, progressBar, durationMs, onComplete }) {
         const remaining = Math.max(0, durationMs - elapsed);
         const secondsLeft = Math.ceil(remaining / 1000);
 
-        counter.textContent = secondsLeft;
-        progressBar.style.width = `${(remaining / durationMs) * 100}%`;
+        if (secondsLeft !== previousSeconds) {
+            counter.textContent = secondsLeft;
+            previousSeconds = secondsLeft;
+        }
+        if (!reduceMotion) {
+            progressBar.style.transform = `scaleX(${remaining / durationMs})`;
+        }
 
         if (remaining > 0) {
             requestAnimationFrame(update);
@@ -562,8 +676,10 @@ function runCountdown({ counter, progressBar, durationMs, onComplete }) {
         onComplete();
     }
 
-    counter.textContent = Math.ceil(durationMs / 1000);
+    previousSeconds = Math.ceil(durationMs / 1000);
+    counter.textContent = previousSeconds;
     progressBar.style.width = '100%';
+    progressBar.style.transform = 'scaleX(1)';
     requestAnimationFrame(update);
 }
 
@@ -578,6 +694,7 @@ function bindCardActivation(element, handler) {
 
 // 初始化游戏
 function initGame() {
+    initializeThemeSwitcher();
     // 更新最佳分数显示
     updateBrandState(elements.landingScreen);
     updateStatsVisibility(elements.landingScreen);
@@ -628,6 +745,19 @@ function renderRules(rules) {
         .join('');
 }
 
+function updatePreparationContext() {
+    if (gameState.gameMode === 'colorRecall') {
+        const config = recallDifficultyConfig[gameState.recallDifficulty];
+        elements.preparationMode.textContent = '颜色复现';
+        elements.preparationDifficulty.textContent = `${config.name} · ${config.controlName}`;
+        return;
+    }
+
+    const config = matchDifficultyConfig[gameState.matchDifficulty];
+    elements.preparationMode.textContent = '颜色匹配';
+    elements.preparationDifficulty.textContent = `${config.name} · ${config.gridSize}×${config.gridSize} 色池`;
+}
+
 function iconMarkup(name, className = '') {
     return `<svg class="ui-icon ${className}" aria-hidden="true"><use href="#icon-${name}"></use></svg>`;
 }
@@ -649,6 +779,7 @@ function selectMatchDifficulty(difficulty) {
     gameState.matchDifficulty = difficulty;
     gameState.totalLevels = config.totalLevels;
     renderRules(config.rules);
+    updatePreparationContext();
     updateDisplays();
     showScreen(elements.startScreen);
 }
@@ -661,6 +792,7 @@ function selectRecallDifficulty(difficulty) {
     gameState.recallTotalScoreCenti = 0;
     gameState.recallRound = 1;
     renderRules(config.rules);
+    updatePreparationContext();
     updateDisplays();
     showScreen(elements.startScreen);
 }
@@ -867,9 +999,8 @@ function showColorGrid() {
     colors.forEach((color, index) => {
         const colorBlock = document.createElement('button');
         colorBlock.type = 'button';
-        colorBlock.className = 'color-card w-full aspect-square rounded-xl shadow-lg cursor-pointer transition-all transform hover:scale-105 hover:shadow-xl animate-scale-in';
+        colorBlock.className = 'color-card w-full aspect-square rounded-xl shadow-lg cursor-pointer';
         colorBlock.style.backgroundColor = color;
-        colorBlock.style.animationDelay = `${index * 0.05}s`;
         colorBlock.setAttribute('aria-label', `颜色选项 ${index + 1}`);
         colorBlock.addEventListener('click', () => checkColorSelection(color));
         elements.colorGrid.appendChild(colorBlock);
@@ -920,9 +1051,6 @@ function checkColorSelection(selectedColor) {
         elements.resultIcon.innerHTML = iconMarkup('x-circle');
         elements.resultText.textContent = '没有选中目标色';
         elements.resultText.className = 'text-3xl font-bold mb-6 text-danger';
-        
-        // 添加抖动动画
-        elements.resultSelectedColor.classList.add('animate-shake');
         
         // 处理大师无尽模式的生命值
         if (config.endless) {
@@ -1247,9 +1375,9 @@ function startColorRecallRound() {
 }
 
 // 更新HSL色轮指针位置
-function updateHSLPointerPosition() {
+function updateHSLPointerPosition(wheelRect) {
     const wheel = elements.hslWheel;
-    const rect = wheel.getBoundingClientRect();
+    const rect = wheelRect || wheel.getBoundingClientRect();
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
     const radius = centerX;
@@ -1509,66 +1637,85 @@ function showColorRecallResult() {
 // 设置HSL色轮交互
 function setupHSLWheelInteraction() {
     let isDragging = false;
-    
-    const handleMove = (e) => {
-        if (!isDragging && e.type === 'click') return;
-        if (e.cancelable) e.preventDefault();
-        
-        const rect = elements.hslWheel.getBoundingClientRect();
+    let wheelRect;
+    let pendingPoint;
+    let moveFrameId;
+
+    const applyPoint = ({ clientX, clientY }) => {
+        const rect = wheelRect || elements.hslWheel.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
+
         let x = clientX - centerX;
         let y = clientY - centerY;
-        
+
         // 计算角度（色调）
         let angle = Math.atan2(y, x) * (180 / Math.PI) + 90;
         if (angle < 0) angle += 360;
         gameState.recallUserHSL.h = Math.round(angle) % 360;
-        
+
         // 计算距离（饱和度）
         const distance = Math.sqrt(x * x + y * y);
         const maxDistance = rect.width / 2;
         gameState.recallUserHSL.s = Math.min(100, Math.round((distance / maxDistance) * 100));
-        
-        updateHSLPointerPosition();
+
+        updateHSLPointerPosition(rect);
         updateRecallUserColor();
     };
-    
-    elements.hslWheel.addEventListener('mousedown', (e) => {
+
+    const queueMove = (event) => {
+        if (event.cancelable) event.preventDefault();
+        const point = event.touches ? event.touches[0] : event;
+        if (!point) return;
+        pendingPoint = { clientX: point.clientX, clientY: point.clientY };
+        if (moveFrameId) return;
+        moveFrameId = requestAnimationFrame(() => {
+            moveFrameId = undefined;
+            const nextPoint = pendingPoint;
+            pendingPoint = undefined;
+            if (nextPoint) applyPoint(nextPoint);
+        });
+    };
+
+    const startDragging = (event) => {
         isDragging = true;
-        handleMove(e);
-    });
-    
-    elements.hslWheel.addEventListener('click', handleMove);
-    
-    document.addEventListener('mousemove', (e) => {
-        if (isDragging) handleMove(e);
-    });
-    
-    document.addEventListener('mouseup', () => {
+        wheelRect = elements.hslWheel.getBoundingClientRect();
+        queueMove(event);
+    };
+
+    const stopDragging = (event) => {
+        if (moveFrameId) {
+            cancelAnimationFrame(moveFrameId);
+            moveFrameId = undefined;
+        }
+        const finalPoint = pendingPoint;
+        pendingPoint = undefined;
+        if (event?.type !== 'touchcancel' && finalPoint) applyPoint(finalPoint);
         isDragging = false;
+        wheelRect = undefined;
+    };
+
+    elements.hslWheel.addEventListener('mousedown', (e) => {
+        startDragging(e);
     });
-    
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDragging) queueMove(e);
+    });
+
+    document.addEventListener('mouseup', stopDragging);
+
     // 触摸支持
     elements.hslWheel.addEventListener('touchstart', (e) => {
-        isDragging = true;
-        handleMove(e);
+        startDragging(e);
     }, { passive: false });
-    
+
     elements.hslWheel.addEventListener('touchmove', (e) => {
-        if (isDragging) handleMove(e);
+        if (isDragging) queueMove(e);
     }, { passive: false });
-    
-    elements.hslWheel.addEventListener('touchend', () => {
-        isDragging = false;
-    });
-    elements.hslWheel.addEventListener('touchcancel', () => {
-        isDragging = false;
-    });
+
+    elements.hslWheel.addEventListener('touchend', stopDragging);
+    elements.hslWheel.addEventListener('touchcancel', stopDragging);
     
     // 亮度滑块
     const syncHslSliders = () => {

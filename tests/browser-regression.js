@@ -242,6 +242,19 @@ async function run() {
             || !startupStorageFailureReport.statusVisible) {
             throw new Error(`Startup storage fallback failed: ${JSON.stringify(startupStorageFailureReport)}`);
         }
+        await evaluate(client, `elements.themeCubeButton.click()`);
+        await waitFor(client, `document.documentElement.dataset.theme === 'amethyst'`);
+        await waitFor(client, `!elements.themeCubeButton.hasAttribute('aria-busy')`);
+        const blockedStorageThemeReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            storageAvailable,
+            statusVisible: !elements.storageStatus.classList.contains('hidden')
+        })`);
+        if (blockedStorageThemeReport.theme !== 'amethyst'
+            || blockedStorageThemeReport.storageAvailable
+            || !blockedStorageThemeReport.statusVisible) {
+            throw new Error(`Blocked-storage theme fallback failed: ${JSON.stringify(blockedStorageThemeReport)}`);
+        }
         await client.send('Page.removeScriptToEvaluateOnNewDocument', {
             identifier: blockedStorageScript.identifier
         });
@@ -434,6 +447,279 @@ async function run() {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 320,
+            height: 667,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        await evaluate(client, `document.documentElement.style.fontSize = '200%'`);
+        await delay(100);
+        const landingZoomReport = await evaluate(client, `(() => {
+            const cube = elements.themeCubeButton.getBoundingClientRect();
+            const primary = elements.enterGameButton.getBoundingClientRect();
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                cubeLeft: cube.left,
+                cubeRight: cube.right,
+                primaryLeft: primary.left,
+                primaryRight: primary.right
+            };
+        })()`);
+        if (landingZoomReport.scrollWidth > landingZoomReport.viewportWidth
+            || landingZoomReport.cubeLeft < 0
+            || landingZoomReport.cubeRight > landingZoomReport.viewportWidth + 1
+            || landingZoomReport.primaryLeft < 0
+            || landingZoomReport.primaryRight > landingZoomReport.viewportWidth + 1) {
+            throw new Error(`Landing text scaling failed: ${JSON.stringify(landingZoomReport)}`);
+        }
+        await evaluate(client, `document.documentElement.style.fontSize = ''`);
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 1440,
+            height: 1000,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
+
+        const themeStructureReport = await evaluate(client, `(() => {
+            const button = elements.themeCubeButton;
+            const initialTheme = document.documentElement.dataset.theme;
+            button.focus();
+            return {
+                buttonTag: button.tagName,
+                focused: document.activeElement.id,
+                initialTheme,
+                faces: document.querySelectorAll('.theme-cube-face').length,
+                tiles: document.querySelectorAll('.theme-cube-face i').length,
+                transformStyle: getComputedStyle(document.querySelector('.theme-cube-stage')).transformStyle,
+                transitionProperty: getComputedStyle(elements.themeCube).transitionProperty,
+                transitionDuration: getComputedStyle(elements.themeCube).transitionDuration
+            };
+        })()`);
+        if (themeStructureReport.buttonTag !== 'BUTTON'
+            || themeStructureReport.focused !== 'theme-cube-button'
+            || themeStructureReport.initialTheme !== 'cyan'
+            || themeStructureReport.faces !== 6
+            || themeStructureReport.tiles !== 24
+            || themeStructureReport.transformStyle !== 'preserve-3d'
+            || themeStructureReport.transitionProperty !== 'transform'
+            || themeStructureReport.transitionDuration !== '0.52s') {
+            throw new Error(`Theme cube structure failed: ${JSON.stringify(themeStructureReport)}`);
+        }
+        await client.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13
+        });
+        await client.send('Input.dispatchKeyEvent', {
+            type: 'char', key: 'Enter', code: 'Enter', text: '\r', unmodifiedText: '\r', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13
+        });
+        await client.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13
+        });
+        const keyboardThemeStartReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            busyDuringTurn: elements.themeCubeButton.getAttribute('aria-busy')
+        })`);
+        if (keyboardThemeStartReport.theme !== 'cyan'
+            || keyboardThemeStartReport.busyDuringTurn !== 'true') {
+            throw new Error(`Theme cube keyboard activation failed: ${JSON.stringify(keyboardThemeStartReport)}`);
+        }
+        const rapidThemeInputReport = await evaluate(client, `(() => {
+            elements.themeCubeButton.click();
+            return {
+                theme: document.documentElement.dataset.theme,
+                turn: elements.themeCube.style.getPropertyValue('--cube-turn'),
+                busy: elements.themeCubeButton.getAttribute('aria-busy')
+            };
+        })()`);
+        if (rapidThemeInputReport.theme !== 'cyan'
+            || rapidThemeInputReport.turn !== '120deg'
+            || rapidThemeInputReport.busy !== 'true') {
+            throw new Error(`Rapid theme input guard failed: ${JSON.stringify(rapidThemeInputReport)}`);
+        }
+        await waitFor(client, `document.documentElement.dataset.theme === 'amethyst'`);
+        await waitFor(client, `!elements.themeCubeButton.hasAttribute('aria-busy')`);
+        const amethystThemeReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            stored: localStorage.getItem(THEME_STORAGE_KEY),
+            label: elements.themeCubeButton.getAttribute('aria-label'),
+            activeDots: document.querySelectorAll('[data-theme-dot].is-active').length,
+            activeDot: document.querySelector('[data-theme-dot].is-active')?.dataset.themeDot,
+            turn: elements.themeCube.style.getPropertyValue('--cube-turn'),
+            titlePrimary: getComputedStyle(document.querySelector('.landing-title span:first-child')).color,
+            titleSecondary: getComputedStyle(document.querySelector('.landing-title span:last-child')).color,
+            themeColor: elements.themeColorMeta.getAttribute('content')
+        })`);
+        if (amethystThemeReport.theme !== 'amethyst'
+            || amethystThemeReport.stored !== 'amethyst'
+            || !amethystThemeReport.label.includes('当前紫晶黄铜')
+            || amethystThemeReport.activeDots !== 1
+            || amethystThemeReport.activeDot !== 'amethyst'
+            || amethystThemeReport.turn !== '120deg'
+            || amethystThemeReport.titlePrimary !== 'rgb(170, 155, 232)'
+            || amethystThemeReport.titleSecondary !== 'rgb(216, 182, 90)'
+            || amethystThemeReport.themeColor !== '#12101B') {
+            throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
+        }
+        await captureScreenshot(client, 'landing-amethyst-desktop.png');
+
+        await evaluate(client, `elements.themeCubeButton.click()`);
+        await waitFor(client, `document.documentElement.dataset.theme === 'ivory'`);
+        await waitFor(client, `!elements.themeCubeButton.hasAttribute('aria-busy')`);
+        await navigate(client, appUrl);
+        const ivoryThemeReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            stored: localStorage.getItem(THEME_STORAGE_KEY),
+            label: elements.themeCubeButton.getAttribute('aria-label'),
+            activeDot: document.querySelector('[data-theme-dot].is-active')?.dataset.themeDot,
+            bodyColor: getComputedStyle(document.body).color,
+            colorScheme: getComputedStyle(document.documentElement).colorScheme,
+            titlePrimary: getComputedStyle(document.querySelector('.landing-title span:first-child')).color,
+            titleSecondary: getComputedStyle(document.querySelector('.landing-title span:last-child')).color,
+            themeColor: elements.themeColorMeta.getAttribute('content'),
+            sampleSurround: getComputedStyle(document.documentElement).getPropertyValue('--sample-surround').trim(),
+            subtle: getComputedStyle(document.documentElement).getPropertyValue('--subtle').trim(),
+            rgbLabels: ['.text-red-300', '.text-green-300', '.text-blue-300']
+                .map((selector) => getComputedStyle(document.querySelector(selector)).color),
+            storageDetail: getComputedStyle(elements.storageStatus.querySelector('span')).color
+        })`);
+        if (ivoryThemeReport.theme !== 'ivory'
+            || ivoryThemeReport.stored !== 'ivory'
+            || !ivoryThemeReport.label.includes('当前象牙墨绿')
+            || ivoryThemeReport.activeDot !== 'ivory'
+            || ivoryThemeReport.bodyColor !== 'rgb(27, 36, 35)'
+            || ivoryThemeReport.colorScheme !== 'light'
+            || ivoryThemeReport.titlePrimary !== 'rgb(33, 106, 100)'
+            || ivoryThemeReport.titleSecondary !== 'rgb(176, 82, 63)'
+            || ivoryThemeReport.themeColor !== '#E9E1D3'
+            || ivoryThemeReport.sampleSurround !== '#10191d'
+            || ivoryThemeReport.subtle !== '#4e5854'
+            || ivoryThemeReport.rgbLabels.join('|') !== 'rgb(143, 47, 42)|rgb(29, 101, 64)|rgb(40, 94, 158)'
+            || ivoryThemeReport.storageDetail !== 'rgb(200, 208, 207)') {
+            throw new Error(`Ivory theme persistence failed: ${JSON.stringify(ivoryThemeReport)}`);
+        }
+        await captureScreenshot(client, 'landing-ivory-desktop.png');
+        await evaluate(client, `elements.enterGameButton.click()`);
+        await waitFor(client, `!elements.modeSelectionScreen.classList.contains('hidden')`);
+        await captureScreenshot(client, 'mode-selection-ivory-desktop.png');
+        await evaluate(client, `showScreen(elements.landingScreen)`);
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 390,
+            height: 844,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        await captureScreenshot(client, 'landing-ivory-mobile.png');
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 1440,
+            height: 1000,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
+
+        await client.send('Emulation.setEmulatedMedia', {
+            features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
+        });
+        const reducedThemeReport = await evaluate(client, `(() => {
+            applyTheme('cyan', { persist: true });
+            cubeRotationDegrees = 0;
+            setCubeRotationWithoutMotion(0);
+            elements.themeCubeButton.click();
+            return {
+                reduce: matchMedia('(prefers-reduced-motion: reduce)').matches,
+                theme: document.documentElement.dataset.theme,
+                busy: elements.themeCubeButton.hasAttribute('aria-busy'),
+                stored: localStorage.getItem(THEME_STORAGE_KEY),
+                transitionDuration: parseFloat(getComputedStyle(elements.themeCube).transitionDuration)
+            };
+        })()`);
+        if (!reducedThemeReport.reduce
+            || reducedThemeReport.theme !== 'amethyst'
+            || reducedThemeReport.busy
+            || reducedThemeReport.stored !== 'amethyst'
+            || reducedThemeReport.transitionDuration >= 0.001) {
+            throw new Error(`Reduced-motion theme switch failed: ${JSON.stringify(reducedThemeReport)}`);
+        }
+        await client.send('Emulation.setEmulatedMedia', { features: [] });
+        await evaluate(client, `(() => {
+            applyTheme('cyan', { persist: true });
+            cubeRotationDegrees = 0;
+            setCubeRotationWithoutMotion(0);
+        })()`);
+
+        for (const themeId of ['amethyst', 'ivory', 'cyan']) {
+            await evaluate(client, `elements.themeCubeButton.click()`);
+            await waitFor(client, `document.documentElement.dataset.theme === '${themeId}'`);
+            await waitFor(client, `!elements.themeCubeButton.hasAttribute('aria-busy')`);
+        }
+        const themeResetReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            turn: elements.themeCube.style.getPropertyValue('--cube-turn'),
+            resetting: elements.themeCube.classList.contains('is-resetting')
+        })`);
+        if (themeResetReport.theme !== 'cyan'
+            || themeResetReport.turn !== '0deg'
+            || themeResetReport.resetting) {
+            throw new Error(`Theme cube full-cycle reset failed: ${JSON.stringify(themeResetReport)}`);
+        }
+
+        await evaluate(client, `elements.themeCubeButton.focus()`);
+        await client.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: ' ', code: 'Space', text: ' ', unmodifiedText: ' ', windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32
+        });
+        await client.send('Input.dispatchKeyEvent', {
+            type: 'char', key: ' ', code: 'Space', text: ' ', unmodifiedText: ' ', windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32
+        });
+        await client.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32
+        });
+        const spaceThemeStartReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            busyDuringTurn: elements.themeCubeButton.getAttribute('aria-busy')
+        })`);
+        if (spaceThemeStartReport.theme !== 'cyan'
+            || spaceThemeStartReport.busyDuringTurn !== 'true') {
+            throw new Error(`Theme cube Space activation failed: ${JSON.stringify(spaceThemeStartReport)}`);
+        }
+        await waitFor(client, `document.documentElement.dataset.theme === 'amethyst'`);
+        await waitFor(client, `!elements.themeCubeButton.hasAttribute('aria-busy')`);
+        await evaluate(client, `(() => {
+            applyTheme('cyan', { persist: true });
+            cubeRotationDegrees = 0;
+            setCubeRotationWithoutMotion(0);
+        })()`);
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 390,
+            height: 844,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        await client.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+        const cubeTouchPoint = await evaluate(client, `(() => {
+            const rect = elements.themeCubeButton.getBoundingClientRect();
+            return { x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 };
+        })()`);
+        await client.send('Input.dispatchTouchEvent', {
+            type: 'touchStart',
+            touchPoints: [{ x: cubeTouchPoint.x, y: cubeTouchPoint.y }]
+        });
+        await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        const touchThemeStartReport = await evaluate(client, `({
+            theme: document.documentElement.dataset.theme,
+            busyDuringTurn: elements.themeCubeButton.getAttribute('aria-busy')
+        })`);
+        if (touchThemeStartReport.theme !== 'cyan'
+            || touchThemeStartReport.busyDuringTurn !== 'true') {
+            throw new Error(`Theme cube touch activation failed: ${JSON.stringify(touchThemeStartReport)}`);
+        }
+        await waitFor(client, `document.documentElement.dataset.theme === 'amethyst'`);
+        await waitFor(client, `!elements.themeCubeButton.hasAttribute('aria-busy')`);
+        await evaluate(client, `(() => {
+            applyTheme('cyan', { persist: true });
+            cubeRotationDegrees = 0;
+            setCubeRotationWithoutMotion(0);
+        })()`);
+        await client.send('Emulation.setTouchEmulationEnabled', { enabled: false });
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 1440,
             height: 1000,
@@ -691,9 +977,10 @@ async function run() {
         await evaluate(client, `(() => {
             const startedAt = performance.now();
             window.__observationTiming = { completed: false, elapsed: 0 };
+            window.__observationProgress = document.createElement('div');
             runCountdown({
                 counter: document.createElement('div'),
-                progressBar: document.createElement('div'),
+                progressBar: window.__observationProgress,
                 durationMs: OBSERVATION_DURATION_MS,
                 onComplete: () => {
                     window.__observationTiming.completed = true;
@@ -701,6 +988,19 @@ async function run() {
                 }
             });
         })()`);
+        await delay(100);
+        const countdownRenderReport = await evaluate(client, `({
+            width: window.__observationProgress.style.width,
+            transform: window.__observationProgress.style.transform
+        })`);
+        const countdownScale = Number(countdownRenderReport.transform.match(/scaleX\(([^)]+)\)/)?.[1]);
+        if (countdownRenderReport.width !== '100%'
+            || !countdownRenderReport.transform.startsWith('scaleX(')
+            || !Number.isFinite(countdownScale)
+            || countdownScale <= 0
+            || countdownScale >= 1) {
+            throw new Error(`Countdown rendering path failed: ${JSON.stringify(countdownRenderReport)}`);
+        }
         await waitFor(client, `window.__observationTiming.completed`, 7000);
         const observationTimingReport = await evaluate(client, `window.__observationTiming`);
         if (observationTimingReport.elapsed < 4900 || observationTimingReport.elapsed > 6500) {
@@ -740,9 +1040,14 @@ async function run() {
         await waitFor(client, `!document.querySelector('#start-screen').classList.contains('hidden')`);
         const matchPreparationReport = await evaluate(client, `({
             gameInfoHidden: elements.gameInfoBar.classList.contains('hidden'),
-            startVisible: !elements.startScreen.classList.contains('hidden')
+            startVisible: !elements.startScreen.classList.contains('hidden'),
+            mode: elements.preparationMode.textContent,
+            difficulty: elements.preparationDifficulty.textContent
         })`);
-        if (!matchPreparationReport.gameInfoHidden || !matchPreparationReport.startVisible) {
+        if (!matchPreparationReport.gameInfoHidden
+            || !matchPreparationReport.startVisible
+            || matchPreparationReport.mode !== '颜色匹配'
+            || matchPreparationReport.difficulty !== '基础 · 3×3 色池') {
             throw new Error(`Match preparation stats visibility failed: ${JSON.stringify(matchPreparationReport)}`);
         }
         await captureScreenshot(client, 'preparation-desktop.png');
@@ -765,7 +1070,8 @@ async function run() {
                 uniqueCount: new Set(colors.map(rgbToHex)).size,
                 targetCount: colors.filter((color) => rgbToHex(color) === targetHex).length,
                 distancesInBand: distanceChecks.every((distance) => distance >= band.min && distance <= band.max),
-                answersAfterDoubleClick: gameState.totalAnswers
+                answersAfterDoubleClick: gameState.totalAnswers,
+                stableSurround: getComputedStyle(cards[0]).boxShadow.includes('rgb(16, 25, 29)')
             };
         })()`);
 
@@ -773,7 +1079,8 @@ async function run() {
             || matchReport.uniqueCount !== 9
             || matchReport.targetCount !== 1
             || !matchReport.distancesInBand
-            || matchReport.answersAfterDoubleClick !== 1) {
+            || matchReport.answersAfterDoubleClick !== 1
+            || !matchReport.stableSurround) {
             throw new Error(`Match regression failed: ${JSON.stringify(matchReport)}`);
         }
 
@@ -786,9 +1093,14 @@ async function run() {
         await waitFor(client, `!document.querySelector('#start-screen').classList.contains('hidden')`);
         const recallPreparationReport = await evaluate(client, `({
             gameInfoHidden: elements.gameInfoBar.classList.contains('hidden'),
-            startVisible: !elements.startScreen.classList.contains('hidden')
+            startVisible: !elements.startScreen.classList.contains('hidden'),
+            mode: elements.preparationMode.textContent,
+            difficulty: elements.preparationDifficulty.textContent
         })`);
-        if (!recallPreparationReport.gameInfoHidden || !recallPreparationReport.startVisible) {
+        if (!recallPreparationReport.gameInfoHidden
+            || !recallPreparationReport.startVisible
+            || recallPreparationReport.mode !== '颜色复现'
+            || recallPreparationReport.difficulty !== '进阶 · RGB 控制') {
             throw new Error(`Recall preparation stats visibility failed: ${JSON.stringify(recallPreparationReport)}`);
         }
         await evaluate(client, `(() => {
@@ -1145,6 +1457,27 @@ async function run() {
             || !basicDesktopWorkbenchReport.statsInsideShell) {
             throw new Error(`Basic desktop workbench failed: ${JSON.stringify(basicDesktopWorkbenchReport)}`);
         }
+        const hslDragFlushReport = await evaluate(client, `(() => {
+            const rect = elements.hslWheel.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            elements.hslWheel.dispatchEvent(new MouseEvent('mousedown', {
+                bubbles: true, cancelable: true, clientX: centerX, clientY: centerY, buttons: 1
+            }));
+            document.dispatchEvent(new MouseEvent('mousemove', {
+                bubbles: true, cancelable: true, clientX: rect.right, clientY: centerY, buttons: 1
+            }));
+            document.dispatchEvent(new MouseEvent('mouseup', {
+                bubbles: true, cancelable: true, clientX: rect.right, clientY: centerY
+            }));
+            return {
+                hue: gameState.recallUserHSL.h,
+                saturation: gameState.recallUserHSL.s
+            };
+        })()`);
+        if (hslDragFlushReport.hue !== 90 || hslDragFlushReport.saturation !== 100) {
+            throw new Error(`HSL drag flush failed: ${JSON.stringify(hslDragFlushReport)}`);
+        }
         await captureScreenshot(client, 'recall-control-basic-desktop.png');
 
         const mobileReports = [];
@@ -1256,7 +1589,8 @@ async function run() {
             || finalZoomReport.restartLabel !== '再玩一次'
             || !finalZoomReport.changeDifficultyVisible
             || !finalZoomReport.scorePanelFits
-            || !finalZoomReport.statsFit) {
+            || !finalZoomReport.statsFit
+            || finalZoomReport.overflowElements.length) {
             throw new Error(`Final summary text scaling failed: ${JSON.stringify(finalZoomReport)}`);
         }
 
@@ -1270,7 +1604,8 @@ async function run() {
         const narrowFinalZoomReport = await collectFinalZoomReport(client);
         if (narrowFinalZoomReport.scrollWidth > narrowFinalZoomReport.viewportWidth
             || !narrowFinalZoomReport.scorePanelFits
-            || !narrowFinalZoomReport.statsFit) {
+            || !narrowFinalZoomReport.statsFit
+            || narrowFinalZoomReport.overflowElements.length) {
             throw new Error(`Narrow final summary scaling failed: ${JSON.stringify(narrowFinalZoomReport)}`);
         }
 
@@ -1313,11 +1648,22 @@ async function run() {
             matchPreparationReport,
             legacyIsolationReport,
             startupStorageFailureReport,
+            blockedStorageThemeReport,
             storageFailureReport,
             audioFailureReport,
             homepageReport,
             desktopShellReport,
             homepageMobileReport,
+            landingZoomReport,
+            themeStructureReport,
+            keyboardThemeStartReport,
+            rapidThemeInputReport,
+            amethystThemeReport,
+            ivoryThemeReport,
+            reducedThemeReport,
+            themeResetReport,
+            spaceThemeStartReport,
+            touchThemeStartReport,
             emptyPaletteReport,
             filledPaletteReport,
             hydratedPaletteReport,
@@ -1329,6 +1675,7 @@ async function run() {
             clearCancelReport,
             clearedPaletteReport,
             observationReport,
+            countdownRenderReport,
             observationTimingReport,
             recallReport,
             recallPreparationReport,
@@ -1341,6 +1688,7 @@ async function run() {
             hueKeyboardReport,
             basicExactReport,
             basicDesktopWorkbenchReport,
+            hslDragFlushReport,
             feedbackReport,
             dialogReport,
             interpolationDialogReport,
