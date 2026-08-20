@@ -88,7 +88,7 @@ Mode and difficulty cards use theme-tinted surfaces, thin structural borders, te
 
 Statistics use compact bordered cells and monospace values. Do not add decorative charts or extra metrics that compete with the current round, score, best record, or lives. When difficulty-level best records are shown, keep the adjacent note that identifies them as device-local cache and names the two common reset conditions: clearing cache and changing devices.
 
-Recall results pair the short motivational message with one plain-language diagnostic. Describe differences only as hue, saturation, and lightness; keep Oklab chroma and low-level scoring terminology inside implementation and optional scoring details.
+Recall results pair the short motivational message with one plain-language diagnostic. Describe differences only as hue, saturation, and lightness. In the optional scoring details, name Oklab once in the first calculation step and explain why it is used: equal RGB-number changes do not represent equal visual changes, while Oklab is closer to human color perception. Do not expose Oklab chroma terminology to players.
 
 The scoring explanation is a compact round-specific calibration receipt, not a dashboard. Show the two actual color samples, the plain-language diagnosis, and one continuous calculation flow from base difference through any gray-color correction to the final score. Do not restore metric cards, formula callouts, or score-anchor grids.
 

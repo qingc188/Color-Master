@@ -651,7 +651,7 @@
                 <button id="score-info-close" type="button" class="score-info-close" aria-label="关闭评分说明">×</button>
             </header>
             <div class="score-info-body">
-                <p id="score-info-description" class="score-info-intro">先看两种颜色差多少，再换成 10 分制。差异越小，分数越高。</p>
+                <p id="score-info-description" class="score-info-intro">先用 Oklab 看两种颜色差多少，再换成 10 分制。差异越小，分数越高。</p>
                 <section class="score-color-pair" aria-label="本轮颜色对比">
                     <div class="score-color-sample">
                         <span id="score-info-target-swatch" class="score-color-swatch" aria-hidden="true"></span>
@@ -670,8 +670,8 @@
                         <li>
                             <span class="score-step-number">1</span>
                             <div>
-                                <strong>先比较颜色</strong>
-                                <p>综合比较色相、饱和度和明度，基础差异为 <output id="score-info-base-distance">0.0</output>。</p>
+                                <strong>用 Oklab 比较颜色</strong>
+                                <p>RGB 是屏幕的红绿蓝数值，数字差不等于人眼看到的差别。Oklab 更接近人眼对明度、饱和度和色相变化的感受，本轮基础差异为 <output id="score-info-base-distance">0.0</output>。</p>
                             </div>
                         </li>
                         <li>

@@ -1262,6 +1262,7 @@ async function run() {
             description: document.querySelector('#score-info-description').textContent,
             adjustment: document.querySelector('#score-info-adjustment').textContent,
             baseDistance: document.querySelector('#score-info-base-distance').textContent,
+            oklabExplanation: document.querySelector('.score-calculation li:first-child p').textContent,
             targetCode: document.querySelector('#score-info-target-code').textContent,
             userCode: document.querySelector('#score-info-user-code').textContent,
             guidance: document.querySelector('#score-info-guidance').textContent,
@@ -1284,10 +1285,12 @@ async function run() {
         if (dialogReport.title !== '为什么是 10.00 分'
             || dialogReport.score !== '10.00 / 10'
             || dialogReport.distance !== '0.0'
-            || dialogReport.description !== '先看两种颜色差多少，再换成 10 分制。差异越小，分数越高。'
+            || dialogReport.description !== '先用 Oklab 看两种颜色差多少，再换成 10 分制。差异越小，分数越高。'
             || dialogReport.description.includes('彩度')
             || dialogReport.adjustment !== '这轮没有出现明显的灰色情况，因此不增加差异。'
             || dialogReport.baseDistance !== '0.0'
+            || !dialogReport.oklabExplanation.includes('RGB 是屏幕的红绿蓝数值')
+            || !dialogReport.oklabExplanation.includes('Oklab 更接近人眼对明度、饱和度和色相变化的感受')
             || dialogReport.targetCode !== dialogReport.userCode
             || dialogReport.guidance !== '色相、饱和度和明度都很接近'
             || dialogReport.totalFormula !== '0.0 + 0.0 = 0.0'
