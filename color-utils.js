@@ -296,7 +296,14 @@ function calculateRecallDistanceDetails(target, user) {
     return {
         baseDistance,
         neutralPenalty,
+        neutralAmount,
+        neutralFactor: smoothNeutralAmount,
         distance: baseDistance + neutralPenalty,
+        oklabDelta: {
+            l: userOklab.l - targetOklab.l,
+            a: userOklab.a - targetOklab.a,
+            b: userOklab.b - targetOklab.b
+        },
         lightnessDelta: (userOklab.l - targetOklab.l) * 100,
         chromaDelta: (userChroma - targetChroma) * 100,
         hueDifference: Math.min(targetChroma, userChroma) < 0.00001

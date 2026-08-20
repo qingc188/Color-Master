@@ -227,11 +227,16 @@ const elements = {
     scoreInfoScore: document.getElementById('score-info-score'),
     scoreInfoDistance: document.getElementById('score-info-distance'),
     scoreInfoBaseDistance: document.getElementById('score-info-base-distance'),
+    scoreInfoBaseFormula: document.getElementById('score-info-base-formula'),
+    scoreInfoBaseExpression: document.getElementById('score-info-base-expression'),
     scoreInfoTotalBase: document.getElementById('score-info-total-base'),
     scoreInfoTotalAdjustment: document.getElementById('score-info-total-adjustment'),
     scoreInfoAdjustment: document.getElementById('score-info-adjustment'),
+    scoreInfoNeutralFormula: document.getElementById('score-info-neutral-formula'),
+    scoreInfoAdjustmentFormula: document.getElementById('score-info-adjustment-formula'),
     scoreInfoRange: document.getElementById('score-info-range'),
     scoreInfoInterpolation: document.getElementById('score-info-interpolation'),
+    scoreInfoMappingBody: document.getElementById('score-info-mapping-body'),
     scoreInfoGuidance: document.getElementById('score-info-guidance'),
     scoreInfoTargetSwatch: document.getElementById('score-info-target-swatch'),
     scoreInfoTargetCode: document.getElementById('score-info-target-code'),
@@ -1543,38 +1548,65 @@ function updateScoreInfoDialog() {
     const user = getRecallUserRGB();
     const distanceDetails = calculateRecallDistanceDetails(target, user);
     const { lower, upper } = getScoreBracket(distance);
+    const formatOklabDelta = (value) => `(${value.toFixed(4)})²`;
+    const targetChroma = distanceDetails.targetChroma;
+    const userChroma = distanceDetails.userChroma;
 
     elements.scoreInfoTitle.textContent = `为什么是 ${score.toFixed(2)} 分`;
     elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
-    elements.scoreInfoDistance.textContent = distance.toFixed(1);
-    elements.scoreInfoBaseDistance.textContent = baseDistance.toFixed(1);
-    elements.scoreInfoTotalBase.textContent = baseDistance.toFixed(1);
-    elements.scoreInfoTotalAdjustment.textContent = neutralPenalty.toFixed(1);
+    elements.scoreInfoDistance.textContent = distance.toFixed(2);
+    elements.scoreInfoBaseDistance.textContent = baseDistance.toFixed(2);
+    elements.scoreInfoBaseExpression.textContent = `100 × √[${formatOklabDelta(distanceDetails.oklabDelta.l)} + ${formatOklabDelta(distanceDetails.oklabDelta.a)} + ${formatOklabDelta(distanceDetails.oklabDelta.b)}] ≈ `;
+    elements.scoreInfoTotalBase.textContent = baseDistance.toFixed(2);
+    elements.scoreInfoTotalAdjustment.textContent = neutralPenalty.toFixed(2);
     elements.scoreInfoTargetSwatch.style.backgroundColor = rgbToCss(target);
     elements.scoreInfoTargetCode.textContent = rgbToCss(target);
     elements.scoreInfoUserSwatch.style.backgroundColor = rgbToCss(user);
     elements.scoreInfoUserCode.textContent = rgbToCss(user);
     elements.scoreInfoGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
-        ? `当复现接近灰色、但明度刚好接近目标时，基础差异可能仍然不大。为了避免饱和度几乎丢失却拿到过高分，这一步再增加 ${neutralPenalty.toFixed(1)}。`
-        : '这一步用来防止明度接近的灰色拿到过高分。本轮没有明显灰色情况，所以不增加差异。';
+        ? `为防止明度碰巧接近的灰色拿到高分，先由 a、b 合成目标与复现的色彩强度。较低值越接近 0，灰色程度越接近 1。本轮修正值 ${neutralPenalty.toFixed(2)} 会加入最终差异，而不是直接扣掉同样多的分数。`
+        : '为防止明度碰巧接近的灰色拿到高分，先由 a、b 合成目标与复现的色彩强度。本轮色彩强度差没有产生额外修正，所以修正值为 0。';
+    elements.scoreInfoNeutralFormula.textContent = `灰色程度：n = 限制到 0–1(1 − min(${targetChroma.toFixed(4)}, ${userChroma.toFixed(4)}) ÷ 0.04) = ${distanceDetails.neutralAmount.toFixed(3)}；平滑后 g = n²(3 − 2n) = ${distanceDetails.neutralFactor.toFixed(3)}`;
+    elements.scoreInfoAdjustmentFormula.textContent = `修正值：|${targetChroma.toFixed(4)} − ${userChroma.toFixed(4)}| × 100 × ${RECALL_NEUTRAL_PENALTY_WEIGHT.toFixed(1)} × ${distanceDetails.neutralFactor.toFixed(3)} ≈ ${neutralPenalty.toFixed(2)}`;
+
+    if (!elements.scoreInfoMappingBody.children.length) {
+        for (let index = 0; index < OKLAB_SCORE_ANCHORS.length; index += 2) {
+            const row = document.createElement('tr');
+            OKLAB_SCORE_ANCHORS.slice(index, index + 2).forEach((anchor) => {
+                const distanceCell = document.createElement('td');
+                const scoreCell = document.createElement('td');
+                distanceCell.textContent = anchor.distance === 100 ? '100+' : String(anchor.distance);
+                scoreCell.textContent = anchor.score.toFixed(1);
+                distanceCell.dataset.scoreAnchor = String(anchor.distance);
+                scoreCell.dataset.scoreAnchor = String(anchor.distance);
+                row.append(distanceCell, scoreCell);
+            });
+            elements.scoreInfoMappingBody.appendChild(row);
+        }
+    }
+
+    const activeAnchors = new Set([lower.distance, upper?.distance].filter(Number.isFinite));
+    elements.scoreInfoMappingBody.querySelectorAll('[data-score-anchor]').forEach((cell) => {
+        cell.classList.toggle('is-active', activeAnchors.has(Number(cell.dataset.scoreAnchor)));
+    });
 
     if (!upper) {
-        elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(1)}，已经达到 ${lower.distance} 以上。`;
-        elements.scoreInfoInterpolation.textContent = '这个范围记 0 分。';
+        elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(2)}，已经达到 ${lower.distance} 以上。`;
+        elements.scoreInfoInterpolation.textContent = `${lower.distance} 以上均映射为 0.00 分。`;
         return;
     }
 
     if (lower === upper) {
         elements.scoreInfoRange.textContent = distance === 0
             ? '最终差异是 0，表示两种颜色一致。'
-            : `最终差异 ${distance.toFixed(1)}，按当前规则对应 ${lower.score.toFixed(1)} 分。`;
-        elements.scoreInfoInterpolation.textContent = '差异越小，分数越高。';
+            : `最终差异 ${distance.toFixed(2)}，正好落在一个映射点上。`;
+        elements.scoreInfoInterpolation.textContent = `${lower.distance} → ${lower.score.toFixed(2)} 分。`;
         return;
     }
 
-    elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(1)}，介于 ${lower.distance} 和 ${upper.distance} 之间。`;
-    elements.scoreInfoInterpolation.textContent = `${lower.distance} 对应 ${lower.score.toFixed(1)} 分，${upper.distance} 对应 ${upper.score.toFixed(1)} 分；按这轮所在的位置换算为 ${score.toFixed(2)} 分。`;
+    elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(2)}，介于 ${lower.distance} 和 ${upper.distance} 之间。`;
+    elements.scoreInfoInterpolation.textContent = `${lower.score.toFixed(1)} + (${upper.score.toFixed(1)} − ${lower.score.toFixed(1)}) × (${distance.toFixed(2)} − ${lower.distance}) ÷ (${upper.distance} − ${lower.distance}) ≈ ${score.toFixed(2)}`;
 }
 
 function openScoreInfoDialog() {

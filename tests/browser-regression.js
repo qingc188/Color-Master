@@ -1263,14 +1263,27 @@ async function run() {
             adjustment: document.querySelector('#score-info-adjustment').textContent,
             baseDistance: document.querySelector('#score-info-base-distance').textContent,
             oklabExplanation: document.querySelector('.score-calculation li:first-child p').textContent,
+            baseFormula: document.querySelector('#score-info-base-formula').textContent,
+            neutralFormula: document.querySelector('#score-info-neutral-formula').textContent,
+            adjustmentFormula: document.querySelector('#score-info-adjustment-formula').textContent,
             targetCode: document.querySelector('#score-info-target-code').textContent,
             userCode: document.querySelector('#score-info-user-code').textContent,
             guidance: document.querySelector('#score-info-guidance').textContent,
             totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
+            roundingNote: document.querySelector('.score-rounding-note').textContent,
             range: document.querySelector('#score-info-range').textContent,
             interpolation: document.querySelector('#score-info-interpolation').textContent,
             processSteps: document.querySelectorAll('.score-calculation li').length,
             grayStepTitle: document.querySelector('.score-calculation li:nth-child(2) strong').textContent,
+            mappingAnchorCount: new Set(Array.from(
+                document.querySelectorAll('#score-info-mapping-body [data-score-anchor]'),
+                (cell) => cell.dataset.scoreAnchor
+            )).size,
+            mappingRows: document.querySelectorAll('#score-info-mapping-body tr').length,
+            activeMappingAnchors: Array.from(new Set(Array.from(
+                document.querySelectorAll('#score-info-mapping-body .is-active'),
+                (cell) => Number(cell.dataset.scoreAnchor)
+            ))),
             genericCardsRemoved: !document.querySelector('.score-info-current')
                 && !document.querySelector('.score-info-formula')
                 && !document.querySelector('.score-anchor-section')
@@ -1286,20 +1299,27 @@ async function run() {
         })`);
         if (dialogReport.title !== '为什么是 10.00 分'
             || dialogReport.score !== '10.00 / 10'
-            || dialogReport.distance !== '0.0'
+            || dialogReport.distance !== '0.00'
             || dialogReport.description !== '先用 Oklab 看两种颜色差多少，再换成 10 分制。差异越小，分数越高。'
             || dialogReport.description.includes('彩度')
-            || dialogReport.adjustment !== '这一步用来防止明度接近的灰色拿到过高分。本轮没有明显灰色情况，所以不增加差异。'
-            || dialogReport.baseDistance !== '0.0'
-            || !dialogReport.oklabExplanation.includes('RGB 是屏幕的红绿蓝数值')
-            || !dialogReport.oklabExplanation.includes('Oklab 更接近人眼对明度、饱和度和色相变化的感受')
+            || !dialogReport.adjustment.includes('本轮色彩强度差没有产生额外修正')
+            || dialogReport.baseDistance !== '0.00'
+            || !dialogReport.oklabExplanation.includes('RGB 数字差不等于人眼看到的差别')
+            || !dialogReport.oklabExplanation.includes('L 表示明度，a、b 表示颜色方向')
+            || dialogReport.baseFormula !== '100 × √[(0.0000)² + (0.0000)² + (0.0000)²] ≈ 0.00'
+            || !dialogReport.neutralFormula.includes('n²(3 − 2n) = 0.000')
+            || !dialogReport.adjustmentFormula.endsWith('≈ 0.00')
             || dialogReport.targetCode !== dialogReport.userCode
             || dialogReport.guidance !== '色相、饱和度和明度都很接近'
-            || dialogReport.totalFormula !== '0.0 + 0.0 = 0.0'
+            || dialogReport.totalFormula !== '0.00 + 0.00 ≈ 0.00'
+            || dialogReport.roundingNote !== '界面保留两位小数，实际计算使用未四舍五入的数值。'
             || dialogReport.range !== '最终差异是 0，表示两种颜色一致。'
-            || dialogReport.interpolation !== '差异越小，分数越高。'
+            || dialogReport.interpolation !== '0 → 10.00 分。'
             || dialogReport.processSteps !== 3
             || dialogReport.grayStepTitle !== '防止灰色得到虚高分'
+            || dialogReport.mappingAnchorCount !== 8
+            || dialogReport.mappingRows !== 4
+            || JSON.stringify(dialogReport.activeMappingAnchors) !== '[0]'
             || !dialogReport.genericCardsRemoved
             || !dialogReport.singleCloseControl
             || dialogReport.helpHitWidth !== 44
@@ -1363,14 +1383,110 @@ async function run() {
             return {
                 title: elements.scoreInfoTitle.textContent,
                 range: elements.scoreInfoRange.textContent,
-                interpolation: elements.scoreInfoInterpolation.textContent
+                interpolation: elements.scoreInfoInterpolation.textContent,
+                activeMappingAnchors: Array.from(new Set(Array.from(
+                    elements.scoreInfoMappingBody.querySelectorAll('.is-active'),
+                    (cell) => Number(cell.dataset.scoreAnchor)
+                )))
             };
         })()`);
         if (interpolationDialogReport.title !== '为什么是 9.55 分'
             || !interpolationDialogReport.range.includes('2 和 5 之间')
-            || !interpolationDialogReport.interpolation.includes('2 对应 9.8 分，5 对应 9.3 分')) {
+            || interpolationDialogReport.interpolation !== '9.8 + (9.3 − 9.8) × (3.50 − 2) ÷ (5 − 2) ≈ 9.55'
+            || JSON.stringify(interpolationDialogReport.activeMappingAnchors) !== '[2,5]') {
             throw new Error(`Score interpolation dialog failed: ${JSON.stringify(interpolationDialogReport)}`);
         }
+        await evaluate(client, `closeScoreInfoDialog()`);
+        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
+
+        const grayCorrectionDialogReport = await evaluate(client, `(() => {
+            const target = { r: 92, g: 64, b: 54 };
+            const user = { r: 128, g: 128, b: 128 };
+            const details = calculateRecallDistanceDetails(target, user);
+            gameState.recallTargetRGB = target;
+            gameState.recallUserRGB = user;
+            gameState.recallLastRoundDistance = details.distance;
+            gameState.recallLastRoundBaseDistance = details.baseDistance;
+            gameState.recallLastRoundNeutralPenalty = details.neutralPenalty;
+            gameState.recallLastRoundScore = Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100;
+            openScoreInfoDialog();
+            return {
+                title: elements.scoreInfoTitle.textContent,
+                baseFormula: elements.scoreInfoBaseFormula.textContent,
+                adjustment: elements.scoreInfoAdjustment.textContent,
+                neutralFormula: elements.scoreInfoNeutralFormula.textContent,
+                adjustmentFormula: elements.scoreInfoAdjustmentFormula.textContent,
+                totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
+                interpolation: elements.scoreInfoInterpolation.textContent,
+                activeMappingAnchors: Array.from(new Set(Array.from(
+                    elements.scoreInfoMappingBody.querySelectorAll('.is-active'),
+                    (cell) => Number(cell.dataset.scoreAnchor)
+                )))
+            };
+        })()`);
+        if (grayCorrectionDialogReport.title !== '为什么是 5.41 分'
+            || !grayCorrectionDialogReport.baseFormula.endsWith('≈ 20.44')
+            || !grayCorrectionDialogReport.adjustment.includes('而不是直接扣掉同样多的分数')
+            || !grayCorrectionDialogReport.neutralFormula.endsWith('g = n²(3 − 2n) = 1.000')
+            || !grayCorrectionDialogReport.adjustmentFormula.endsWith('≈ 6.85')
+            || grayCorrectionDialogReport.totalFormula !== '20.44 + 6.85 ≈ 27.28'
+            || !grayCorrectionDialogReport.interpolation.endsWith('≈ 5.41')
+            || JSON.stringify(grayCorrectionDialogReport.activeMappingAnchors) !== '[20,40]') {
+            throw new Error(`Gray correction dialog failed: ${JSON.stringify(grayCorrectionDialogReport)}`);
+        }
+        await captureScreenshot(client, 'score-dialog-gray-correction-desktop.png');
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 320,
+            height: 667,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        await evaluate(client, `document.documentElement.style.fontSize = '200%'`);
+        await delay(100);
+        const scoreDialogZoomReport = await evaluate(client, `(() => {
+            const panel = document.querySelector('.score-info-panel');
+            const close = elements.scoreInfoClose;
+            const tableWrap = document.querySelector('.score-mapping-table-wrap');
+            const panelRect = panel.getBoundingClientRect();
+            const closeRect = close.getBoundingClientRect();
+            const tableRect = tableWrap.getBoundingClientRect();
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                documentScrollWidth: document.documentElement.scrollWidth,
+                panelLeft: panelRect.left,
+                panelRight: panelRect.right,
+                panelHeight: panelRect.height,
+                closeTop: closeRect.top,
+                closeRight: closeRect.right,
+                tableLeft: tableRect.left,
+                tableRight: tableRect.right,
+                bodyScrollable: elements.scoreInfoDialog.querySelector('.score-info-body').scrollHeight
+                    > elements.scoreInfoDialog.querySelector('.score-info-body').clientHeight,
+                formulasFit: Array.from(document.querySelectorAll('.score-detail-formula')).every((formula) => (
+                    formula.scrollWidth <= formula.clientWidth
+                ))
+            };
+        })()`);
+        if (scoreDialogZoomReport.documentScrollWidth > scoreDialogZoomReport.viewportWidth
+            || scoreDialogZoomReport.panelLeft < 0
+            || scoreDialogZoomReport.panelRight > scoreDialogZoomReport.viewportWidth
+            || scoreDialogZoomReport.panelHeight > 667
+            || scoreDialogZoomReport.closeTop < 0
+            || scoreDialogZoomReport.closeRight > scoreDialogZoomReport.viewportWidth
+            || scoreDialogZoomReport.tableLeft < scoreDialogZoomReport.panelLeft
+            || scoreDialogZoomReport.tableRight > scoreDialogZoomReport.panelRight
+            || !scoreDialogZoomReport.bodyScrollable
+            || !scoreDialogZoomReport.formulasFit) {
+            throw new Error(`Score dialog text scaling failed: ${JSON.stringify(scoreDialogZoomReport)}`);
+        }
+        await captureScreenshot(client, 'score-dialog-gray-correction-zoom.png');
+        await evaluate(client, `document.documentElement.style.fontSize = ''`);
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 1440,
+            height: 1000,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
         await evaluate(client, `closeScoreInfoDialog()`);
         await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
 
