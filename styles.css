@@ -252,6 +252,7 @@ input:focus-visible,
     --ink-850: #0a1e26;
     --ink-800: #0d252d;
     --ink-750: #12313a;
+    --progress-track: #12313a;
     --line: #27454d;
     --line-soft: rgba(119, 202, 198, 0.13);
     --cyan: #5ec8c2;
@@ -301,6 +302,7 @@ html[data-theme="amethyst"] {
     --ink-850: #171033;
     --ink-800: #201745;
     --ink-750: #2d225b;
+    --progress-track: #2d225b;
     --line: #493c73;
     --line-soft: rgba(143, 121, 232, 0.16);
     --cyan: #8f79e8;
@@ -350,6 +352,7 @@ html[data-theme="ivory"] {
     --ink-850: #171f31;
     --ink-800: #202a40;
     --ink-750: #2b3852;
+    --progress-track: #2b3852;
     --line: #46536b;
     --line-soft: rgba(153, 183, 232, 0.15);
     --cyan: #99b7e8;
@@ -1582,8 +1585,11 @@ html[data-theme="ivory"] .theme-cube-face--left {
     background: rgba(39, 69, 77, 0.46);
 }
 
-#progress-bar,
-#recall-progress-bar {
+.progress-track {
+    background: var(--progress-track);
+}
+
+.progress-fill {
     background: var(--cyan);
 }
 

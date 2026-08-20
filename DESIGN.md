@@ -38,7 +38,7 @@ ColorMaster is a Chinese-first browser game for observing, remembering, and repr
 
 Use `ink-950`, `ink-900`, and `ink-800` for the original dark stage and control surfaces. Use `line` for strong control edges and `line-soft` for quiet structure inside panels.
 
-In the default theme, use `cyan` as the primary in-game action and progress signal, `cyan-bright` for selected or hovered emphasis, and `cyan-soft` for low-emphasis interactive surfaces. Other themes map those roles to their own primary accent.
+In the default theme, use `cyan` as the primary in-game action and progress signal, `cyan-bright` for selected or hovered emphasis, and `cyan-soft` for low-emphasis interactive surfaces. Other themes map those roles to their own primary accent. Progress fills use the active primary accent, while their low-contrast tracks use the theme-specific `progress-track` token rather than a shared gray or cyan surface.
 
 In the default theme, reserve `coral` for the second brand glyph, the landing-page challenge action, destructive archive confirmation, and negative or unavailable states. Other themes map those roles to their own secondary accent.
 

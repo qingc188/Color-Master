@@ -494,7 +494,11 @@ async function run() {
                 tiles: document.querySelectorAll('.theme-cube-face i').length,
                 transformStyle: getComputedStyle(document.querySelector('.theme-cube-stage')).transformStyle,
                 transitionProperty: getComputedStyle(elements.themeCube).transitionProperty,
-                transitionDuration: getComputedStyle(elements.themeCube).transitionDuration
+                transitionDuration: getComputedStyle(elements.themeCube).transitionDuration,
+                progressTracks: [elements.progressBar, elements.recallProgressBar]
+                    .map((bar) => getComputedStyle(bar.parentElement).backgroundColor),
+                progressFills: [elements.progressBar, elements.recallProgressBar]
+                    .map((bar) => getComputedStyle(bar).backgroundColor)
             };
         })()`);
         if (themeStructureReport.buttonTag !== 'BUTTON'
@@ -504,7 +508,9 @@ async function run() {
             || themeStructureReport.tiles !== 24
             || themeStructureReport.transformStyle !== 'preserve-3d'
             || themeStructureReport.transitionProperty !== 'transform'
-            || themeStructureReport.transitionDuration !== '0.52s') {
+            || themeStructureReport.transitionDuration !== '0.52s'
+            || themeStructureReport.progressTracks.join('|') !== 'rgb(18, 49, 58)|rgb(18, 49, 58)'
+            || themeStructureReport.progressFills.join('|') !== 'rgb(94, 200, 194)|rgb(94, 200, 194)') {
             throw new Error(`Theme cube structure failed: ${JSON.stringify(themeStructureReport)}`);
         }
         await client.send('Input.dispatchKeyEvent', {
@@ -553,7 +559,9 @@ async function run() {
                 .map((token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim()),
             cubeSecondary: ['--cube-secondary-1', '--cube-secondary-2', '--cube-secondary-3', '--cube-secondary-4']
                 .map((token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim()),
-            cubeTopGold: getComputedStyle(document.documentElement).getPropertyValue('--cube-neutral-3').trim()
+            cubeTopGold: getComputedStyle(document.documentElement).getPropertyValue('--cube-neutral-3').trim(),
+            progressTrack: getComputedStyle(elements.progressBar.parentElement).backgroundColor,
+            progressFill: getComputedStyle(elements.progressBar).backgroundColor
         })`);
         if (amethystThemeReport.theme !== 'amethyst'
             || amethystThemeReport.stored !== 'amethyst'
@@ -566,7 +574,9 @@ async function run() {
             || amethystThemeReport.themeColor !== '#100B25'
             || amethystThemeReport.cubePrimary.join('|') !== '#c8bef4|#8c78e2|#674cc7|#3b258d'
             || amethystThemeReport.cubeSecondary.join('|') !== '#ede7b1|#ece165|#d4c85e|#baac45'
-            || amethystThemeReport.cubeTopGold !== '#f4f0cd') {
+            || amethystThemeReport.cubeTopGold !== '#f4f0cd'
+            || amethystThemeReport.progressTrack !== 'rgb(45, 34, 91)'
+            || amethystThemeReport.progressFill !== 'rgb(143, 121, 232)') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
         }
         await captureScreenshot(client, 'landing-amethyst-desktop.png');
@@ -589,7 +599,9 @@ async function run() {
             subtle: getComputedStyle(document.documentElement).getPropertyValue('--subtle').trim(),
             rgbLabels: ['.text-red-300', '.text-green-300', '.text-blue-300']
                 .map((selector) => getComputedStyle(document.querySelector(selector)).color),
-            storageDetail: getComputedStyle(elements.storageStatus.querySelector('span')).color
+            storageDetail: getComputedStyle(elements.storageStatus.querySelector('span')).color,
+            progressTrack: getComputedStyle(elements.progressBar.parentElement).backgroundColor,
+            progressFill: getComputedStyle(elements.progressBar).backgroundColor
         })`);
         if (ivoryThemeReport.theme !== 'ivory'
             || ivoryThemeReport.stored !== 'ivory'
@@ -603,7 +615,9 @@ async function run() {
             || ivoryThemeReport.sampleSurround !== '#10191d'
             || ivoryThemeReport.subtle !== '#9499ad'
             || ivoryThemeReport.rgbLabels.join('|') !== 'rgb(252, 165, 165)|rgb(134, 239, 172)|rgb(147, 197, 253)'
-            || ivoryThemeReport.storageDetail !== 'rgb(200, 208, 207)') {
+            || ivoryThemeReport.storageDetail !== 'rgb(200, 208, 207)'
+            || ivoryThemeReport.progressTrack !== 'rgb(43, 56, 82)'
+            || ivoryThemeReport.progressFill !== 'rgb(153, 183, 232)') {
             throw new Error(`Ivory theme persistence failed: ${JSON.stringify(ivoryThemeReport)}`);
         }
         await captureScreenshot(client, 'landing-ivory-desktop.png');

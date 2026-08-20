@@ -1119,8 +1119,8 @@ function showGameEnd() {
         
         elements.resultDetail.innerHTML = `
             <p class="text-xl font-semibold mb-2">正确率: <span class="text-success">${accuracy}%</span></p>
-            <div class="w-full bg-gray-700 rounded-full h-2.5">
-                <div class="bg-success h-2.5 rounded-full" style="width: ${accuracy}%"></div>
+            <div class="progress-track w-full rounded-full h-2.5">
+                <div class="progress-fill h-2.5 rounded-full" style="width: ${accuracy}%"></div>
             </div>
             <p class="text-sm text-gray-400 mt-2">答对: ${gameState.correctAnswers} / 总题数: ${gameState.totalAnswers}</p>
             <p class="text-sm text-gray-400 mt-1">${isNewRecord ? '新纪录！' : `${config.name}最佳：${gameState.matchBestScores[gameState.matchDifficulty]}`}</p>
