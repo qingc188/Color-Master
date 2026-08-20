@@ -552,13 +552,13 @@ async function run() {
         })`);
         if (amethystThemeReport.theme !== 'amethyst'
             || amethystThemeReport.stored !== 'amethyst'
-            || !amethystThemeReport.label.includes('当前紫晶香槟')
+            || !amethystThemeReport.label.includes('当前星夜紫金')
             || amethystThemeReport.activeDots !== 1
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
-            || amethystThemeReport.titlePrimary !== 'rgb(169, 153, 234)'
-            || amethystThemeReport.titleSecondary !== 'rgb(226, 207, 139)'
-            || amethystThemeReport.themeColor !== '#12101B') {
+            || amethystThemeReport.titlePrimary !== 'rgb(143, 121, 232)'
+            || amethystThemeReport.titleSecondary !== 'rgb(228, 188, 39)'
+            || amethystThemeReport.themeColor !== '#100B25') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
         }
         await captureScreenshot(client, 'landing-amethyst-desktop.png');

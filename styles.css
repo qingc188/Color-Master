@@ -294,51 +294,51 @@ input:focus-visible,
 }
 
 html[data-theme="amethyst"] {
-    --page-start: #12101b;
-    --page-end: #090811;
-    --ink-950: #090811;
-    --ink-900: #12101b;
-    --ink-850: #181522;
-    --ink-800: #201c2c;
-    --ink-750: #2d273c;
-    --line: #49405d;
-    --line-soft: rgba(169, 153, 234, 0.14);
-    --cyan: #a999ea;
-    --cyan-bright: #c1b5f2;
-    --cyan-soft: rgba(169, 153, 234, 0.12);
-    --coral: #e2cf8b;
-    --coral-bright: #eee3b7;
-    --coral-soft: rgba(226, 207, 139, 0.13);
-    --cream: #f1ede4;
-    --muted: #b9b2c4;
-    --subtle: #918a9d;
-    --on-accent: #111018;
-    --focus-ring: rgba(193, 181, 242, 0.94);
-    --accent-primary-rgb: 169, 153, 234;
-    --accent-secondary-rgb: 226, 207, 139;
-    --panel-rgb: 24, 21, 34;
-    --card-rgb: 32, 28, 44;
-    --card-hover-rgb: 45, 39, 60;
-    --deep-rgb: 9, 8, 17;
-    --text-rgb: 241, 237, 228;
-    --muted-rgb: 185, 178, 196;
-    --subtle-rgb: 145, 138, 157;
-    --structure-rgb: 169, 153, 234;
-    --cube-edge: #171421;
-    --cube-primary-1: #b7a9ea;
-    --cube-primary-2: #9888d9;
-    --cube-primary-3: #715eb8;
-    --cube-primary-4: #4e4082;
-    --cube-secondary-1: #f4e9c2;
-    --cube-secondary-2: #e2cf8b;
-    --cube-secondary-3: #bdaa72;
-    --cube-secondary-4: #958456;
-    --cube-neutral-1: #f2ede5;
-    --cube-neutral-2: #f4e8be;
-    --cube-neutral-3: #d7c47e;
-    --cube-neutral-4: #b8aaea;
-    --shadow-panel: 0 24px 70px rgba(5, 4, 10, 0.38);
-    --shadow-card: 0 14px 34px rgba(5, 4, 10, 0.28);
+    --page-start: #100b25;
+    --page-end: #06040d;
+    --ink-950: #06040d;
+    --ink-900: #100b25;
+    --ink-850: #171033;
+    --ink-800: #201745;
+    --ink-750: #2d225b;
+    --line: #493c73;
+    --line-soft: rgba(143, 121, 232, 0.16);
+    --cyan: #8f79e8;
+    --cyan-bright: #b6a8f5;
+    --cyan-soft: rgba(143, 121, 232, 0.13);
+    --coral: #e4bc27;
+    --coral-bright: #f2d867;
+    --coral-soft: rgba(228, 188, 39, 0.14);
+    --cream: #f8f6f1;
+    --muted: #c0b9cf;
+    --subtle: #938aa7;
+    --on-accent: #100c1c;
+    --focus-ring: rgba(194, 181, 250, 0.94);
+    --accent-primary-rgb: 143, 121, 232;
+    --accent-secondary-rgb: 228, 188, 39;
+    --panel-rgb: 20, 14, 44;
+    --card-rgb: 27, 19, 58;
+    --card-hover-rgb: 38, 27, 78;
+    --deep-rgb: 6, 4, 13;
+    --text-rgb: 248, 246, 241;
+    --muted-rgb: 192, 185, 207;
+    --subtle-rgb: 147, 138, 167;
+    --structure-rgb: 143, 121, 232;
+    --cube-edge: #120e20;
+    --cube-primary-1: #b8aaf3;
+    --cube-primary-2: #927de8;
+    --cube-primary-3: #674cc7;
+    --cube-primary-4: #3b258d;
+    --cube-secondary-1: #f7e8a4;
+    --cube-secondary-2: #e4bc27;
+    --cube-secondary-3: #c79b1d;
+    --cube-secondary-4: #9a7717;
+    --cube-neutral-1: #fffefa;
+    --cube-neutral-2: #f7edbd;
+    --cube-neutral-3: #e4bc27;
+    --cube-neutral-4: #a794ed;
+    --shadow-panel: 0 24px 70px rgba(3, 2, 9, 0.46);
+    --shadow-card: 0 14px 34px rgba(3, 2, 9, 0.32);
 }
 
 /* Keep the persisted ivory ID while its visual theme becomes mist blue and soft pink. */
@@ -1002,8 +1002,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
 
 [data-theme-dot="cyan"] i:first-child { background: #5ec8c2; }
 [data-theme-dot="cyan"] i:last-child { background: #f36f63; }
-[data-theme-dot="amethyst"] i:first-child { background: #a999ea; }
-[data-theme-dot="amethyst"] i:last-child { background: #e2cf8b; }
+[data-theme-dot="amethyst"] i:first-child { background: #8f79e8; }
+[data-theme-dot="amethyst"] i:last-child { background: #e4bc27; }
 [data-theme-dot="ivory"] i:first-child { background: #99b7e8; }
 [data-theme-dot="ivory"] i:last-child { background: #f3a1b0; }
 
