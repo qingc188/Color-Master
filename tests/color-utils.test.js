@@ -5,6 +5,9 @@ const {
     OKLAB_SCORE_ANCHORS,
     calculatePerceptualDistance,
     calculatePerceptualScore,
+    calculateRecallDistance,
+    calculateRecallDistanceDetails,
+    calculateRecallScore,
     generateColor,
     generatePerceptualDistractors,
     getMatchDistanceBand,
@@ -92,6 +95,47 @@ test('perceptual score is symmetric, bounded, and decreases with distance', () =
         1e-12
     );
     assert.ok(calculatePerceptualScore(black, samples[3]) < 1.1);
+});
+
+test('recall scoring penalizes a colored target reproduced as gray', () => {
+    const grayAttempt = calculateRecallDistanceDetails(
+        { r: 62, g: 124, b: 127 },
+        { r: 128, g: 128, b: 128 }
+    );
+    const sameHueAttempt = calculateRecallDistanceDetails(
+        { r: 118, g: 59, b: 135 },
+        { r: 189, g: 97, b: 193 }
+    );
+
+    approximately(grayAttempt.baseDistance, 8.345652804580233);
+    approximately(grayAttempt.neutralPenalty, 10.256917866624654);
+    approximately(grayAttempt.distance, 18.602570671204887);
+    approximately(sameHueAttempt.baseDistance, 18.043781400018073);
+    approximately(sameHueAttempt.neutralPenalty, 0);
+    approximately(calculateRecallScore({ r: 62, g: 124, b: 127 }, { r: 128, g: 128, b: 128 }), 6.737562985895169);
+    approximately(calculateRecallScore({ r: 118, g: 59, b: 135 }, { r: 189, g: 97, b: 193 }), 6.832557161996927);
+    assert.ok(sameHueAttempt.distance < grayAttempt.distance);
+});
+
+test('recall distance remains symmetric and exact matches keep full score', () => {
+    const first = { r: 62, g: 124, b: 127 };
+    const second = { r: 128, g: 128, b: 128 };
+
+    approximately(calculateRecallDistance(first, second), calculateRecallDistance(second, first));
+    approximately(calculateRecallDistance(first, first), 0);
+    approximately(calculateRecallScore(first, first), 10);
+    approximately(calculatePerceptualDistance(first, second), 8.345652804580233);
+});
+
+test('default gray is not a high-scoring recall baseline', () => {
+    const random = seededRandom(20260821);
+    const scores = Array.from({ length: 5000 }, (_, index) => (
+        calculateRecallScore(generateColor(index + 1, random), { r: 128, g: 128, b: 128 })
+    )).sort((first, second) => first - second);
+    const highScores = scores.filter((score) => score >= 8).length / scores.length;
+
+    assert.ok(scores[Math.floor(scores.length / 2)] <= 5.5);
+    assert.ok(highScores < 0.01);
 });
 
 test('visually identical HSL strings resolve to the same canonical RGB', () => {

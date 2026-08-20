@@ -88,6 +88,8 @@ Mode and difficulty cards use theme-tinted surfaces, thin structural borders, te
 
 Statistics use compact bordered cells and monospace values. Do not add decorative charts or extra metrics that compete with the current round, score, best record, or lives. When difficulty-level best records are shown, keep the adjacent note that identifies them as device-local cache and names the two common reset conditions: clearing cache and changing devices.
 
+Recall results pair the short motivational message with one plain-language diagnostic. Describe differences only as hue, saturation, and lightness; keep Oklab chroma and low-level scoring terminology inside implementation and optional scoring details.
+
 ## Motion
 
 Use motion only for feedback, state legibility, spatial continuity, or rare completion delight. Prefer transform and opacity, preserve the existing reduced-motion path, and avoid animating the page shell or footer between screens.

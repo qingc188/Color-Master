@@ -85,9 +85,9 @@ const gameState = {
     recallTotalScore: 0, // 累计得分
     recallTotalScoreCenti: 0,
     recallBestScores: {
-        basic: Number(getStorageItem('colorMemoryBestRecallScore_basic_oklab_v2')) || 0,
-        advanced: Number(getStorageItem('colorMemoryBestRecallScore_advanced_oklab_v2')) || 0,
-        master: Number(getStorageItem('colorMemoryBestRecallScore_master_oklab_v2')) || 0
+        basic: Number(getStorageItem('colorMemoryBestRecallScore_basic_oklab_v3')) || 0,
+        advanced: Number(getStorageItem('colorMemoryBestRecallScore_advanced_oklab_v3')) || 0,
+        master: Number(getStorageItem('colorMemoryBestRecallScore_master_oklab_v3')) || 0
     },
     recallTargetHSL: null, // 目标HSL颜色
     recallTargetRGB: null,
@@ -97,6 +97,8 @@ const gameState = {
     recallRoundSubmitted: false,
     recallLastRoundScore: 0,
     recallLastRoundDistance: 0,
+    recallLastRoundBaseDistance: 0,
+    recallLastRoundNeutralPenalty: 0,
     recallTotalRounds: 10 // 总轮次
 };
 
@@ -217,6 +219,7 @@ const elements = {
     restartRecallBtn: document.getElementById('restart-recall-btn'),
     recallRoundScore: document.getElementById('recall-round-score'),
     recallRoundFeedback: document.getElementById('recall-round-feedback'),
+    recallRoundGuidance: document.getElementById('recall-round-guidance'),
     scoreInfoButton: document.getElementById('score-info-button'),
     scoreInfoDialog: document.getElementById('score-info-dialog'),
     scoreInfoClose: document.getElementById('score-info-close'),
@@ -224,6 +227,7 @@ const elements = {
     scoreInfoTitle: document.getElementById('score-info-title'),
     scoreInfoScore: document.getElementById('score-info-score'),
     scoreInfoDistance: document.getElementById('score-info-distance'),
+    scoreInfoAdjustment: document.getElementById('score-info-adjustment'),
     scoreInfoRange: document.getElementById('score-info-range'),
     scoreInfoInterpolation: document.getElementById('score-info-interpolation'),
     recallResultTarget: document.getElementById('recall-result-target'),
@@ -341,39 +345,39 @@ const recallDifficultyConfig = {
         name: '基础',
         controlName: 'HSL 控制',
         preview: true,
-        storageKey: 'colorMemoryBestRecallScore_basic_oklab_v2',
+        storageKey: 'colorMemoryBestRecallScore_basic_oklab_v3',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
             '5 秒后目标颜色隐藏，进入复现环节',
             '使用 HSL 色轮或色相、饱和度、明度滑杆调整颜色',
             '调整时可以实时看到当前复现颜色',
-            '每轮按 Oklab 感知色差计分，满分 10 分，共 10 轮'
+            '每轮比较色相、饱和度和明度，满分 10 分，共 10 轮'
         ]
     },
     advanced: {
         name: '进阶',
         controlName: 'RGB 控制',
         preview: true,
-        storageKey: 'colorMemoryBestRecallScore_advanced_oklab_v2',
+        storageKey: 'colorMemoryBestRecallScore_advanced_oklab_v3',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
             '5 秒后目标颜色隐藏，进入复现环节',
             '使用 R、G、B 三个滑杆调整颜色',
             '调整时可以实时看到当前复现颜色',
-            '每轮按 Oklab 感知色差计分，满分 10 分，共 10 轮'
+            '每轮比较色相、饱和度和明度，满分 10 分，共 10 轮'
         ]
     },
     master: {
         name: '大师',
         controlName: 'RGB 盲调',
         preview: false,
-        storageKey: 'colorMemoryBestRecallScore_master_oklab_v2',
+        storageKey: 'colorMemoryBestRecallScore_master_oklab_v3',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
             '5 秒后目标颜色隐藏，进入复现环节',
             '只使用 R、G、B 三个滑杆调整参数',
             '调整时不会显示实时颜色预览',
-            '每轮按 Oklab 感知色差计分，满分 10 分，共 10 轮'
+            '每轮比较色相、饱和度和明度，满分 10 分，共 10 轮'
         ]
     }
 };
@@ -501,6 +505,8 @@ function resetRecallAttemptState() {
     gameState.recallRoundSubmitted = false;
     gameState.recallLastRoundScore = 0;
     gameState.recallLastRoundDistance = 0;
+    gameState.recallLastRoundBaseDistance = 0;
+    gameState.recallLastRoundNeutralPenalty = 0;
     gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
     gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
     elements.nextRecallBtn.textContent = '下一轮';
@@ -1331,6 +1337,8 @@ function startColorRecallRound() {
     gameState.recallRoundSubmitted = false;
     gameState.recallLastRoundScore = 0;
     gameState.recallLastRoundDistance = 0;
+    gameState.recallLastRoundBaseDistance = 0;
+    gameState.recallLastRoundNeutralPenalty = 0;
     elements.nextRecallBtn.textContent = '下一轮';
     updateDisplays();
     configureRecallControlPanel();
@@ -1447,6 +1455,61 @@ function getRecallFeedback(score, round = 1) {
     return tier.messages[messageIndex];
 }
 
+function getRecallDifferenceFeedback(details) {
+    const lightnessDifference = Math.abs(details.lightnessDelta);
+    const saturationDifference = Math.abs(details.chromaDelta);
+    const lightnessDirection = details.lightnessDelta > 0 ? '偏亮' : '偏暗';
+    const saturationDirection = details.chromaDelta > 0 ? '偏高' : '偏低';
+    const lightnessIssue = lightnessDifference > 10
+        ? `明度明显${lightnessDirection}`
+        : `明度稍微${lightnessDirection}`;
+
+    if (details.userChroma < 0.02 && details.targetChroma - details.userChroma >= 0.025) {
+        if (lightnessDifference <= 7) {
+            return '明度接近，但饱和度明显偏低，颜色接近灰色';
+        }
+        return `饱和度明显偏低，颜色接近灰色，同时${lightnessIssue}`;
+    }
+
+    if (details.targetChroma < 0.02 && details.userChroma - details.targetChroma >= 0.025) {
+        if (lightnessDifference <= 7) {
+            return '明度接近，但饱和度明显偏高';
+        }
+        return `饱和度明显偏高，同时${lightnessIssue}`;
+    }
+
+    if ((details.hueDifference === null || details.hueDifference <= 5)
+        && saturationDifference < 2
+        && lightnessDifference < 3) {
+        return '色相、饱和度和明度都很接近';
+    }
+
+    const closeParts = [];
+    const issueParts = [];
+    if (details.hueDifference !== null) {
+        if (details.hueDifference <= 12) {
+            closeParts.push('色相很接近');
+        } else if (details.hueDifference <= 30) {
+            issueParts.push('色相稍有偏差');
+        } else {
+            issueParts.push('色相偏差较大');
+        }
+    }
+    if (saturationDifference >= 4) {
+        issueParts.push(`饱和度${saturationDifference > 8 ? '明显' : '稍微'}${saturationDirection}`);
+    }
+    if (lightnessDifference >= 4.5) {
+        issueParts.push(lightnessIssue);
+    }
+
+    if (!issueParts.length) {
+        return closeParts.length ? `${closeParts.join('、')}，饱和度和明度也很接近` : '饱和度和明度都很接近';
+    }
+    return closeParts.length
+        ? `${closeParts.join('、')}，但${issueParts.join('、')}`
+        : issueParts.join('、');
+}
+
 function getScoreBracket(distance) {
     const safeDistance = Math.max(0, Number(distance) || 0);
     const exactAnchor = OKLAB_SCORE_ANCHORS.find((anchor) => (
@@ -1468,25 +1531,29 @@ function getScoreBracket(distance) {
 function updateScoreInfoDialog() {
     const score = gameState.recallLastRoundScore;
     const distance = gameState.recallLastRoundDistance;
+    const neutralPenalty = gameState.recallLastRoundNeutralPenalty;
     const { lower, upper } = getScoreBracket(distance);
 
     elements.scoreInfoTitle.textContent = `这 ${score.toFixed(2)} 分是怎么来的？`;
     elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
     elements.scoreInfoDistance.textContent = distance.toFixed(1);
+    elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
+        ? `两种颜色中有一种接近灰色，饱和度差异使综合色差增加 ${neutralPenalty.toFixed(1)}。`
+        : '本轮没有触发低饱和度修正。';
 
     if (!upper) {
-        elements.scoreInfoRange.textContent = `本轮色差 ${distance.toFixed(1)}，超过最后一个评分锚点 ${lower.distance}。`;
-        elements.scoreInfoInterpolation.textContent = `色差达到 ${lower.distance} 或更高时，本轮得分为 ${score.toFixed(2)}。`;
+        elements.scoreInfoRange.textContent = `本轮综合色差 ${distance.toFixed(1)}，超过最后一个评分锚点 ${lower.distance}。`;
+        elements.scoreInfoInterpolation.textContent = `综合色差达到 ${lower.distance} 或更高时，本轮得分为 ${score.toFixed(2)}。`;
         return;
     }
 
     if (lower === upper) {
-        elements.scoreInfoRange.textContent = `本轮色差 ${distance.toFixed(1)}，正好落在评分锚点上。`;
+        elements.scoreInfoRange.textContent = `本轮综合色差 ${distance.toFixed(1)}，正好落在评分锚点上。`;
         elements.scoreInfoInterpolation.textContent = `这个锚点对应 ${lower.score.toFixed(1)} 分，本轮最终得分为 ${score.toFixed(2)}。`;
         return;
     }
 
-    elements.scoreInfoRange.textContent = `本轮色差 ${distance.toFixed(1)}，位于 ${lower.distance} 和 ${upper.distance} 之间。`;
+    elements.scoreInfoRange.textContent = `本轮综合色差 ${distance.toFixed(1)}，位于 ${lower.distance} 和 ${upper.distance} 之间。`;
     elements.scoreInfoInterpolation.textContent = `对应分数从 ${lower.score.toFixed(1)} 到 ${upper.score.toFixed(1)} 线性换算，本轮最终得分为 ${score.toFixed(2)}。`;
 }
 
@@ -1534,8 +1601,9 @@ function submitRecallAnswer() {
 
     const target = gameState.recallTargetRGB;
     const user = getRecallUserRGB();
-    const distance = calculatePerceptualDistance(target, user);
-    const scoreCenti = Math.round(calculatePerceptualScore(target, user) * 100);
+    const distanceDetails = calculateRecallDistanceDetails(target, user);
+    const distance = distanceDetails.distance;
+    const scoreCenti = Math.round(scoreFromPerceptualDistance(distance) * 100);
     const score = scoreCenti / 100;
     addToColorHistory(`rgb(${target.r}, ${target.g}, ${target.b})`);
     
@@ -1545,6 +1613,8 @@ function submitRecallAnswer() {
     gameState.recallRoundSubmitted = true;
     gameState.recallLastRoundScore = score;
     gameState.recallLastRoundDistance = distance;
+    gameState.recallLastRoundBaseDistance = distanceDetails.baseDistance;
+    gameState.recallLastRoundNeutralPenalty = distanceDetails.neutralPenalty;
     
     // 显示结果
     showRecallSection(elements.recallResultSection);
@@ -1552,6 +1622,7 @@ function submitRecallAnswer() {
     // 显示本轮得分
     elements.recallRoundScore.textContent = score.toFixed(2);
     elements.recallRoundFeedback.textContent = getRecallFeedback(score, gameState.recallRound);
+    elements.recallRoundGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     
     // 显示目标颜色和用户复现
     elements.recallResultTarget.style.backgroundColor = `rgb(${target.r}, ${target.g}, ${target.b})`;

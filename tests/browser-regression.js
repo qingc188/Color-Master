@@ -215,13 +215,19 @@ async function run() {
 
         const appUrl = pathToFileURL(path.resolve(__dirname, '..', 'index.html')).href;
         await navigate(client, appUrl);
-        await evaluate(client, `localStorage.setItem('colorMemoryBestRecallScore_advanced', '99')`);
+        await evaluate(client, `
+            localStorage.setItem('colorMemoryBestRecallScore_advanced', '99');
+            localStorage.setItem('colorMemoryBestRecallScore_advanced_oklab_v2', '88');
+        `);
         await navigate(client, appUrl);
         const legacyIsolationReport = await evaluate(client, `({
-            loadedV2Best: gameState.recallBestScores.advanced,
+            loadedV3Best: gameState.recallBestScores.advanced,
+            storedV2: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v2'),
             legacyValue: localStorage.getItem('colorMemoryBestRecallScore_advanced')
         })`);
-        if (legacyIsolationReport.loadedV2Best !== 0 || legacyIsolationReport.legacyValue !== '99') {
+        if (legacyIsolationReport.loadedV3Best !== 0
+            || legacyIsolationReport.storedV2 !== '88'
+            || legacyIsolationReport.legacyValue !== '99') {
             throw new Error(`Legacy score isolation failed: ${JSON.stringify(legacyIsolationReport)}`);
         }
 
@@ -1054,6 +1060,30 @@ async function run() {
             throw new Error(`Feedback regression failed: ${JSON.stringify(feedbackReport)}`);
         }
 
+        const recallSemanticReport = await evaluate(client, `(() => {
+            const grayAttempt = calculateRecallDistanceDetails(
+                { r: 62, g: 124, b: 127 },
+                { r: 128, g: 128, b: 128 }
+            );
+            const sameHueAttempt = calculateRecallDistanceDetails(
+                { r: 118, g: 59, b: 135 },
+                { r: 189, g: 97, b: 193 }
+            );
+            return {
+                grayScore: Math.round(scoreFromPerceptualDistance(grayAttempt.distance) * 100) / 100,
+                sameHueScore: Math.round(scoreFromPerceptualDistance(sameHueAttempt.distance) * 100) / 100,
+                grayFeedback: getRecallDifferenceFeedback(grayAttempt),
+                sameHueFeedback: getRecallDifferenceFeedback(sameHueAttempt)
+            };
+        })()`);
+        if (recallSemanticReport.grayScore !== 6.74
+            || recallSemanticReport.sameHueScore !== 6.83
+            || recallSemanticReport.sameHueScore <= recallSemanticReport.grayScore
+            || recallSemanticReport.grayFeedback !== '明度接近，但饱和度明显偏低，颜色接近灰色'
+            || recallSemanticReport.sameHueFeedback !== '色相很接近，但明度明显偏亮') {
+            throw new Error(`Recall semantic scoring failed: ${JSON.stringify(recallSemanticReport)}`);
+        }
+
         await evaluate(client, `document.querySelector('#enter-game-button').click()`);
         await waitFor(client, `!document.querySelector('#mode-selection-screen').classList.contains('hidden')`);
         await evaluate(client, `document.querySelector('#color-match-mode').click()`);
@@ -1196,6 +1226,9 @@ async function run() {
             distance: gameState.recallLastRoundDistance,
             displayedScore: document.querySelector('#recall-round-score').textContent,
             feedback: document.querySelector('#recall-round-feedback').textContent,
+            guidance: elements.recallRoundGuidance.textContent,
+            baseDistance: gameState.recallLastRoundBaseDistance,
+            neutralPenalty: gameState.recallLastRoundNeutralPenalty,
             focused: document.activeElement.id,
             topStatsVisible: !elements.gameInfoBar.classList.contains('hidden'),
             topRound: elements.levelDisplay.textContent,
@@ -1206,6 +1239,9 @@ async function run() {
             || recallReport.distance !== 0
             || recallReport.displayedScore !== '10.00'
             || recallReport.feedback !== '你就是Color Master!'
+            || recallReport.guidance !== '色相、饱和度和明度都很接近'
+            || recallReport.baseDistance !== 0
+            || recallReport.neutralPenalty !== 0
             || recallReport.focused !== 'recall-result-title'
             || !recallReport.topStatsVisible
             || recallReport.topRound !== '1'
@@ -1222,6 +1258,9 @@ async function run() {
             title: document.querySelector('#score-info-title').textContent,
             score: document.querySelector('#score-info-score').textContent,
             distance: document.querySelector('#score-info-distance').textContent,
+            description: document.querySelector('#score-info-description').textContent,
+            adjustment: document.querySelector('#score-info-adjustment').textContent,
+            formula: document.querySelector('.score-info-formula').textContent.trim(),
             range: document.querySelector('#score-info-range').textContent,
             focused: document.activeElement.id,
             role: document.querySelector('#score-info-dialog').getAttribute('role'),
@@ -1231,7 +1270,11 @@ async function run() {
         if (dialogReport.title !== '这 10.00 分是怎么来的？'
             || dialogReport.score !== '10.00 / 10'
             || dialogReport.distance !== '0.0'
-            || !dialogReport.range.includes('色差 0.0')
+            || !dialogReport.description.includes('色相、饱和度和明度')
+            || dialogReport.description.includes('彩度')
+            || dialogReport.adjustment !== '本轮没有触发低饱和度修正。'
+            || dialogReport.formula !== '综合色差 = Oklab 基础色差 + 低饱和度修正'
+            || !dialogReport.range.includes('综合色差 0.0')
             || dialogReport.focused !== 'score-info-close'
             || dialogReport.role !== 'dialog'
             || dialogReport.modal !== 'true'
@@ -1321,12 +1364,12 @@ async function run() {
                 { r: 255, g: 0, b: 0 }
             ];
             gameState.recallUserRGB = candidates.find((color) => (
-                Math.round(calculatePerceptualScore(gameState.recallTargetRGB, color) * 100) % 100 !== 0
+                Math.round(calculateRecallScore(gameState.recallTargetRGB, color) * 100) % 100 !== 0
             )) || candidates[0];
             gameState.recallTotalScore = 0;
             gameState.recallTotalScoreCenti = 0;
             const expectedRoundCenti = Math.round(
-                calculatePerceptualScore(gameState.recallTargetRGB, gameState.recallUserRGB) * 100
+                calculateRecallScore(gameState.recallTargetRGB, gameState.recallUserRGB) * 100
             );
             for (let round = 0; round < 10; round++) {
                 gameState.recallRoundSubmitted = false;
@@ -1370,6 +1413,7 @@ async function run() {
             totalCenti: gameState.recallTotalScoreCenti,
             round: gameState.recallRound,
             best: gameState.recallBestScores.advanced,
+            storedV3: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v3'),
             storedV2: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v2'),
             legacyValue: localStorage.getItem('colorMemoryBestRecallScore_advanced'),
             bestLabel: document.querySelector('#recall-final-summary .recall-final-stat:nth-child(2) p').textContent,
@@ -1380,7 +1424,8 @@ async function run() {
             || persistenceReport.totalCenti !== 10000
             || persistenceReport.round !== 10
             || persistenceReport.best !== 100
-            || persistenceReport.storedV2 !== '100'
+            || persistenceReport.storedV3 !== '100'
+            || persistenceReport.storedV2 !== '88'
             || persistenceReport.legacyValue !== '99'
             || persistenceReport.bestLabel !== '本机最佳'
             || persistenceReport.recordNote !== '首次完成，已记录为本机最佳'

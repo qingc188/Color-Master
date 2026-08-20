@@ -9,6 +9,8 @@ const OKLAB_SCORE_ANCHORS = Object.freeze([
     { distance: 70, score: 0.8 },
     { distance: 100, score: 0 }
 ]);
+const RECALL_NEUTRAL_CHROMA_THRESHOLD = 0.04;
+const RECALL_NEUTRAL_PENALTY_WEIGHT = 1.6;
 
 function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -266,6 +268,53 @@ function calculatePerceptualScore(target, user) {
     return scoreFromPerceptualDistance(calculatePerceptualDistance(target, user));
 }
 
+// 复现模式额外惩罚“有颜色的目标被还原成灰色”，匹配模式仍使用纯 Oklab 距离。
+function calculateRecallDistanceDetails(target, user) {
+    const targetOklab = rgbToOklab(target);
+    const userOklab = rgbToOklab(user);
+    const targetChroma = Math.hypot(targetOklab.a, targetOklab.b);
+    const userChroma = Math.hypot(userOklab.a, userOklab.b);
+    const baseDistance = Math.hypot(
+        userOklab.l - targetOklab.l,
+        userOklab.a - targetOklab.a,
+        userOklab.b - targetOklab.b
+    ) * 100;
+    const neutralAmount = clamp(
+        1 - Math.min(targetChroma, userChroma) / RECALL_NEUTRAL_CHROMA_THRESHOLD,
+        0,
+        1
+    );
+    const smoothNeutralAmount = neutralAmount * neutralAmount * (3 - 2 * neutralAmount);
+    const neutralPenalty = Math.abs(targetChroma - userChroma)
+        * 100
+        * RECALL_NEUTRAL_PENALTY_WEIGHT
+        * smoothNeutralAmount;
+    const targetHue = Math.atan2(targetOklab.b, targetOklab.a) * 180 / Math.PI;
+    const userHue = Math.atan2(userOklab.b, userOklab.a) * 180 / Math.PI;
+    const rawHueDifference = Math.abs(targetHue - userHue) % 360;
+
+    return {
+        baseDistance,
+        neutralPenalty,
+        distance: baseDistance + neutralPenalty,
+        lightnessDelta: (userOklab.l - targetOklab.l) * 100,
+        chromaDelta: (userChroma - targetChroma) * 100,
+        hueDifference: Math.min(targetChroma, userChroma) < 0.00001
+            ? null
+            : Math.min(rawHueDifference, 360 - rawHueDifference),
+        targetChroma,
+        userChroma
+    };
+}
+
+function calculateRecallDistance(target, user) {
+    return calculateRecallDistanceDetails(target, user).distance;
+}
+
+function calculateRecallScore(target, user) {
+    return scoreFromPerceptualDistance(calculateRecallDistance(target, user));
+}
+
 function getMatchDistanceBand(difficulty, level) {
     const safeLevel = Math.max(1, Number(level) || 1);
     let center;
@@ -356,9 +405,14 @@ function shuffleArray(array, random = Math.random) {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         OKLAB_SCORE_ANCHORS,
+        RECALL_NEUTRAL_CHROMA_THRESHOLD,
+        RECALL_NEUTRAL_PENALTY_WEIGHT,
         calculateOklabDistance,
         calculatePerceptualDistance,
         calculatePerceptualScore,
+        calculateRecallDistance,
+        calculateRecallDistanceDetails,
+        calculateRecallScore,
         findMaxOklchChroma,
         generateColor,
         generatePerceptualDistractors,

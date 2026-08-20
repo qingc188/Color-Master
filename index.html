@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
     <link rel="stylesheet" href="tailwind.css">
-    <link rel="stylesheet" href="styles.css?v=20260821-themed-progress">
+    <link rel="stylesheet" href="styles.css?v=20260821-recall-v3">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
     <svg class="icon-sprite" aria-hidden="true">
@@ -535,6 +535,7 @@
                         <p id="recall-round-feedback">感觉对了</p>
                         <button id="score-info-button" type="button" aria-label="查看评分说明" title="查看评分说明">?</button>
                     </div>
+                    <p id="recall-round-guidance" class="recall-round-guidance">色相、饱和度和明度都很接近</p>
                     <div class="result-color-grid grid grid-cols-2 gap-3 sm:gap-8 justify-center mb-8">
                         <div class="text-center min-w-0">
                             <div id="recall-result-target" class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto"></div>
@@ -650,26 +651,27 @@
                 <button id="score-info-close" type="button" class="score-info-close" aria-label="关闭评分说明">×</button>
             </header>
             <div class="score-info-body">
-                <p id="score-info-description">系统会先把目标颜色和你的复现转换到 Oklab。它比直接比较 RGB 数字更接近人眼对明暗、彩度和色相差异的感受。</p>
+                <p id="score-info-description">系统会综合比较色相、饱和度和明度。当目标有明显颜色而复现接近灰色时，还会增加低饱和度修正，避免灰色仅凭明度接近获得过高分。</p>
                 <div class="score-info-current" aria-label="本轮评分数据">
                     <div><span>本轮得分</span><strong id="score-info-score">0.00 / 10</strong></div>
-                    <div><span>Oklab 色差</span><strong id="score-info-distance">0.0</strong></div>
+                    <div><span>综合色差</span><strong id="score-info-distance">0.0</strong></div>
                 </div>
                 <div class="score-info-explanation">
                     <h3>本轮怎么算</h3>
+                    <p id="score-info-adjustment"></p>
                     <p id="score-info-range"></p>
                     <p id="score-info-interpolation"></p>
                 </div>
-                <div class="score-info-formula" aria-label="Oklab 色差公式">
-                    色差 = √[(ΔL)² + (Δa)² + (Δb)²] × 100
+                <div class="score-info-formula" aria-label="综合色差公式">
+                    综合色差 = Oklab 基础色差 + 低饱和度修正
                 </div>
                 <div class="score-anchor-section">
                     <h3>评分锚点</h3>
-                    <div class="score-anchor-grid" aria-label="Oklab 色差评分锚点">
+                    <div class="score-anchor-grid" aria-label="综合色差评分锚点">
                         <span>0 → 10.0</span><span>2 → 9.8</span><span>5 → 9.3</span><span>10 → 8.2</span>
                         <span>20 → 6.5</span><span>40 → 3.5</span><span>70 → 0.8</span><span>100+ → 0</span>
                     </div>
-                    <p>相邻锚点之间按距离线性换算。色差越小，颜色看起来越接近。</p>
+                    <p>相邻锚点之间按距离线性换算。综合色差越小，颜色看起来越接近。</p>
                 </div>
             </div>
             <button id="score-info-confirm" type="button" class="score-info-confirm">知道了</button>
@@ -677,8 +679,8 @@
     </div>
 
     <!-- 游戏脚本 -->
-    <script src="color-utils.js"></script>
-    <script src="app.js"></script>
+    <script src="color-utils.js?v=20260821-recall-v3"></script>
+    <script src="app.js?v=20260821-recall-v3"></script>
 </body>
 </html>
 
