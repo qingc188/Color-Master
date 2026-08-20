@@ -70,6 +70,8 @@ Use `--shadow-panel` only for major screens and the continuous recall shell. Use
 
 Low-contrast grids and restrained ambient color support the geometric identity but must remain visually subordinate to the cube, target colors, and controls. Large surfaces should use mostly opaque color rather than stacking heavy blur effects.
 
+The landing cube sits inside a three-axis color-calibration field: three concentric diamonds establish depth, while broken primary, secondary, and structural rails echo the cube's isometric axes. Keep the lines interrupted around the cube so they frame the object instead of crossing its faces.
+
 ## Shapes
 
 Maintain a clear radius hierarchy: the landing stage is softest, major screens are one step tighter, cards and control groups tighter again, and compact controls use the smallest corners. Reserve circles and full pills for indicators, badges, slider tracks, and genuinely circular controls.
@@ -93,6 +95,8 @@ Use motion only for feedback, state legibility, spatial continuity, or rare comp
 Keep the countdown progress linear and time-accurate. Do not apply decorative easing to elapsed-time indicators.
 
 The landing cube is the signature interaction. On activation, rotate the real CSS 3D cube 120 degrees around its body diagonal, swap the theme at the midpoint, and settle within 520ms. Use only transform and opacity for spatial motion; under reduced motion, switch themes without rotation.
+
+At every settled theme angle, preserve the cube's face logic from the original mark: the top is a mixed, light-catching arrangement of neutral, primary, and secondary tiles; the screen-left face descends through the primary cool family; the screen-right face descends through the secondary warm family. Map physical faces per rotation rather than allowing a monochrome side to become the top face.
 
 Gate hover-only movement to devices that actually support hover. Touch interaction must not inherit false hover lifts.
 
