@@ -341,53 +341,53 @@ html[data-theme="amethyst"] {
     --shadow-card: 0 14px 34px rgba(5, 4, 10, 0.28);
 }
 
+/* Keep the persisted ivory ID while its visual theme becomes mist blue and soft pink. */
 html[data-theme="ivory"] {
-    color-scheme: light;
-    --page-start: #e9e1d3;
-    --page-end: #d9cebd;
-    --ink-950: #1b2423;
-    --ink-900: #f6f1e8;
-    --ink-850: #eee8dd;
-    --ink-800: #e9e1d3;
-    --ink-750: #ded3c3;
-    --line: #b7aa98;
-    --line-soft: rgba(33, 106, 100, 0.18);
-    --cyan: #216a64;
-    --cyan-bright: #17524e;
-    --cyan-soft: rgba(33, 106, 100, 0.11);
-    --coral: #9b455f;
-    --coral-bright: #7d334b;
-    --coral-soft: rgba(155, 69, 95, 0.12);
-    --cream: #1b2423;
-    --muted: #4e5a57;
-    --subtle: #4e5854;
-    --on-accent: #f8f3eb;
-    --focus-ring: rgba(33, 106, 100, 0.92);
-    --accent-primary-rgb: 33, 106, 100;
-    --accent-secondary-rgb: 155, 69, 95;
-    --panel-rgb: 246, 241, 232;
-    --card-rgb: 238, 231, 218;
-    --card-hover-rgb: 232, 224, 209;
-    --deep-rgb: 27, 36, 35;
-    --text-rgb: 27, 36, 35;
-    --muted-rgb: 78, 90, 87;
-    --subtle-rgb: 78, 88, 84;
-    --structure-rgb: 33, 106, 100;
-    --cube-edge: #303b39;
-    --cube-primary-1: #4c9990;
-    --cube-primary-2: #34847d;
-    --cube-primary-3: #246e68;
-    --cube-primary-4: #184e4b;
-    --cube-secondary-1: #c5788e;
-    --cube-secondary-2: #a9526b;
-    --cube-secondary-3: #853b54;
-    --cube-secondary-4: #5d293d;
-    --cube-neutral-1: #fbf7ef;
-    --cube-neutral-2: #e7c5cf;
-    --cube-neutral-3: #bd697e;
-    --cube-neutral-4: #4a948b;
-    --shadow-panel: 0 24px 60px rgba(71, 58, 43, 0.14);
-    --shadow-card: 0 12px 28px rgba(71, 58, 43, 0.12);
+    --page-start: #151b2c;
+    --page-end: #090d17;
+    --ink-950: #090d17;
+    --ink-900: #111827;
+    --ink-850: #171f31;
+    --ink-800: #202a40;
+    --ink-750: #2b3852;
+    --line: #46536b;
+    --line-soft: rgba(157, 184, 228, 0.15);
+    --cyan: #9db8e4;
+    --cyan-bright: #c2d2ee;
+    --cyan-soft: rgba(157, 184, 228, 0.12);
+    --coral: #efa5b2;
+    --coral-bright: #ffc4cd;
+    --coral-soft: rgba(239, 165, 178, 0.12);
+    --cream: #f5f0f2;
+    --muted: #bbb9c7;
+    --subtle: #9499ad;
+    --on-accent: #111522;
+    --focus-ring: rgba(194, 210, 238, 0.94);
+    --accent-primary-rgb: 157, 184, 228;
+    --accent-secondary-rgb: 239, 165, 178;
+    --panel-rgb: 20, 27, 44;
+    --card-rgb: 28, 36, 56;
+    --card-hover-rgb: 37, 47, 72;
+    --deep-rgb: 9, 13, 23;
+    --text-rgb: 245, 240, 242;
+    --muted-rgb: 187, 185, 199;
+    --subtle-rgb: 148, 153, 173;
+    --structure-rgb: 149, 171, 211;
+    --cube-edge: #171c2b;
+    --cube-primary-1: #c5d3e9;
+    --cube-primary-2: #a9bfdf;
+    --cube-primary-3: #849dc8;
+    --cube-primary-4: #6078a6;
+    --cube-secondary-1: #facbd1;
+    --cube-secondary-2: #efa8b4;
+    --cube-secondary-3: #da8495;
+    --cube-secondary-4: #b85f75;
+    --cube-neutral-1: #faf5f4;
+    --cube-neutral-2: #f2dde1;
+    --cube-neutral-3: #dfb5c0;
+    --cube-neutral-4: #b7c7e3;
+    --shadow-panel: 0 24px 70px rgba(4, 6, 12, 0.42);
+    --shadow-card: 0 14px 34px rgba(4, 6, 12, 0.3);
 }
 
 html {
@@ -512,18 +512,6 @@ div.app-container > main > :not(.hidden) {
 
 .site-body .bg-primary {
     background-color: var(--cyan);
-}
-
-html[data-theme="ivory"] .site-body .text-red-300 {
-    color: #8f2f2a;
-}
-
-html[data-theme="ivory"] .site-body .text-green-300 {
-    color: #1d6540;
-}
-
-html[data-theme="ivory"] .site-body .text-blue-300 {
-    color: #285e9e;
 }
 
 #brand-header.hidden,
@@ -1016,8 +1004,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
 [data-theme-dot="cyan"] i:last-child { background: #f36f63; }
 [data-theme-dot="amethyst"] i:first-child { background: #aa9be8; }
 [data-theme-dot="amethyst"] i:last-child { background: #ddca86; }
-[data-theme-dot="ivory"] i:first-child { background: #216a64; }
-[data-theme-dot="ivory"] i:last-child { background: #9b455f; }
+[data-theme-dot="ivory"] i:first-child { background: #9db8e4; }
+[data-theme-dot="ivory"] i:last-child { background: #efa5b2; }
 
 @supports (transform-style: preserve-3d) {
     .theme-cube-stage {

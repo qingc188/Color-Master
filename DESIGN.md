@@ -44,7 +44,7 @@ In the default theme, reserve `coral` for the second brand glyph, the landing-pa
 
 Use `cream` for primary content, `muted` for supporting copy, and `subtle` for metadata. Runtime HSL, RGB, target, preview, result, and archive swatch colors are game data rather than interface palette tokens.
 
-The interface has three deliberate themes: cyan/orange (`#5ec8c2`, `#f36f63`), amethyst/champagne (`#aa9be8`, `#ddca86`), and ivory/ink-green/garnet (`#e9e1d3`, `#216a64`, `#9b455f`). Theme changes affect interface chrome and brand surfaces only. Keep a fixed neutral surround around target and answer swatches so theme selection does not change local color perception.
+The interface has three deliberate themes: cyan/orange (`#5ec8c2`, `#f36f63`), amethyst/champagne (`#aa9be8`, `#ddca86`), and mist-blue/soft-pink (`#9db8e4`, `#efa5b2`) on a deep slate stage (`#151b2c` to `#090d17`). Theme changes affect interface chrome and brand surfaces only. Keep a fixed neutral surround around target and answer swatches so theme selection does not change local color perception.
 
 ## Typography
 

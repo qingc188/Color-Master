@@ -585,16 +585,16 @@ async function run() {
         })`);
         if (ivoryThemeReport.theme !== 'ivory'
             || ivoryThemeReport.stored !== 'ivory'
-            || !ivoryThemeReport.label.includes('当前象牙墨绿')
+            || !ivoryThemeReport.label.includes('当前雾蓝柔粉')
             || ivoryThemeReport.activeDot !== 'ivory'
-            || ivoryThemeReport.bodyColor !== 'rgb(27, 36, 35)'
-            || ivoryThemeReport.colorScheme !== 'light'
-            || ivoryThemeReport.titlePrimary !== 'rgb(33, 106, 100)'
-            || ivoryThemeReport.titleSecondary !== 'rgb(155, 69, 95)'
-            || ivoryThemeReport.themeColor !== '#E9E1D3'
+            || ivoryThemeReport.bodyColor !== 'rgb(245, 240, 242)'
+            || ivoryThemeReport.colorScheme !== 'dark'
+            || ivoryThemeReport.titlePrimary !== 'rgb(157, 184, 228)'
+            || ivoryThemeReport.titleSecondary !== 'rgb(239, 165, 178)'
+            || ivoryThemeReport.themeColor !== '#151B2C'
             || ivoryThemeReport.sampleSurround !== '#10191d'
-            || ivoryThemeReport.subtle !== '#4e5854'
-            || ivoryThemeReport.rgbLabels.join('|') !== 'rgb(143, 47, 42)|rgb(29, 101, 64)|rgb(40, 94, 158)'
+            || ivoryThemeReport.subtle !== '#9499ad'
+            || ivoryThemeReport.rgbLabels.join('|') !== 'rgb(252, 165, 165)|rgb(134, 239, 172)|rgb(147, 197, 253)'
             || ivoryThemeReport.storageDetail !== 'rgb(200, 208, 207)') {
             throw new Error(`Ivory theme persistence failed: ${JSON.stringify(ivoryThemeReport)}`);
         }
