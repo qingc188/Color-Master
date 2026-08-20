@@ -548,7 +548,12 @@ async function run() {
             turn: elements.themeCube.style.getPropertyValue('--cube-turn'),
             titlePrimary: getComputedStyle(document.querySelector('.landing-title span:first-child')).color,
             titleSecondary: getComputedStyle(document.querySelector('.landing-title span:last-child')).color,
-            themeColor: elements.themeColorMeta.getAttribute('content')
+            themeColor: elements.themeColorMeta.getAttribute('content'),
+            cubePrimary: ['--cube-primary-1', '--cube-primary-2', '--cube-primary-3', '--cube-primary-4']
+                .map((token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim()),
+            cubeSecondary: ['--cube-secondary-1', '--cube-secondary-2', '--cube-secondary-3', '--cube-secondary-4']
+                .map((token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim()),
+            cubeTopGold: getComputedStyle(document.documentElement).getPropertyValue('--cube-neutral-3').trim()
         })`);
         if (amethystThemeReport.theme !== 'amethyst'
             || amethystThemeReport.stored !== 'amethyst'
@@ -557,8 +562,11 @@ async function run() {
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
             || amethystThemeReport.titlePrimary !== 'rgb(143, 121, 232)'
-            || amethystThemeReport.titleSecondary !== 'rgb(226, 199, 101)'
-            || amethystThemeReport.themeColor !== '#100B25') {
+            || amethystThemeReport.titleSecondary !== 'rgb(232, 203, 100)'
+            || amethystThemeReport.themeColor !== '#100B25'
+            || amethystThemeReport.cubePrimary.join('|') !== '#c8bef4|#8c78e2|#674cc7|#3b258d'
+            || amethystThemeReport.cubeSecondary.join('|') !== '#ebddad|#e8cb64|#d1b65c|#b49746'
+            || amethystThemeReport.cubeTopGold !== '#f1e8c5') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
         }
         await captureScreenshot(client, 'landing-amethyst-desktop.png');
