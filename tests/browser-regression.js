@@ -562,11 +562,11 @@ async function run() {
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
             || amethystThemeReport.titlePrimary !== 'rgb(143, 121, 232)'
-            || amethystThemeReport.titleSecondary !== 'rgb(232, 203, 100)'
+            || amethystThemeReport.titleSecondary !== 'rgb(236, 225, 101)'
             || amethystThemeReport.themeColor !== '#100B25'
             || amethystThemeReport.cubePrimary.join('|') !== '#c8bef4|#8c78e2|#674cc7|#3b258d'
-            || amethystThemeReport.cubeSecondary.join('|') !== '#ebddad|#e8cb64|#d1b65c|#b49746'
-            || amethystThemeReport.cubeTopGold !== '#f1e8c5') {
+            || amethystThemeReport.cubeSecondary.join('|') !== '#ede7b1|#ece165|#d4c85e|#baac45'
+            || amethystThemeReport.cubeTopGold !== '#f4f0cd') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
         }
         await captureScreenshot(client, 'landing-amethyst-desktop.png');
