@@ -557,7 +557,7 @@ async function run() {
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
             || amethystThemeReport.titlePrimary !== 'rgb(143, 121, 232)'
-            || amethystThemeReport.titleSecondary !== 'rgb(228, 188, 39)'
+            || amethystThemeReport.titleSecondary !== 'rgb(226, 199, 101)'
             || amethystThemeReport.themeColor !== '#100B25') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
         }

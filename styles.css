@@ -306,16 +306,16 @@ html[data-theme="amethyst"] {
     --cyan: #8f79e8;
     --cyan-bright: #b6a8f5;
     --cyan-soft: rgba(143, 121, 232, 0.13);
-    --coral: #e4bc27;
-    --coral-bright: #f2d867;
-    --coral-soft: rgba(228, 188, 39, 0.14);
+    --coral: #e2c765;
+    --coral-bright: #eedb96;
+    --coral-soft: rgba(226, 199, 101, 0.14);
     --cream: #f8f6f1;
     --muted: #c0b9cf;
     --subtle: #938aa7;
     --on-accent: #100c1c;
     --focus-ring: rgba(194, 181, 250, 0.94);
     --accent-primary-rgb: 143, 121, 232;
-    --accent-secondary-rgb: 228, 188, 39;
+    --accent-secondary-rgb: 226, 199, 101;
     --panel-rgb: 20, 14, 44;
     --card-rgb: 27, 19, 58;
     --card-hover-rgb: 38, 27, 78;
@@ -325,18 +325,18 @@ html[data-theme="amethyst"] {
     --subtle-rgb: 147, 138, 167;
     --structure-rgb: 143, 121, 232;
     --cube-edge: #120e20;
-    --cube-primary-1: #b8aaf3;
+    --cube-primary-1: #c4baf3;
     --cube-primary-2: #927de8;
     --cube-primary-3: #674cc7;
     --cube-primary-4: #3b258d;
-    --cube-secondary-1: #f7e8a4;
-    --cube-secondary-2: #e4bc27;
-    --cube-secondary-3: #c79b1d;
-    --cube-secondary-4: #9a7717;
+    --cube-secondary-1: #f3e8c4;
+    --cube-secondary-2: #e2c765;
+    --cube-secondary-3: #c9b05e;
+    --cube-secondary-4: #a58d4a;
     --cube-neutral-1: #fffefa;
-    --cube-neutral-2: #f7edbd;
-    --cube-neutral-3: #e4bc27;
-    --cube-neutral-4: #a794ed;
+    --cube-neutral-2: #f3e8c4;
+    --cube-neutral-3: #e3ce82;
+    --cube-neutral-4: #b5a8f0;
     --shadow-panel: 0 24px 70px rgba(3, 2, 9, 0.46);
     --shadow-card: 0 14px 34px rgba(3, 2, 9, 0.32);
 }
@@ -1003,7 +1003,7 @@ html[data-theme="ivory"] .theme-cube-face--left {
 [data-theme-dot="cyan"] i:first-child { background: #5ec8c2; }
 [data-theme-dot="cyan"] i:last-child { background: #f36f63; }
 [data-theme-dot="amethyst"] i:first-child { background: #8f79e8; }
-[data-theme-dot="amethyst"] i:last-child { background: #e4bc27; }
+[data-theme-dot="amethyst"] i:last-child { background: #e2c765; }
 [data-theme-dot="ivory"] i:first-child { background: #99b7e8; }
 [data-theme-dot="ivory"] i:last-child { background: #f3a1b0; }
 
