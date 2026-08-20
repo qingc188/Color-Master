@@ -1708,24 +1708,42 @@ html[data-theme="ivory"] .theme-cube-face--left {
 }
 
 #score-info-button {
+    position: relative;
     display: inline-grid;
     flex: 0 0 auto;
     width: 2.75rem;
     height: 2.75rem;
+    padding: 0;
     place-items: center;
+    border: 0;
+    color: var(--muted);
+    background: transparent;
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.78rem;
+    font-weight: 800;
+    transition: color 150ms ease;
+}
+
+#score-info-button::before {
+    content: "";
+    position: absolute;
+    width: 1.75rem;
+    height: 1.75rem;
+    pointer-events: none;
     border: 1px solid rgba(var(--muted-rgb), 0.48);
     border-radius: 50%;
-    color: var(--muted);
     background: rgba(var(--deep-rgb), 0.08);
-    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-    font-size: 0.9rem;
-    font-weight: 800;
-    transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+    transition: border-color 150ms ease, background 150ms ease;
 }
 
 #score-info-button:hover,
 #score-info-button:focus-visible {
     color: var(--cyan-bright);
+    background: transparent;
+}
+
+#score-info-button:hover::before,
+#score-info-button:focus-visible::before {
     border-color: var(--cyan);
     background: var(--cyan-soft);
 }

@@ -1262,6 +1262,8 @@ async function run() {
             adjustment: document.querySelector('#score-info-adjustment').textContent,
             formula: document.querySelector('.score-info-formula').textContent.trim(),
             range: document.querySelector('#score-info-range').textContent,
+            helpHitWidth: elements.scoreInfoButton.getBoundingClientRect().width,
+            helpVisualWidth: parseFloat(getComputedStyle(elements.scoreInfoButton, '::before').width),
             focused: document.activeElement.id,
             role: document.querySelector('#score-info-dialog').getAttribute('role'),
             modal: document.querySelector('#score-info-dialog').getAttribute('aria-modal'),
@@ -1275,6 +1277,8 @@ async function run() {
             || dialogReport.adjustment !== '本轮没有触发低饱和度修正。'
             || dialogReport.formula !== '综合色差 = Oklab 基础色差 + 低饱和度修正'
             || !dialogReport.range.includes('综合色差 0.0')
+            || dialogReport.helpHitWidth !== 44
+            || dialogReport.helpVisualWidth !== 28
             || dialogReport.focused !== 'score-info-close'
             || dialogReport.role !== 'dialog'
             || dialogReport.modal !== 'true'
