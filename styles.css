@@ -302,20 +302,20 @@ html[data-theme="amethyst"] {
     --ink-800: #201c2c;
     --ink-750: #2d273c;
     --line: #49405d;
-    --line-soft: rgba(170, 155, 232, 0.14);
-    --cyan: #aa9be8;
+    --line-soft: rgba(169, 153, 234, 0.14);
+    --cyan: #a999ea;
     --cyan-bright: #c1b5f2;
-    --cyan-soft: rgba(170, 155, 232, 0.12);
-    --coral: #ddca86;
+    --cyan-soft: rgba(169, 153, 234, 0.12);
+    --coral: #e2cf8b;
     --coral-bright: #eee3b7;
-    --coral-soft: rgba(221, 202, 134, 0.13);
+    --coral-soft: rgba(226, 207, 139, 0.13);
     --cream: #f1ede4;
     --muted: #b9b2c4;
     --subtle: #918a9d;
     --on-accent: #111018;
     --focus-ring: rgba(193, 181, 242, 0.94);
-    --accent-primary-rgb: 170, 155, 232;
-    --accent-secondary-rgb: 221, 202, 134;
+    --accent-primary-rgb: 169, 153, 234;
+    --accent-secondary-rgb: 226, 207, 139;
     --panel-rgb: 24, 21, 34;
     --card-rgb: 32, 28, 44;
     --card-hover-rgb: 45, 39, 60;
@@ -323,20 +323,20 @@ html[data-theme="amethyst"] {
     --text-rgb: 241, 237, 228;
     --muted-rgb: 185, 178, 196;
     --subtle-rgb: 145, 138, 157;
-    --structure-rgb: 170, 155, 232;
+    --structure-rgb: 169, 153, 234;
     --cube-edge: #171421;
-    --cube-primary-1: #b8abe8;
-    --cube-primary-2: #9a8bd6;
-    --cube-primary-3: #7463b3;
-    --cube-primary-4: #50447e;
-    --cube-secondary-1: #f2e7bf;
-    --cube-secondary-2: #ddca86;
-    --cube-secondary-3: #b5a46f;
-    --cube-secondary-4: #776e55;
+    --cube-primary-1: #b7a9ea;
+    --cube-primary-2: #9888d9;
+    --cube-primary-3: #715eb8;
+    --cube-primary-4: #4e4082;
+    --cube-secondary-1: #f4e9c2;
+    --cube-secondary-2: #e2cf8b;
+    --cube-secondary-3: #bdaa72;
+    --cube-secondary-4: #958456;
     --cube-neutral-1: #f2ede5;
-    --cube-neutral-2: #efe4bd;
-    --cube-neutral-3: #d4c078;
-    --cube-neutral-4: #b9ace8;
+    --cube-neutral-2: #f4e8be;
+    --cube-neutral-3: #d7c47e;
+    --cube-neutral-4: #b8aaea;
     --shadow-panel: 0 24px 70px rgba(5, 4, 10, 0.38);
     --shadow-card: 0 14px 34px rgba(5, 4, 10, 0.28);
 }
@@ -1002,8 +1002,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
 
 [data-theme-dot="cyan"] i:first-child { background: #5ec8c2; }
 [data-theme-dot="cyan"] i:last-child { background: #f36f63; }
-[data-theme-dot="amethyst"] i:first-child { background: #aa9be8; }
-[data-theme-dot="amethyst"] i:last-child { background: #ddca86; }
+[data-theme-dot="amethyst"] i:first-child { background: #a999ea; }
+[data-theme-dot="amethyst"] i:last-child { background: #e2cf8b; }
 [data-theme-dot="ivory"] i:first-child { background: #9bb7e6; }
 [data-theme-dot="ivory"] i:last-child { background: #f1a3b1; }
 
