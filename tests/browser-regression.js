@@ -590,7 +590,7 @@ async function run() {
             || ivoryThemeReport.bodyColor !== 'rgb(27, 36, 35)'
             || ivoryThemeReport.colorScheme !== 'light'
             || ivoryThemeReport.titlePrimary !== 'rgb(33, 106, 100)'
-            || ivoryThemeReport.titleSecondary !== 'rgb(176, 82, 63)'
+            || ivoryThemeReport.titleSecondary !== 'rgb(155, 69, 95)'
             || ivoryThemeReport.themeColor !== '#E9E1D3'
             || ivoryThemeReport.sampleSurround !== '#10191d'
             || ivoryThemeReport.subtle !== '#4e5854'
