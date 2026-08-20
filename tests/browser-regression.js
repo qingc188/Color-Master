@@ -137,7 +137,8 @@ async function openRecallControl(client, appUrl, difficulty) {
 
 async function captureScreenshot(client, name) {
     const captureDirectory = process.env.UI_CAPTURE_DIR;
-    if (!captureDirectory) return;
+    const captureFilter = process.env.UI_CAPTURE_FILTER;
+    if (!captureDirectory || (captureFilter && !name.includes(captureFilter))) return;
     await delay(600);
     const screenshot = await client.send('Page.captureScreenshot', {
         format: 'png',
@@ -1260,8 +1261,19 @@ async function run() {
             distance: document.querySelector('#score-info-distance').textContent,
             description: document.querySelector('#score-info-description').textContent,
             adjustment: document.querySelector('#score-info-adjustment').textContent,
-            formula: document.querySelector('.score-info-formula').textContent.trim(),
+            baseDistance: document.querySelector('#score-info-base-distance').textContent,
+            targetCode: document.querySelector('#score-info-target-code').textContent,
+            userCode: document.querySelector('#score-info-user-code').textContent,
+            guidance: document.querySelector('#score-info-guidance').textContent,
+            totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
             range: document.querySelector('#score-info-range').textContent,
+            interpolation: document.querySelector('#score-info-interpolation').textContent,
+            processSteps: document.querySelectorAll('.score-calculation li').length,
+            genericCardsRemoved: !document.querySelector('.score-info-current')
+                && !document.querySelector('.score-info-formula')
+                && !document.querySelector('.score-anchor-section')
+                && !document.querySelector('.score-anchor-grid'),
+            confirmText: elements.scoreInfoConfirm.textContent,
             helpHitWidth: elements.scoreInfoButton.getBoundingClientRect().width,
             helpVisualWidth: parseFloat(getComputedStyle(elements.scoreInfoButton, '::before').width),
             focused: document.activeElement.id,
@@ -1269,17 +1281,24 @@ async function run() {
             modal: document.querySelector('#score-info-dialog').getAttribute('aria-modal'),
             hidden: document.querySelector('#score-info-dialog').getAttribute('aria-hidden')
         })`);
-        if (dialogReport.title !== '这 10.00 分是怎么来的？'
+        if (dialogReport.title !== '为什么是 10.00 分'
             || dialogReport.score !== '10.00 / 10'
             || dialogReport.distance !== '0.0'
-            || !dialogReport.description.includes('色相、饱和度和明度')
+            || dialogReport.description !== '先看两种颜色差多少，再换成 10 分制。差异越小，分数越高。'
             || dialogReport.description.includes('彩度')
-            || dialogReport.adjustment !== '本轮没有触发低饱和度修正。'
-            || dialogReport.formula !== '综合色差 = Oklab 基础色差 + 低饱和度修正'
-            || !dialogReport.range.includes('综合色差 0.0')
+            || dialogReport.adjustment !== '这轮没有出现明显的灰色情况，因此不增加差异。'
+            || dialogReport.baseDistance !== '0.0'
+            || dialogReport.targetCode !== dialogReport.userCode
+            || dialogReport.guidance !== '色相、饱和度和明度都很接近'
+            || dialogReport.totalFormula !== '0.0 + 0.0 = 0.0'
+            || dialogReport.range !== '最终差异是 0，表示两种颜色一致。'
+            || dialogReport.interpolation !== '差异越小，分数越高。'
+            || dialogReport.processSteps !== 3
+            || !dialogReport.genericCardsRemoved
+            || dialogReport.confirmText !== '关闭说明'
             || dialogReport.helpHitWidth !== 44
             || dialogReport.helpVisualWidth !== 28
-            || dialogReport.focused !== 'score-info-close'
+            || dialogReport.focused !== 'score-info-title'
             || dialogReport.role !== 'dialog'
             || dialogReport.modal !== 'true'
             || dialogReport.hidden !== 'false') {
@@ -1329,6 +1348,8 @@ async function run() {
 
         const interpolationDialogReport = await evaluate(client, `(() => {
             gameState.recallLastRoundDistance = 3.5;
+            gameState.recallLastRoundBaseDistance = 3.5;
+            gameState.recallLastRoundNeutralPenalty = 0;
             gameState.recallLastRoundScore = scoreFromPerceptualDistance(3.5);
             openScoreInfoDialog();
             return {
@@ -1337,9 +1358,9 @@ async function run() {
                 interpolation: elements.scoreInfoInterpolation.textContent
             };
         })()`);
-        if (interpolationDialogReport.title !== '这 9.55 分是怎么来的？'
+        if (interpolationDialogReport.title !== '为什么是 9.55 分'
             || !interpolationDialogReport.range.includes('2 和 5 之间')
-            || !interpolationDialogReport.interpolation.includes('9.8 到 9.3')) {
+            || !interpolationDialogReport.interpolation.includes('2 对应 9.8 分，5 对应 9.3 分')) {
             throw new Error(`Score interpolation dialog failed: ${JSON.stringify(interpolationDialogReport)}`);
         }
         await evaluate(client, `closeScoreInfoDialog()`);

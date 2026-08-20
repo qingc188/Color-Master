@@ -90,6 +90,8 @@ Statistics use compact bordered cells and monospace values. Do not add decorativ
 
 Recall results pair the short motivational message with one plain-language diagnostic. Describe differences only as hue, saturation, and lightness; keep Oklab chroma and low-level scoring terminology inside implementation and optional scoring details.
 
+The scoring explanation is a compact round-specific calibration receipt, not a dashboard. Show the two actual color samples, the plain-language diagnosis, and one continuous calculation flow from base difference through any gray-color correction to the final score. Do not restore metric cards, formula callouts, or score-anchor grids.
+
 ## Motion
 
 Use motion only for feedback, state legibility, spatial continuity, or rare completion delight. Prefer transform and opacity, preserve the existing reduced-motion path, and avoid animating the page shell or footer between screens.

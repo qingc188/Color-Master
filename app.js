@@ -227,9 +227,17 @@ const elements = {
     scoreInfoTitle: document.getElementById('score-info-title'),
     scoreInfoScore: document.getElementById('score-info-score'),
     scoreInfoDistance: document.getElementById('score-info-distance'),
+    scoreInfoBaseDistance: document.getElementById('score-info-base-distance'),
+    scoreInfoTotalBase: document.getElementById('score-info-total-base'),
+    scoreInfoTotalAdjustment: document.getElementById('score-info-total-adjustment'),
     scoreInfoAdjustment: document.getElementById('score-info-adjustment'),
     scoreInfoRange: document.getElementById('score-info-range'),
     scoreInfoInterpolation: document.getElementById('score-info-interpolation'),
+    scoreInfoGuidance: document.getElementById('score-info-guidance'),
+    scoreInfoTargetSwatch: document.getElementById('score-info-target-swatch'),
+    scoreInfoTargetCode: document.getElementById('score-info-target-code'),
+    scoreInfoUserSwatch: document.getElementById('score-info-user-swatch'),
+    scoreInfoUserCode: document.getElementById('score-info-user-code'),
     recallResultTarget: document.getElementById('recall-result-target'),
     recallResultUser: document.getElementById('recall-result-user'),
     recallTargetCode: document.getElementById('recall-target-code'),
@@ -1531,30 +1539,44 @@ function getScoreBracket(distance) {
 function updateScoreInfoDialog() {
     const score = gameState.recallLastRoundScore;
     const distance = gameState.recallLastRoundDistance;
+    const baseDistance = gameState.recallLastRoundBaseDistance;
     const neutralPenalty = gameState.recallLastRoundNeutralPenalty;
+    const target = gameState.recallTargetRGB;
+    const user = getRecallUserRGB();
+    const distanceDetails = calculateRecallDistanceDetails(target, user);
     const { lower, upper } = getScoreBracket(distance);
 
-    elements.scoreInfoTitle.textContent = `这 ${score.toFixed(2)} 分是怎么来的？`;
+    elements.scoreInfoTitle.textContent = `为什么是 ${score.toFixed(2)} 分`;
     elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
     elements.scoreInfoDistance.textContent = distance.toFixed(1);
+    elements.scoreInfoBaseDistance.textContent = baseDistance.toFixed(1);
+    elements.scoreInfoTotalBase.textContent = baseDistance.toFixed(1);
+    elements.scoreInfoTotalAdjustment.textContent = neutralPenalty.toFixed(1);
+    elements.scoreInfoTargetSwatch.style.backgroundColor = rgbToCss(target);
+    elements.scoreInfoTargetCode.textContent = rgbToCss(target);
+    elements.scoreInfoUserSwatch.style.backgroundColor = rgbToCss(user);
+    elements.scoreInfoUserCode.textContent = rgbToCss(user);
+    elements.scoreInfoGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
-        ? `两种颜色中有一种接近灰色，饱和度差异使综合色差增加 ${neutralPenalty.toFixed(1)}。`
-        : '本轮没有触发低饱和度修正。';
+        ? `其中一种颜色接近灰色，饱和度差异较大，因此再增加 ${neutralPenalty.toFixed(1)}。`
+        : '这轮没有出现明显的灰色情况，因此不增加差异。';
 
     if (!upper) {
-        elements.scoreInfoRange.textContent = `本轮综合色差 ${distance.toFixed(1)}，超过最后一个评分锚点 ${lower.distance}。`;
-        elements.scoreInfoInterpolation.textContent = `综合色差达到 ${lower.distance} 或更高时，本轮得分为 ${score.toFixed(2)}。`;
+        elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(1)}，已经达到 ${lower.distance} 以上。`;
+        elements.scoreInfoInterpolation.textContent = '这个范围记 0 分。';
         return;
     }
 
     if (lower === upper) {
-        elements.scoreInfoRange.textContent = `本轮综合色差 ${distance.toFixed(1)}，正好落在评分锚点上。`;
-        elements.scoreInfoInterpolation.textContent = `这个锚点对应 ${lower.score.toFixed(1)} 分，本轮最终得分为 ${score.toFixed(2)}。`;
+        elements.scoreInfoRange.textContent = distance === 0
+            ? '最终差异是 0，表示两种颜色一致。'
+            : `最终差异 ${distance.toFixed(1)}，按当前规则对应 ${lower.score.toFixed(1)} 分。`;
+        elements.scoreInfoInterpolation.textContent = '差异越小，分数越高。';
         return;
     }
 
-    elements.scoreInfoRange.textContent = `本轮综合色差 ${distance.toFixed(1)}，位于 ${lower.distance} 和 ${upper.distance} 之间。`;
-    elements.scoreInfoInterpolation.textContent = `对应分数从 ${lower.score.toFixed(1)} 到 ${upper.score.toFixed(1)} 线性换算，本轮最终得分为 ${score.toFixed(2)}。`;
+    elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(1)}，介于 ${lower.distance} 和 ${upper.distance} 之间。`;
+    elements.scoreInfoInterpolation.textContent = `${lower.distance} 对应 ${lower.score.toFixed(1)} 分，${upper.distance} 对应 ${upper.score.toFixed(1)} 分；按这轮所在的位置换算为 ${score.toFixed(2)} 分。`;
 }
 
 function openScoreInfoDialog() {
@@ -1563,7 +1585,7 @@ function openScoreInfoDialog() {
     elements.scoreInfoDialog.classList.remove('hidden');
     elements.scoreInfoDialog.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
-    elements.scoreInfoClose.focus();
+    elements.scoreInfoTitle.focus();
 }
 
 function closeScoreInfoDialog() {
@@ -1586,7 +1608,7 @@ function handleScoreInfoDialogKeydown(event) {
     const focusable = [elements.scoreInfoClose, elements.scoreInfoConfirm];
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) {
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === elements.scoreInfoTitle)) {
         event.preventDefault();
         last.focus();
     } else if (!event.shiftKey && document.activeElement === last) {
