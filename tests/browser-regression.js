@@ -552,12 +552,12 @@ async function run() {
         })`);
         if (amethystThemeReport.theme !== 'amethyst'
             || amethystThemeReport.stored !== 'amethyst'
-            || !amethystThemeReport.label.includes('当前紫晶黄铜')
+            || !amethystThemeReport.label.includes('当前紫晶香槟')
             || amethystThemeReport.activeDots !== 1
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
             || amethystThemeReport.titlePrimary !== 'rgb(170, 155, 232)'
-            || amethystThemeReport.titleSecondary !== 'rgb(216, 182, 90)'
+            || amethystThemeReport.titleSecondary !== 'rgb(221, 202, 134)'
             || amethystThemeReport.themeColor !== '#12101B') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
         }

@@ -8,7 +8,7 @@ const THEME_SWAP_DELAY_MS = 260;
 const THEME_ORDER = ['cyan', 'amethyst', 'ivory'];
 const THEME_CONFIG = {
     cyan: { name: '青橙', themeColor: '#071820' },
-    amethyst: { name: '紫晶黄铜', themeColor: '#12101B' },
+    amethyst: { name: '紫晶香槟', themeColor: '#12101B' },
     ivory: { name: '象牙墨绿', themeColor: '#E9E1D3' }
 };
 let storageAvailable = true;
