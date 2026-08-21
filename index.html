@@ -7,8 +7,8 @@
     <meta id="theme-color-meta" name="theme-color" content="#071820">
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
-    <link rel="stylesheet" href="tailwind.css?v=20260821-webview-hardening">
-    <link rel="stylesheet" href="styles.css?v=20260821-webview-hardening">
+    <link rel="stylesheet" href="tailwind.css?v=20260821-match-inline">
+    <link rel="stylesheet" href="styles.css?v=20260821-match-inline">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
     <svg class="icon-sprite" aria-hidden="true">
@@ -411,8 +411,12 @@
                         <span>退出本局</span>
                     </button>
                 </div>
-                <h2 class="text-2xl font-bold mb-6 text-center">找出与目标颜色相同的方块</h2>
+                <h2 id="match-round-title" class="text-2xl font-bold mb-6 text-center" tabindex="-1" aria-live="polite">找出与目标颜色相同的方块</h2>
                 <div id="color-grid" class="grid gap-4"></div>
+                <div id="match-round-actions" class="result-actions match-round-actions hidden">
+                    <button id="match-continue-button" type="button">下一关</button>
+                    <button id="match-restart-button" type="button">重新开始</button>
+                </div>
             </div>
 
             <!-- 颜色复现游戏区域 -->
@@ -732,8 +736,8 @@
     </div>
 
     <!-- 游戏脚本 -->
-    <script src="color-utils.js?v=20260821-webview-hardening"></script>
-    <script src="app.js?v=20260821-webview-hardening"></script>
+    <script src="color-utils.js?v=20260821-match-inline"></script>
+    <script src="app.js?v=20260821-match-inline"></script>
 </body>
 </html>
 

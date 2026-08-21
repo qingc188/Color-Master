@@ -1239,6 +1239,9 @@ async function run() {
                 .filter((color) => rgbToHex(color) !== targetHex)
                 .map((color) => calculatePerceptualDistance(gameState.currentTargetColor, color));
             const selected = cards.find((card) => rgbToHex(card.style.backgroundColor) !== targetHex) || cards[0];
+            const screenTopBefore = elements.colorGridScreen.getBoundingClientRect().top;
+            const scrollBefore = window.scrollY;
+            const stableSurround = getComputedStyle(cards[0]).boxShadow.includes('rgb(16, 25, 29)');
             selected.click();
             selected.click();
             return {
@@ -1247,7 +1250,20 @@ async function run() {
                 targetCount: colors.filter((color) => rgbToHex(color) === targetHex).length,
                 distancesInBand: distanceChecks.every((distance) => distance >= band.min && distance <= band.max),
                 answersAfterDoubleClick: gameState.totalAnswers,
-                stableSurround: getComputedStyle(cards[0]).boxShadow.includes('rgb(16, 25, 29)')
+                stableSurround,
+                gridStillVisible: !elements.colorGridScreen.classList.contains('hidden'),
+                resultScreenHidden: elements.resultScreen.classList.contains('hidden'),
+                brandStillHidden: elements.brandHeader.classList.contains('hidden'),
+                resultTitle: elements.matchRoundTitle.textContent,
+                titleFocused: document.activeElement === elements.matchRoundTitle,
+                actionsVisible: !elements.matchRoundActions.classList.contains('hidden'),
+                continueLabel: elements.matchContinueButton.textContent,
+                levelBeforeContinue: gameState.level,
+                disabledCards: cards.filter((card) => card.disabled).length,
+                correctMarkers: cards.filter((card) => card.classList.contains('is-match-correct')).length,
+                wrongMarkers: cards.filter((card) => card.classList.contains('is-match-selected-wrong')).length,
+                screenTopShift: Math.abs(elements.colorGridScreen.getBoundingClientRect().top - screenTopBefore),
+                scrollShift: Math.abs(window.scrollY - scrollBefore)
             };
         })()`);
 
@@ -1256,8 +1272,135 @@ async function run() {
             || matchReport.targetCount !== 1
             || !matchReport.distancesInBand
             || matchReport.answersAfterDoubleClick !== 1
-            || !matchReport.stableSurround) {
+            || !matchReport.stableSurround
+            || !matchReport.gridStillVisible
+            || !matchReport.resultScreenHidden
+            || !matchReport.brandStillHidden
+            || matchReport.resultTitle !== '匹配失败'
+            || !matchReport.titleFocused
+            || !matchReport.actionsVisible
+            || matchReport.continueLabel !== '下一关'
+            || matchReport.levelBeforeContinue !== 1
+            || matchReport.disabledCards !== 9
+            || matchReport.correctMarkers !== 1
+            || matchReport.wrongMarkers !== 1
+            || matchReport.screenTopShift > 1
+            || matchReport.scrollShift > 1) {
             throw new Error(`Match regression failed: ${JSON.stringify(matchReport)}`);
+        }
+        await captureScreenshot(client, 'match-inline-failure-desktop.png');
+
+        const matchContinueReport = await evaluate(client, `(() => {
+            elements.matchContinueButton.click();
+            stopActiveCountdown();
+            return {
+                level: gameState.level,
+                targetVisible: !elements.targetColorScreen.classList.contains('hidden')
+            };
+        })()`);
+        if (matchContinueReport.level !== 2 || !matchContinueReport.targetVisible) {
+            throw new Error(`Match continue flow failed: ${JSON.stringify(matchContinueReport)}`);
+        }
+
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 390,
+            height: 844,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        await evaluate(client, `showColorGrid()`);
+        await waitFor(client, `document.querySelectorAll('.color-card').length === 9`);
+        const matchMobileSuccessReport = await evaluate(client, `(() => {
+            const cards = [...document.querySelectorAll('.color-card')];
+            const targetHex = rgbToHex(gameState.currentTargetColor);
+            const target = cards.find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
+            const screenTopBefore = elements.colorGridScreen.getBoundingClientRect().top;
+            const scrollBefore = window.scrollY;
+            target.click();
+            const continueRect = elements.matchContinueButton.getBoundingClientRect();
+            const screenRect = elements.colorGridScreen.getBoundingClientRect();
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                gridStillVisible: !elements.colorGridScreen.classList.contains('hidden'),
+                resultScreenHidden: elements.resultScreen.classList.contains('hidden'),
+                resultTitle: elements.matchRoundTitle.textContent,
+                levelBeforeContinue: gameState.level,
+                correctMarkers: cards.filter((card) => card.classList.contains('is-match-correct')).length,
+                wrongMarkers: cards.filter((card) => card.classList.contains('is-match-selected-wrong')).length,
+                targetLabel: target.getAttribute('aria-label'),
+                actionsVisible: !elements.matchRoundActions.classList.contains('hidden'),
+                buttonsFit: continueRect.left >= screenRect.left - 1 && continueRect.right <= screenRect.right + 1,
+                screenTopShift: Math.abs(elements.colorGridScreen.getBoundingClientRect().top - screenTopBefore),
+                scrollShift: Math.abs(window.scrollY - scrollBefore)
+            };
+        })()`);
+        if (matchMobileSuccessReport.scrollWidth !== matchMobileSuccessReport.viewportWidth
+            || !matchMobileSuccessReport.gridStillVisible
+            || !matchMobileSuccessReport.resultScreenHidden
+            || matchMobileSuccessReport.resultTitle !== '完美匹配！'
+            || matchMobileSuccessReport.levelBeforeContinue !== 2
+            || matchMobileSuccessReport.correctMarkers !== 1
+            || matchMobileSuccessReport.wrongMarkers !== 0
+            || !matchMobileSuccessReport.targetLabel.includes('正确选择')
+            || !matchMobileSuccessReport.actionsVisible
+            || !matchMobileSuccessReport.buttonsFit
+            || matchMobileSuccessReport.screenTopShift > 1
+            || matchMobileSuccessReport.scrollShift > 1) {
+            throw new Error(`Mobile match result continuity failed: ${JSON.stringify(matchMobileSuccessReport)}`);
+        }
+        await captureScreenshot(client, 'match-inline-success-mobile.png');
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 1440,
+            height: 1000,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
+
+        const masterAdvanceReport = await evaluate(client, `(() => {
+            gameState.matchDifficulty = 'master';
+            gameState.level = 3;
+            gameState.matchLastAnswerCorrect = false;
+            nextLevel();
+            stopActiveCountdown();
+            const levelAfterFailure = gameState.level;
+            gameState.matchLastAnswerCorrect = true;
+            nextLevel();
+            stopActiveCountdown();
+            return {
+                levelAfterFailure,
+                levelAfterSuccess: gameState.level
+            };
+        })()`);
+        if (masterAdvanceReport.levelAfterFailure !== 3 || masterAdvanceReport.levelAfterSuccess !== 4) {
+            throw new Error(`Master match progression failed: ${JSON.stringify(masterAdvanceReport)}`);
+        }
+
+        const matchFinalSummaryReport = await evaluate(client, `(() => {
+            gameState.matchDifficulty = 'basic';
+            gameState.level = matchDifficultyConfig.basic.totalLevels;
+            gameState.isGameActive = true;
+            showTargetColor();
+            stopActiveCountdown();
+            showColorGrid();
+            const targetHex = rgbToHex(gameState.currentTargetColor);
+            const target = [...document.querySelectorAll('.color-card')]
+                .find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
+            target.click();
+            return {
+                gridHidden: elements.colorGridScreen.classList.contains('hidden'),
+                resultVisible: !elements.resultScreen.classList.contains('hidden'),
+                title: elements.resultText.textContent,
+                continueHidden: elements.continueButton.classList.contains('hidden'),
+                restartVisible: !elements.restartButton.classList.contains('hidden')
+            };
+        })()`);
+        if (!matchFinalSummaryReport.gridHidden
+            || !matchFinalSummaryReport.resultVisible
+            || matchFinalSummaryReport.title !== '基础颜色匹配完成！'
+            || !matchFinalSummaryReport.continueHidden
+            || !matchFinalSummaryReport.restartVisible) {
+            throw new Error(`Match final summary failed: ${JSON.stringify(matchFinalSummaryReport)}`);
         }
 
         await navigate(client, appUrl);

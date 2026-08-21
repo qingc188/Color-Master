@@ -81,6 +81,7 @@ const gameState = {
     correctAnswers: 0, // 用于计算正确率
     totalAnswers: 0, // 用于计算正确率
     matchRoundSubmitted: false,
+    matchLastAnswerCorrect: false,
     // 颜色复现模式专用
     recallDifficulty: 'basic',
     recallTotalScore: 0, // 累计得分
@@ -129,6 +130,10 @@ const elements = {
     preparationDifficulty: document.getElementById('preparation-difficulty'),
     targetColorScreen: document.getElementById('target-color-screen'),
     colorGridScreen: document.getElementById('color-grid-screen'),
+    matchRoundTitle: document.getElementById('match-round-title'),
+    matchRoundActions: document.getElementById('match-round-actions'),
+    matchContinueButton: document.getElementById('match-continue-button'),
+    matchRestartButton: document.getElementById('match-restart-button'),
     colorRecallScreen: document.getElementById('color-recall-screen'),
     gameInfoAnchor: document.getElementById('game-info-anchor'),
     gameInfoBar: document.getElementById('game-info-bar'),
@@ -556,6 +561,47 @@ function showMatchResultLayout() {
     elements.restartButton.textContent = '重新开始';
 }
 
+function resetMatchRoundFeedback() {
+    elements.matchRoundTitle.textContent = '找出与目标颜色相同的方块';
+    elements.matchRoundTitle.classList.remove('is-success', 'is-failure');
+    elements.matchRoundActions.classList.add('hidden');
+    elements.matchContinueButton.textContent = '下一关';
+}
+
+function addMatchCardResult(card, label, stateClass) {
+    if (!card) return;
+    card.classList.add(stateClass);
+    card.setAttribute('aria-label', `${card.getAttribute('aria-label')}，${label}`);
+    const resultLabel = document.createElement('span');
+    resultLabel.className = 'match-card-result';
+    resultLabel.textContent = label;
+    card.appendChild(resultLabel);
+}
+
+function showMatchRoundFeedback(selectedCard, isCorrect) {
+    const cards = Array.from(elements.colorGrid.querySelectorAll('.color-card'));
+    const targetHex = rgbToHex(gameState.currentTargetColor);
+    const targetCard = cards.find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
+
+    cards.forEach((card) => {
+        card.disabled = true;
+    });
+
+    if (isCorrect) {
+        addMatchCardResult(selectedCard, '正确选择', 'is-match-correct');
+        elements.matchRoundTitle.textContent = '完美匹配！';
+        elements.matchRoundTitle.classList.add('is-success');
+    } else {
+        addMatchCardResult(selectedCard, '你的选择', 'is-match-selected-wrong');
+        addMatchCardResult(targetCard, '正确答案', 'is-match-correct');
+        elements.matchRoundTitle.textContent = '匹配失败';
+        elements.matchRoundTitle.classList.add('is-failure');
+    }
+
+    elements.matchRoundActions.classList.remove('hidden');
+    elements.matchRoundTitle.focus({ preventScroll: true });
+}
+
 function showRecallFinalLayout() {
     elements.matchResultSummary.classList.add('hidden');
     elements.recallFinalSummary.classList.remove('hidden');
@@ -751,6 +797,8 @@ function initGame() {
     elements.startButton.addEventListener('click', startGame);
     elements.continueButton.addEventListener('click', nextLevel);
     elements.restartButton.addEventListener('click', handleRestartButton);
+    elements.matchContinueButton.addEventListener('click', nextLevel);
+    elements.matchRestartButton.addEventListener('click', restartCurrentMatchDifficulty);
     elements.restartRecallBtn.addEventListener('click', restartCurrentRecallDifficulty);
     elements.backButtons.forEach((button) => {
         button.addEventListener('click', () => handleBackNavigation(button.dataset.backTarget));
@@ -961,6 +1009,7 @@ function showTargetColor() {
         paletteRetryTimeoutId = undefined;
     }
     gameState.matchRoundSubmitted = false;
+    gameState.matchLastAnswerCorrect = false;
     
     // 生成目标颜色
     gameState.currentTargetColor = generateColor(gameState.level);
@@ -978,6 +1027,7 @@ function showTargetColor() {
 
 // 显示颜色选择网格
 function showColorGrid() {
+    resetMatchRoundFeedback();
     showScreen(elements.colorGridScreen);
     const config = matchDifficultyConfig[gameState.matchDifficulty];
     const gridTotal = config.gridSize * config.gridSize;
@@ -1033,17 +1083,15 @@ function showColorGrid() {
         colorBlock.className = 'color-card w-full aspect-square rounded-xl shadow-lg cursor-pointer';
         colorBlock.style.backgroundColor = color;
         colorBlock.setAttribute('aria-label', `颜色选项 ${index + 1}`);
-        colorBlock.addEventListener('click', () => checkColorSelection(color));
+        colorBlock.addEventListener('click', () => checkColorSelection(color, colorBlock));
         elements.colorGrid.appendChild(colorBlock);
     });
 }
 
 // 检查颜色选择
-function checkColorSelection(selectedColor) {
+function checkColorSelection(selectedColor, selectedCard) {
     if (gameState.matchRoundSubmitted) return;
     gameState.matchRoundSubmitted = true;
-    showMatchResultLayout();
-    showScreen(elements.resultScreen);
     resetResultColorBlocks();
     elements.resultDetail.innerHTML = '';
     elements.resultDetail.classList.add('hidden');
@@ -1062,6 +1110,7 @@ function checkColorSelection(selectedColor) {
     gameState.totalAnswers++;
     const isCorrect = rgbToHex(selectedColor) === rgbToHex(gameState.currentTargetColor);
     const config = matchDifficultyConfig[gameState.matchDifficulty];
+    gameState.matchLastAnswerCorrect = isCorrect;
     
     // 判断选择是否正确
     if (isCorrect) {
@@ -1069,20 +1118,10 @@ function checkColorSelection(selectedColor) {
         playSound('correct');
         gameState.score++;
         gameState.correctAnswers++;
-        
-        elements.resultIcon.className = 'text-6xl mb-4 text-success';
-        elements.resultIcon.innerHTML = iconMarkup('check-circle');
-        elements.resultText.textContent = '回答正确';
-        elements.resultText.className = 'text-3xl font-bold mb-6 text-success';
-
     } else {
         // 选择错误
         playSound('wrong');
-        elements.resultIcon.className = 'text-6xl mb-4 text-danger';
-        elements.resultIcon.innerHTML = iconMarkup('x-circle');
-        elements.resultText.textContent = '没有选中目标色';
-        elements.resultText.className = 'text-3xl font-bold mb-6 text-danger';
-        
+
         // 处理大师无尽模式的生命值
         if (config.endless) {
             gameState.lives--;
@@ -1094,28 +1133,31 @@ function checkColorSelection(selectedColor) {
             }
         }
     }
-    
+
     if (!config.endless) {
-        elements.continueButton.textContent = '下一关';
+        elements.matchContinueButton.textContent = '下一关';
         if (gameState.level >= config.totalLevels) {
             showGameEnd();
             return;
         }
-        gameState.level++;
     } else if (isCorrect) {
         // 大师模式只有做对才进入下一关
-        elements.continueButton.textContent = '下一关';
-        gameState.level++;
+        elements.matchContinueButton.textContent = '下一关';
     } else {
-        elements.continueButton.textContent = '继续本关';
+        elements.matchContinueButton.textContent = '继续本关';
     }
-    
+
+    showMatchRoundFeedback(selectedCard, isCorrect);
     elements.resultScore.textContent = gameState.score;
     updateDisplays();
 }
 
 // 进入下一关
 function nextLevel() {
+    if (gameState.gameMode === 'colorMatch') {
+        const config = matchDifficultyConfig[gameState.matchDifficulty];
+        if (!config.endless || gameState.matchLastAnswerCorrect) gameState.level++;
+    }
     showTargetColor();
 }
 
