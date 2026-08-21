@@ -17,6 +17,9 @@ body {
     min-height: 100vh;
     min-height: 100dvh;
 }
+.hidden {
+    display: none !important;
+}
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -607,11 +610,14 @@ div.app-container > main > :not(.hidden) {
 .landing-screen {
     position: relative;
     display: grid;
+    min-height: calc(100vh - 4rem);
     min-height: min(50rem, calc(100svh - 4rem));
     place-items: center;
     align-content: center;
+    gap: 1.2rem;
     gap: clamp(1.2rem, 3vh, 2rem);
     overflow: hidden;
+    padding: 2.5rem 1rem;
     padding: clamp(2.5rem, 7vh, 5rem) 1rem;
     border: 1px solid rgba(var(--structure-rgb), 0.2);
     border-radius: 1.5rem;
@@ -650,6 +656,8 @@ div.app-container > main > :not(.hidden) {
 .landing-orbit {
     position: relative;
     display: grid;
+    width: 54vw;
+    max-width: 368px;
     width: min(368px, 54vw, 100%);
     aspect-ratio: 1;
     place-items: center;
@@ -802,6 +810,7 @@ div.app-container > main > :not(.hidden) {
 }
 
 .theme-cube-stage {
+    --cube-size: 184px;
     --cube-size: min(184px, 34vw);
     position: relative;
     display: none;
@@ -1049,7 +1058,7 @@ html[data-theme="ivory"] .theme-cube-face--left {
 }
 
 .landing-english {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
     color: var(--muted);
     font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
     font-size: 0.75rem;
@@ -1063,7 +1072,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
     justify-content: center;
     gap: 0.06em;
     font-family: "Yise QingKe Title", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(3.7rem, 16vw, 6.8rem);
+    font-size: 4rem;
+    font-size: clamp(4.0rem, 16vw, 6.8rem);
     font-synthesis: none;
     font-weight: 400;
     line-height: 1;
@@ -1098,6 +1108,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
 
 .landing-actions {
     display: grid;
+    width: 100%;
+    max-width: 23rem;
     width: min(100%, 23rem);
     justify-items: stretch;
     gap: 0.55rem;
@@ -1108,7 +1120,10 @@ html[data-theme="ivory"] .theme-cube-face--left {
     min-height: 3.3rem;
     align-items: center;
     justify-content: center;
+    border: 0;
     border-radius: 0.75rem;
+    -webkit-appearance: none;
+    appearance: none;
     font-size: 1rem;
     font-weight: 750;
     letter-spacing: 0.08em;
@@ -1134,7 +1149,11 @@ html[data-theme="ivory"] .theme-cube-face--left {
     justify-content: center;
     gap: 0.5rem;
     color: var(--muted);
+    border: 0;
     border-radius: 999px;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -2648,6 +2667,7 @@ html.theme-transitioning .score-info-panel {
     }
 
     .landing-screen {
+        min-height: calc(100vh - 2.5rem);
         min-height: min(42rem, calc(100svh - 2.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
         gap: 0.8rem;
         padding: 1.25rem 1rem;
@@ -2655,7 +2675,7 @@ html.theme-transitioning .score-info-panel {
     }
 
     .landing-copy {
-        padding-top: 0.5rem;
+        padding-top: 1.2rem;
     }
 
     .landing-english {
@@ -2663,15 +2683,20 @@ html.theme-transitioning .score-info-panel {
     }
 
     .landing-actions {
-        width: min(84%, 19rem);
+        width: 70%;
+        max-width: 17rem;
+        width: min(70%, 17rem);
     }
 
     .landing-orbit {
+        width: 76vw;
+        max-width: 304px;
         width: min(304px, 76vw, 100%);
     }
 
     .theme-cube-stage {
-        --cube-size: min(144px, 31vw);
+        --cube-size: 140px;
+        --cube-size: min(140px, 30vw);
     }
 
     .theme-switch-meta {
@@ -3164,11 +3189,13 @@ html.theme-transitioning .score-info-panel {
     }
 
     .landing-orbit {
+        max-width: 216px;
         width: min(216px, 76vw, 100%);
     }
 
     .theme-cube-stage {
-        --cube-size: min(112px, 31vw);
+        --cube-size: 112px;
+        --cube-size: min(112px, 29vw);
     }
 
     .theme-switch-meta {
@@ -3207,7 +3234,7 @@ html.theme-transitioning .score-info-panel {
     }
 
     .landing-title {
-        font-size: 3.5rem;
+        font-size: 3.8rem;
     }
 
     .brand-name small {
@@ -3265,6 +3292,7 @@ html.theme-transitioning .score-info-panel {
     }
 
     .theme-cube-stage {
+        --cube-size: 120px;
         --cube-size: min(30vh, 120px);
     }
 

@@ -22,6 +22,26 @@ test('production entry uses only packaged local resources', () => {
         resourcePaths.filter((url) => url.endsWith('.js')),
         ['color-utils.js', 'app.js']
     );
+    assert.equal(
+        resourceUrls.filter((url) => /\.(?:css|js)(?:[?#]|$)/i.test(url))
+            .every((url) => /[?&]v=/.test(url)),
+        true,
+        'Production CSS and JavaScript resources must be cache-versioned.'
+    );
+});
+
+test('startup shell degrades safely in older WebViews', () => {
+    const html = read('index.html');
+    const app = read('app.js');
+    const styles = read('styles.css');
+
+    assert.match(html, /id="game-info-bar"\s+class="[^"]*\bhidden\b/);
+    assert.match(styles, /\.hidden\s*{[^}]*display:\s*none\s*!important;/s);
+    assert.match(styles, /\.landing-title\s*{[^}]*font-size:\s*4rem;[^}]*font-size:\s*clamp\(/s);
+    assert.match(styles, /\.landing-palette-link\s*{[^}]*border:\s*0;[^}]*background:\s*transparent;[^}]*appearance:\s*none;/s);
+    assert.equal(/\?\.|\?\?/.test(app), false, 'Production JavaScript must avoid ES2020 optional operators.');
+    assert.equal(/\.replaceChildren\s*\(/.test(app), false, 'replaceChildren is unavailable in older WebViews.');
+    assert.match(app, /document\.readyState === 'loading'/);
 });
 
 test('production code avoids forbidden container APIs', () => {

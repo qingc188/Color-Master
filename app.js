@@ -15,7 +15,8 @@ let storageAvailable = true;
 
 function markStorageUnavailable() {
     storageAvailable = false;
-    document.getElementById('storage-status')?.classList.remove('hidden');
+    const storageStatus = document.getElementById('storage-status');
+    if (storageStatus) storageStatus.classList.remove('hidden');
 }
 
 function getStorageItem(key) {
@@ -73,7 +74,7 @@ const gameState = {
     matchBestScores: {
         basic: Number(getStorageItem('colorMemoryBestMatchScore_basic')) || 0,
         advanced: Number(getStorageItem('colorMemoryBestMatchScore_advanced')) || 0,
-        master: Number(getStorageItem('colorMemoryBestMatchScore_master') ?? getStorageItem('colorMemoryBestScore')) || 0
+        master: Number(getStorageItem('colorMemoryBestMatchScore_master') || getStorageItem('colorMemoryBestScore')) || 0
     },
     lives: 3, // 仅用于颜色匹配大师模式
     totalLevels: 10, // 仅用于固定关卡的颜色匹配模式
@@ -406,7 +407,7 @@ function applyTheme(themeId, { persist = false, announce = false } = {}) {
 
     activeThemeIndex = currentIndex;
     document.documentElement.dataset.theme = normalizedTheme;
-    elements.themeColorMeta?.setAttribute('content', config.themeColor);
+    if (elements.themeColorMeta) elements.themeColorMeta.setAttribute('content', config.themeColor);
     elements.themeDots.forEach((dot) => {
         dot.classList.toggle('is-active', dot.dataset.themeDot === normalizedTheme);
     });
@@ -439,8 +440,10 @@ function finishThemeSwitch() {
     }
     themeSwitching = false;
     document.documentElement.classList.remove('theme-transitioning');
-    elements.themeCubeButton?.classList.remove('is-turning');
-    elements.themeCubeButton?.removeAttribute('aria-busy');
+    if (elements.themeCubeButton) {
+        elements.themeCubeButton.classList.remove('is-turning');
+        elements.themeCubeButton.removeAttribute('aria-busy');
+    }
 }
 
 function switchTheme() {
@@ -448,8 +451,11 @@ function switchTheme() {
 
     const nextThemeIndex = (activeThemeIndex + 1) % THEME_ORDER.length;
     const nextTheme = THEME_ORDER[nextThemeIndex];
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const supports3d = window.CSS?.supports?.('transform-style', 'preserve-3d');
+    const reduceMotion = Boolean(window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const supports3d = Boolean(window.CSS
+        && window.CSS.supports
+        && window.CSS.supports('transform-style', 'preserve-3d'));
 
     cubeRotationDegrees += 120;
     if (reduceMotion || !supports3d) {
@@ -476,7 +482,7 @@ function switchTheme() {
 function initializeThemeSwitcher() {
     applyTheme(THEME_ORDER[activeThemeIndex]);
     setCubeRotationWithoutMotion(cubeRotationDegrees);
-    elements.themeCubeButton?.addEventListener('click', switchTheme);
+    if (elements.themeCubeButton) elements.themeCubeButton.addEventListener('click', switchTheme);
 }
 
 function showScreen(screen) {
@@ -499,7 +505,8 @@ function showRecallSection(section) {
     recallSections.forEach((item) => {
         item.classList.toggle('hidden', item !== section);
     });
-    section.querySelector('h2')?.focus({ preventScroll: true });
+    const sectionTitle = section.querySelector('h2');
+    if (sectionTitle) sectionTitle.focus({ preventScroll: true });
     requestAnimationFrame(() => {
         if (section.classList.contains('hidden')) return;
         window.scrollTo(0, 0);
@@ -674,7 +681,8 @@ function rgbToHslText(r, g, b) {
 function runCountdown({ counter, progressBar, durationMs, onComplete }) {
     const countdownId = ++activeCountdownId;
     const startTime = performance.now();
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = Boolean(window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     let previousSeconds;
 
     function update(now) {
@@ -1277,7 +1285,7 @@ function getCurrentHistoryContext() {
 
 // 更新颜色历史显示
 function updateColorHistoryDisplay() {
-    elements.colorHistory.replaceChildren();
+    elements.colorHistory.textContent = '';
     const historyCount = gameState.colorHistory.length;
     const isEmpty = historyCount === 0;
     elements.landingHistoryCount.textContent = historyCount;
@@ -1607,7 +1615,7 @@ function updateScoreInfoDialog() {
         }
     }
 
-    const activeAnchors = new Set([lower.distance, upper?.distance].filter(Number.isFinite));
+    const activeAnchors = new Set([lower.distance, upper ? upper.distance : undefined].filter(Number.isFinite));
     elements.scoreInfoMappingBody.querySelectorAll('[data-score-anchor]').forEach((cell) => {
         cell.classList.toggle('is-active', activeAnchors.has(Number(cell.dataset.scoreAnchor)));
     });
@@ -1644,7 +1652,7 @@ function closeScoreInfoDialog() {
     elements.scoreInfoDialog.classList.add('hidden');
     elements.scoreInfoDialog.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('modal-open');
-    if (scoreInfoReturnFocus?.isConnected) scoreInfoReturnFocus.focus();
+    if (scoreInfoReturnFocus && scoreInfoReturnFocus.isConnected) scoreInfoReturnFocus.focus();
     scoreInfoReturnFocus = undefined;
 }
 
@@ -1827,7 +1835,7 @@ function setupHSLWheelInteraction() {
         }
         const finalPoint = pendingPoint;
         pendingPoint = undefined;
-        if (event?.type !== 'touchcancel' && finalPoint) applyPoint(finalPoint);
+        if ((!event || event.type !== 'touchcancel') && finalPoint) applyPoint(finalPoint);
         isDragging = false;
         wheelRect = undefined;
     };
@@ -1968,6 +1976,10 @@ function playSound(soundName) {
 }
 
 // 初始化游戏
-window.addEventListener('DOMContentLoaded', initGame);
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initGame);
+} else {
+    initGame();
+}
 
 

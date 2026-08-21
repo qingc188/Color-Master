@@ -216,6 +216,41 @@ async function run() {
         });
 
         const appUrl = pathToFileURL(path.resolve(__dirname, '..', 'index.html')).href;
+        const blockedInitScript = await client.send('Page.addScriptToEvaluateOnNewDocument', {
+            source: `(() => {
+                const nativeAddEventListener = window.addEventListener;
+                window.addEventListener = function addEventListener(type, listener, options) {
+                    if (type === 'DOMContentLoaded' && listener && listener.name === 'initGame') return;
+                    return nativeAddEventListener.call(this, type, listener, options);
+                };
+            })();`
+        });
+        await navigate(client, appUrl);
+        const startupFailClosedReport = await evaluate(client, `(() => {
+            const palette = elements.colorHistoryEntry;
+            const paletteStyle = getComputedStyle(palette);
+            return {
+                gameInfoHidden: elements.gameInfoBar.classList.contains('hidden'),
+                gameInfoDisplay: getComputedStyle(elements.gameInfoBar).display,
+                visibleMainScreens: mainScreens.filter((screen) => !screen.classList.contains('hidden')).length,
+                landingVisible: !elements.landingScreen.classList.contains('hidden'),
+                paletteAppearance: paletteStyle.appearance,
+                paletteBackground: paletteStyle.backgroundColor,
+                paletteBorderStyle: paletteStyle.borderStyle
+            };
+        })()`);
+        if (!startupFailClosedReport.gameInfoHidden
+            || startupFailClosedReport.gameInfoDisplay !== 'none'
+            || startupFailClosedReport.visibleMainScreens !== 1
+            || !startupFailClosedReport.landingVisible
+            || startupFailClosedReport.paletteAppearance !== 'none'
+            || startupFailClosedReport.paletteBackground !== 'rgba(0, 0, 0, 0)'
+            || startupFailClosedReport.paletteBorderStyle !== 'none') {
+            throw new Error(`Startup fail-closed layout failed: ${JSON.stringify(startupFailClosedReport)}`);
+        }
+        await client.send('Page.removeScriptToEvaluateOnNewDocument', {
+            identifier: blockedInitScript.identifier
+        });
         await navigate(client, appUrl);
         await evaluate(client, `
             localStorage.setItem('colorMemoryBestRecallScore_advanced', '99');
@@ -480,7 +515,7 @@ async function run() {
             || !homepageMobileReport.footerAfterMain
             || homepageMobileReport.paletteToEnglishGap < 20
             || Math.abs(homepageMobileReport.englishFontSize - 10.88) > 0.1
-            || Math.abs(homepageMobileReport.actionWidthRatio - 0.84) > 0.01
+            || Math.abs(homepageMobileReport.actionWidthRatio - 0.70) > 0.01
             || homepageMobileReport.backButtonHeights.some((height) => height !== 40)) {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
@@ -2035,6 +2070,7 @@ async function run() {
             blockedStorageThemeReport,
             storageFailureReport,
             audioFailureReport,
+            startupFailClosedReport,
             homepageReport,
             desktopShellReport,
             homepageMobileReport,
