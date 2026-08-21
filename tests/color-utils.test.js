@@ -203,6 +203,30 @@ test('generated Oklch targets are valid, non-neutral sRGB colors', () => {
     }
 });
 
+test('matching bands keep distractors close and tighten each late-game floor', () => {
+    const basicStart = getMatchDistanceBand('basic', 1);
+    const basicMiddle = getMatchDistanceBand('basic', 5);
+    const basicEnd = getMatchDistanceBand('basic', 10);
+    const advancedStart = getMatchDistanceBand('advanced', 1);
+    const advancedEnd = getMatchDistanceBand('advanced', 10);
+    const masterStart = getMatchDistanceBand('master', 1);
+    const masterFloor = getMatchDistanceBand('master', 100);
+
+    assert.equal(basicStart.center, 10);
+    approximately(basicStart.max, 11.5);
+    approximately(basicMiddle.max, 9.9666666667);
+    assert.equal(basicEnd.center, 7);
+    approximately(basicEnd.max, 8.05);
+    assert.equal(advancedStart.center, 9);
+    approximately(advancedStart.max, 10.35);
+    assert.equal(advancedEnd.center, 4.5);
+    approximately(advancedEnd.max, 5.175);
+    assert.equal(masterStart.center, 8.25);
+    approximately(masterStart.max, 9.4875);
+    assert.equal(masterFloor.center, 3.1);
+    approximately(masterFloor.max, 3.565);
+});
+
 test('matching palettes respect target and pairwise perceptual distances', () => {
     const scenarios = [
         { difficulty: 'basic', level: 1, count: 8 },

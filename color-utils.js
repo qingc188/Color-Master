@@ -334,14 +334,15 @@ function getMatchDistanceBand(difficulty, level) {
     const safeLevel = Math.max(1, Number(level) || 1);
     let center;
 
+    // 控制目标色差区间，避免一眼即可排除的干扰色，并保持平滑递进。
     if (difficulty === 'advanced') {
         const progress = clamp((safeLevel - 1) / 9, 0, 1);
-        center = 10 - 5 * progress;
+        center = 9 - 4.5 * progress;
     } else if (difficulty === 'master') {
-        center = Math.max(3.5, 9 * (0.94 ** (safeLevel - 1)));
+        center = Math.max(3.1, 8.25 * (0.94 ** (safeLevel - 1)));
     } else {
         const progress = clamp((safeLevel - 1) / 9, 0, 1);
-        center = 14 - 6 * progress;
+        center = 10 - 3 * progress;
     }
 
     return {
