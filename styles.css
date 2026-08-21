@@ -3148,7 +3148,7 @@ html.theme-transitioning .score-info-panel {
     }
 
     .landing-screen {
-        align-content: start;
+        align-content: safe center;
     }
 
     .landing-orbit {

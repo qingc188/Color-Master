@@ -3,6 +3,7 @@ const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
+const { once } = require('node:events');
 const { pathToFileURL } = require('node:url');
 
 const EDGE_PATHS = [
@@ -469,6 +470,38 @@ async function run() {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 360,
+            height: 800,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        const narrowLandingReport = await evaluate(client, `(() => {
+            const landing = elements.landingScreen.getBoundingClientRect();
+            const content = [
+                document.querySelector('.landing-orbit'),
+                document.querySelector('.landing-copy'),
+                document.querySelector('.landing-actions')
+            ].map((element) => element.getBoundingClientRect());
+            const contentTop = Math.min(...content.map((rect) => rect.top));
+            const contentBottom = Math.max(...content.map((rect) => rect.bottom));
+            return {
+                narrowRule: matchMedia('(max-width: 360px)').matches,
+                alignContent: getComputedStyle(elements.landingScreen).alignContent,
+                spaceAbove: contentTop - landing.top,
+                spaceBelow: landing.bottom - contentBottom,
+                primaryBottom: elements.enterGameButton.getBoundingClientRect().bottom,
+                paletteBottom: elements.colorHistoryEntry.getBoundingClientRect().bottom,
+                viewportHeight: window.visualViewport?.height || window.innerHeight
+            };
+        })()`);
+        if (!narrowLandingReport.narrowRule
+            || Math.abs(narrowLandingReport.spaceAbove - narrowLandingReport.spaceBelow) > 1
+            || narrowLandingReport.primaryBottom > narrowLandingReport.viewportHeight + 1
+            || narrowLandingReport.paletteBottom > narrowLandingReport.viewportHeight + 1) {
+            throw new Error(`Narrow landing alignment failed: ${JSON.stringify(narrowLandingReport)}`);
+        }
+        await captureScreenshot(client, 'landing-mobile-360.png');
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 320,
             height: 667,
@@ -1990,6 +2023,7 @@ async function run() {
             homepageReport,
             desktopShellReport,
             homepageMobileReport,
+            narrowLandingReport,
             landingZoomReport,
             themeStructureReport,
             keyboardThemeStartReport,
@@ -2038,8 +2072,13 @@ async function run() {
     } finally {
         if (client) client.close();
         browser.kill();
-        await delay(200);
-        fs.rmSync(profilePath, { recursive: true, force: true });
+        await Promise.race([once(browser, 'exit'), delay(2000)]);
+        fs.rmSync(profilePath, {
+            recursive: true,
+            force: true,
+            maxRetries: 5,
+            retryDelay: 200
+        });
     }
 }
 
