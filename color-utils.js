@@ -10,6 +10,7 @@ const OKLAB_SCORE_ANCHORS = Object.freeze([
     { distance: 100, score: 0 }
 ]);
 const RECALL_NEUTRAL_CHROMA_THRESHOLD = 0.04;
+const RECALL_TARGET_CHROMA_FULL_THRESHOLD = 0.06;
 const RECALL_NEUTRAL_PENALTY_WEIGHT = 1.6;
 
 function clamp(value, min, max) {
@@ -268,7 +269,7 @@ function calculatePerceptualScore(target, user) {
     return scoreFromPerceptualDistance(calculatePerceptualDistance(target, user));
 }
 
-// 复现模式额外惩罚“有颜色的目标被还原成灰色”，匹配模式仍使用纯 Oklab 距离。
+// 复现模式只额外惩罚“明显带色的目标被还原成灰色”，匹配模式仍使用纯 Oklab 距离。
 function calculateRecallDistanceDetails(target, user) {
     const targetOklab = rgbToOklab(target);
     const userOklab = rgbToOklab(user);
@@ -281,14 +282,19 @@ function calculateRecallDistanceDetails(target, user) {
     };
     const rawDistance = Math.hypot(oklabDelta.l, oklabDelta.a, oklabDelta.b);
     const baseDistance = rawDistance * 100;
-    const neutralRawAmount = 1
-        - Math.min(targetChroma, userChroma) / RECALL_NEUTRAL_CHROMA_THRESHOLD;
-    const neutralAmount = clamp(neutralRawAmount, 0, 1);
-    const smoothNeutralAmount = neutralAmount * neutralAmount * (3 - 2 * neutralAmount);
-    const neutralPenalty = Math.abs(targetChroma - userChroma)
+    const targetColorRawAmount = (targetChroma - RECALL_NEUTRAL_CHROMA_THRESHOLD)
+        / (RECALL_TARGET_CHROMA_FULL_THRESHOLD - RECALL_NEUTRAL_CHROMA_THRESHOLD);
+    const targetColorAmount = clamp(targetColorRawAmount, 0, 1);
+    const targetColorFactor = targetColorAmount * targetColorAmount * (3 - 2 * targetColorAmount);
+    const userNeutralRawAmount = 1 - userChroma / RECALL_NEUTRAL_CHROMA_THRESHOLD;
+    const userNeutralAmount = clamp(userNeutralRawAmount, 0, 1);
+    const userNeutralFactor = userNeutralAmount * userNeutralAmount * (3 - 2 * userNeutralAmount);
+    const missingChroma = Math.max(0, targetChroma - userChroma);
+    const neutralPenalty = missingChroma
         * 100
         * RECALL_NEUTRAL_PENALTY_WEIGHT
-        * smoothNeutralAmount;
+        * targetColorFactor
+        * userNeutralFactor;
     const targetHue = Math.atan2(targetOklab.b, targetOklab.a) * 180 / Math.PI;
     const userHue = Math.atan2(userOklab.b, userOklab.a) * 180 / Math.PI;
     const rawHueDifference = Math.abs(targetHue - userHue) % 360;
@@ -297,9 +303,13 @@ function calculateRecallDistanceDetails(target, user) {
         rawDistance,
         baseDistance,
         neutralPenalty,
-        neutralRawAmount,
-        neutralAmount,
-        neutralFactor: smoothNeutralAmount,
+        targetColorRawAmount,
+        targetColorAmount,
+        targetColorFactor,
+        userNeutralRawAmount,
+        userNeutralAmount,
+        userNeutralFactor,
+        missingChroma,
         distance: baseDistance + neutralPenalty,
         oklabDelta,
         lightnessDelta: (userOklab.l - targetOklab.l) * 100,
@@ -412,6 +422,7 @@ if (typeof module !== 'undefined' && module.exports) {
         OKLAB_SCORE_ANCHORS,
         RECALL_NEUTRAL_CHROMA_THRESHOLD,
         RECALL_NEUTRAL_PENALTY_WEIGHT,
+        RECALL_TARGET_CHROMA_FULL_THRESHOLD,
         calculateOklabDistance,
         calculatePerceptualDistance,
         calculatePerceptualScore,

@@ -219,14 +219,17 @@ async function run() {
         await evaluate(client, `
             localStorage.setItem('colorMemoryBestRecallScore_advanced', '99');
             localStorage.setItem('colorMemoryBestRecallScore_advanced_oklab_v2', '88');
+            localStorage.setItem('colorMemoryBestRecallScore_advanced_oklab_v3', '77');
         `);
         await navigate(client, appUrl);
         const legacyIsolationReport = await evaluate(client, `({
-            loadedV3Best: gameState.recallBestScores.advanced,
+            loadedV4Best: gameState.recallBestScores.advanced,
+            storedV3: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v3'),
             storedV2: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v2'),
             legacyValue: localStorage.getItem('colorMemoryBestRecallScore_advanced')
         })`);
-        if (legacyIsolationReport.loadedV3Best !== 0
+        if (legacyIsolationReport.loadedV4Best !== 0
+            || legacyIsolationReport.storedV3 !== '77'
             || legacyIsolationReport.storedV2 !== '88'
             || legacyIsolationReport.legacyValue !== '99') {
             throw new Error(`Legacy score isolation failed: ${JSON.stringify(legacyIsolationReport)}`);
@@ -356,12 +359,16 @@ async function run() {
             throw new Error(`Audio fallback failed: ${JSON.stringify(audioFailureReport)}`);
         }
 
+        await evaluate(client, `document.fonts.ready`);
         const homepageReport = await evaluate(client, `({
             secondaryGuideRemoved: !document.querySelector('.landing-secondary')
                 && !document.querySelector('#game-guide'),
             supportingContentRemoved: !document.querySelector('#supporting-content'),
             paletteEntryTag: elements.colorHistoryEntry.tagName,
             paletteCount: elements.landingHistoryCount.textContent,
+            titleFontFamily: getComputedStyle(document.querySelector('.landing-title')).fontFamily,
+            titleFontWeight: getComputedStyle(document.querySelector('.landing-title')).fontWeight,
+            titleFontLoaded: document.fonts.check('400 64px "Yise QingKe Title"', '忆色'),
             audioControlsRemoved: !document.querySelector('#sound-toggle')
                 && !document.querySelector('#icon-volume-up')
                 && !document.querySelector('#icon-volume-off')
@@ -370,6 +377,9 @@ async function run() {
             || !homepageReport.supportingContentRemoved
             || homepageReport.paletteEntryTag !== 'BUTTON'
             || homepageReport.paletteCount !== '0'
+            || !homepageReport.titleFontFamily.includes('Yise QingKe Title')
+            || homepageReport.titleFontWeight !== '400'
+            || !homepageReport.titleFontLoaded
             || !homepageReport.audioControlsRemoved) {
             throw new Error(`Homepage simplification failed: ${JSON.stringify(homepageReport)}`);
         }
@@ -428,6 +438,7 @@ async function run() {
             const primary = elements.enterGameButton.getBoundingClientRect();
             const paletteEntry = elements.colorHistoryEntry.getBoundingClientRect();
             const brandName = document.querySelector('.brand-name');
+            const brandTitle = brandName.querySelector(':scope > span');
             const footer = document.querySelector('.site-footer');
             return {
                 viewportWidth: document.documentElement.clientWidth,
@@ -437,6 +448,8 @@ async function run() {
                 paletteBottom: paletteEntry.bottom,
                 brandNameColor: getComputedStyle(brandName).color,
                 brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color,
+                brandTitleFontFamily: getComputedStyle(brandTitle).fontFamily,
+                brandTitleFontWeight: getComputedStyle(brandTitle).fontWeight,
                 footerPosition: getComputedStyle(footer).position,
                 footerAfterMain: footer.offsetTop >= document.querySelector('.app-container > main').offsetTop
                     + document.querySelector('.app-container > main').offsetHeight,
@@ -448,6 +461,8 @@ async function run() {
             || homepageMobileReport.primaryBottom > homepageMobileReport.viewportHeight + 1
             || homepageMobileReport.paletteBottom > homepageMobileReport.viewportHeight + 1
             || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor
+            || !homepageMobileReport.brandTitleFontFamily.includes('Yise QingKe Title')
+            || homepageMobileReport.brandTitleFontWeight !== '400'
             || homepageMobileReport.footerPosition !== 'static'
             || !homepageMobileReport.footerAfterMain
             || homepageMobileReport.backButtonHeights.some((height) => height !== 40)) {
@@ -562,6 +577,9 @@ async function run() {
             titlePrimary: getComputedStyle(document.querySelector('.landing-title span:first-child')).color,
             titleSecondary: getComputedStyle(document.querySelector('.landing-title span:last-child')).color,
             themeColor: elements.themeColorMeta.getAttribute('content'),
+            yellow: getComputedStyle(document.documentElement).getPropertyValue('--coral').trim(),
+            yellowBright: getComputedStyle(document.documentElement).getPropertyValue('--coral-bright').trim(),
+            yellowSoft: getComputedStyle(document.documentElement).getPropertyValue('--coral-soft').trim(),
             cubePrimary: ['--cube-primary-1', '--cube-primary-2', '--cube-primary-3', '--cube-primary-4']
                 .map((token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim()),
             cubeSecondary: ['--cube-secondary-1', '--cube-secondary-2', '--cube-secondary-3', '--cube-secondary-4']
@@ -583,14 +601,17 @@ async function run() {
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
             || amethystThemeReport.titlePrimary !== 'rgb(143, 121, 232)'
-            || amethystThemeReport.titleSecondary !== 'rgb(236, 225, 101)'
+            || amethystThemeReport.titleSecondary !== 'rgb(245, 232, 90)'
             || amethystThemeReport.themeColor !== '#100B25'
-            || amethystThemeReport.cubePrimary.join('|') !== '#c8bef4|#8c78e2|#674cc7|#3b258d'
-            || amethystThemeReport.cubeSecondary.join('|') !== '#ede7b1|#ece165|#d4c85e|#baac45'
+            || amethystThemeReport.yellow !== '#f5e85a'
+            || amethystThemeReport.yellowBright !== '#fff3a3'
+            || amethystThemeReport.yellowSoft !== 'rgba(245, 232, 90, 0.14)'
+            || amethystThemeReport.cubePrimary.join('|') !== '#8978d6|#7760dc|#6146c2|#3b258d'
+            || amethystThemeReport.cubeSecondary.join('|') !== '#ffed75|#f5e85a|#f5e133|#e6d116'
             || amethystThemeReport.cubeTopGold !== '#f4f0cd'
-            || amethystThemeReport.visualTopFace.join('|') !== 'rgb(200, 190, 244)|rgb(255, 254, 250)|rgb(244, 240, 205)|rgb(246, 243, 213)'
-            || amethystThemeReport.visualLeftFace.join('|') !== 'rgb(103, 76, 199)|rgb(185, 172, 241)|rgb(59, 37, 141)|rgb(140, 120, 226)'
-            || amethystThemeReport.visualRightFace.join('|') !== 'rgb(236, 225, 101)|rgb(186, 172, 69)|rgb(237, 231, 177)|rgb(212, 200, 94)'
+            || amethystThemeReport.visualTopFace.join('|') !== 'rgb(137, 120, 214)|rgb(255, 254, 250)|rgb(244, 240, 205)|rgb(246, 243, 213)'
+            || amethystThemeReport.visualLeftFace.join('|') !== 'rgb(97, 70, 194)|rgb(200, 190, 244)|rgb(59, 37, 141)|rgb(119, 96, 220)'
+            || amethystThemeReport.visualRightFace.join('|') !== 'rgb(245, 232, 90)|rgb(230, 209, 22)|rgb(255, 237, 117)|rgb(245, 225, 51)'
             || amethystThemeReport.progressTrack !== 'rgb(45, 34, 91)'
             || amethystThemeReport.progressFill !== 'rgb(143, 121, 232)') {
             throw new Error(`Amethyst theme failed: ${JSON.stringify(amethystThemeReport)}`);
@@ -1248,7 +1269,7 @@ async function run() {
             || recallReport.totalCenti !== 1000
             || recallReport.distance !== 0
             || recallReport.displayedScore !== '10.00'
-            || recallReport.feedback !== '你就是Color Master!'
+            || recallReport.feedback !== '“你就是Color Master!”'
             || recallReport.guidance !== '色相、饱和度和明度都很接近'
             || recallReport.baseDistance !== 0
             || recallReport.neutralPenalty !== 0
@@ -1327,9 +1348,10 @@ async function run() {
             || dialogReport.baseFormula !== '游戏展示差异 = 0.0000 × 100 ≈ 0.00'
             || dialogReport.neutralStart.includes('clamp')
             || dialogReport.neutralStart.includes('min(')
+            || dialogReport.neutralStart.includes('max(')
             || dialogReport.neutralFormula.includes('clamp')
-            || !dialogReport.neutralFormula.includes('灰色程度')
-            || !dialogReport.neutralSmooth.includes('g =')
+            || !dialogReport.neutralFormula.includes('目标显色')
+            || !dialogReport.neutralSmooth.includes('复现灰色')
             || !dialogReport.adjustmentFormula.endsWith('≈ 0.00')
             || dialogReport.targetCode !== dialogReport.userCode
             || dialogReport.guidance !== '色相、饱和度和明度都很接近'
@@ -1338,7 +1360,7 @@ async function run() {
             || dialogReport.range !== '最终差异是 0，表示两种颜色一致。'
             || dialogReport.interpolation !== '映射点：差异 0 → 10.00 分。'
             || dialogReport.processSteps !== 3
-            || dialogReport.grayStepTitle !== '防止灰色得到虚高分'
+            || dialogReport.grayStepTitle !== '防止明显颜色被做成灰色'
             || dialogReport.mappingAnchorCount !== 8
             || dialogReport.mappingRows !== 4
             || JSON.stringify(dialogReport.activeMappingAnchors) !== '[0]'
@@ -1436,7 +1458,7 @@ async function run() {
         await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
 
         const grayCorrectionDialogReport = await evaluate(client, `(() => {
-            const target = { r: 92, g: 64, b: 54 };
+            const target = { r: 62, g: 124, b: 127 };
             const user = { r: 128, g: 128, b: 128 };
             const details = calculateRecallDistanceDetails(target, user);
             gameState.recallTargetRGB = target;
@@ -1464,18 +1486,18 @@ async function run() {
                 )))
             };
         })()`);
-        if (grayCorrectionDialogReport.title !== '为什么是 5.41 分'
-            || !grayCorrectionDialogReport.squareFormula.endsWith('≈ 0.04177')
-            || grayCorrectionDialogReport.rawFormula !== '原始 ΔOK = √(0.04177) ≈ 0.2044'
-            || !grayCorrectionDialogReport.baseFormula.endsWith('≈ 20.44')
-            || !grayCorrectionDialogReport.adjustment.includes('不是直接扣掉 6.85 分')
-            || grayCorrectionDialogReport.neutralStart !== '色彩强度：目标 C = 0.0428，复现 C = 0.0000；较小值 = 0.0000'
-            || grayCorrectionDialogReport.neutralFormula !== '灰色程度初值 = 1 − 0.0000 ÷ 0.04 ≈ 1.000；限制到 0–1 后 n = 1.000'
-            || grayCorrectionDialogReport.neutralSmooth !== '为避免修正突然变化，再平滑：g = n² × (3 − 2n) = 1.000'
-            || !grayCorrectionDialogReport.adjustmentFormula.endsWith('≈ 6.85')
-            || grayCorrectionDialogReport.totalFormula !== '20.44 + 6.85 ≈ 27.28'
-            || !grayCorrectionDialogReport.interpolation.endsWith('≈ 5.41')
-            || JSON.stringify(grayCorrectionDialogReport.activeMappingAnchors) !== '[20,40]') {
+        if (grayCorrectionDialogReport.title !== '为什么是 6.74 分'
+            || !grayCorrectionDialogReport.squareFormula.endsWith('≈ 0.00696')
+            || grayCorrectionDialogReport.rawFormula !== '原始 ΔOK = √(0.00696) ≈ 0.0835'
+            || !grayCorrectionDialogReport.baseFormula.endsWith('≈ 8.35')
+            || !grayCorrectionDialogReport.adjustment.includes('不是直接扣掉 10.26 分')
+            || grayCorrectionDialogReport.neutralStart !== '色彩强度：目标 C = 0.0641，复现 C = 0.0000；两者相减，低于 0 时按 0 计算，丢失量 = 0.0641'
+            || grayCorrectionDialogReport.neutralFormula !== '目标 C 已达到 0.06，因此目标显色系数 q = 1.000'
+            || grayCorrectionDialogReport.neutralSmooth !== '复现灰色程度 r = 1 − 0.0000 ÷ 0.04 ≈ 1.000；平滑后 n = 1.000'
+            || !grayCorrectionDialogReport.adjustmentFormula.endsWith('≈ 10.26')
+            || grayCorrectionDialogReport.totalFormula !== '8.35 + 10.26 ≈ 18.60'
+            || !grayCorrectionDialogReport.interpolation.endsWith('≈ 6.74')
+            || JSON.stringify(grayCorrectionDialogReport.activeMappingAnchors) !== '[10,20]') {
             throw new Error(`Gray correction dialog failed: ${JSON.stringify(grayCorrectionDialogReport)}`);
         }
         await captureScreenshot(client, 'score-dialog-gray-correction-desktop.png');
@@ -1531,6 +1553,44 @@ async function run() {
             deviceScaleFactor: 1,
             mobile: false
         });
+        await evaluate(client, `closeScoreInfoDialog()`);
+        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
+
+        const nearNeutralDialogReport = await evaluate(client, `(() => {
+            const target = { r: 63, g: 85, b: 94 };
+            const user = { r: 128, g: 128, b: 128 };
+            const details = calculateRecallDistanceDetails(target, user);
+            gameState.recallTargetRGB = target;
+            gameState.recallUserRGB = user;
+            gameState.recallLastRoundDistance = details.distance;
+            gameState.recallLastRoundBaseDistance = details.baseDistance;
+            gameState.recallLastRoundNeutralPenalty = details.neutralPenalty;
+            gameState.recallLastRoundScore = Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100;
+            openScoreInfoDialog();
+            return {
+                title: elements.scoreInfoTitle.textContent,
+                adjustment: elements.scoreInfoAdjustment.textContent,
+                neutralStart: elements.scoreInfoNeutralStart.textContent,
+                neutralFormula: elements.scoreInfoNeutralFormula.textContent,
+                adjustmentFormula: elements.scoreInfoAdjustmentFormula.textContent,
+                totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
+                activeMappingAnchors: Array.from(new Set(Array.from(
+                    elements.scoreInfoMappingBody.querySelectorAll('.is-active'),
+                    (cell) => Number(cell.dataset.scoreAnchor)
+                )))
+            };
+        })()`);
+        if (nearNeutralDialogReport.title !== '为什么是 7.05 分'
+            || !nearNeutralDialogReport.adjustment.includes('目标本身接近灰色时不修正')
+            || !nearNeutralDialogReport.adjustment.includes('修正值为 0.00')
+            || nearNeutralDialogReport.neutralStart !== '色彩强度：目标 C = 0.0307，复现 C = 0.0000；两者相减，低于 0 时按 0 计算，丢失量 = 0.0307'
+            || nearNeutralDialogReport.neutralFormula !== '目标 C 未超过 0.04，因此目标显色系数 q = 0.000，不启用额外修正'
+            || !nearNeutralDialogReport.adjustmentFormula.endsWith('≈ 0.00')
+            || nearNeutralDialogReport.totalFormula !== '16.78 + 0.00 ≈ 16.78'
+            || JSON.stringify(nearNeutralDialogReport.activeMappingAnchors) !== '[10,20]') {
+            throw new Error(`Near-neutral target dialog failed: ${JSON.stringify(nearNeutralDialogReport)}`);
+        }
+        await captureScreenshot(client, 'score-dialog-near-neutral-target-desktop.png');
         await evaluate(client, `closeScoreInfoDialog()`);
         await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
 
@@ -1606,6 +1666,7 @@ async function run() {
             totalCenti: gameState.recallTotalScoreCenti,
             round: gameState.recallRound,
             best: gameState.recallBestScores.advanced,
+            storedV4: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v4'),
             storedV3: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v3'),
             storedV2: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v2'),
             legacyValue: localStorage.getItem('colorMemoryBestRecallScore_advanced'),
@@ -1617,7 +1678,8 @@ async function run() {
             || persistenceReport.totalCenti !== 10000
             || persistenceReport.round !== 10
             || persistenceReport.best !== 100
-            || persistenceReport.storedV3 !== '100'
+            || persistenceReport.storedV4 !== '100'
+            || persistenceReport.storedV3 !== '77'
             || persistenceReport.storedV2 !== '88'
             || persistenceReport.legacyValue !== '99'
             || persistenceReport.bestLabel !== '本机最佳'

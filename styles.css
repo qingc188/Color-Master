@@ -1,4 +1,13 @@
-﻿.app-container {
+﻿@font-face {
+    font-family: "Yise QingKe Title";
+    src: url("assets/fonts/zcool-qingke-huangyou-yise.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+5FC6, U+8272;
+}
+
+.app-container {
     padding-top: calc(2rem + env(safe-area-inset-top));
     padding-right: calc(1rem + env(safe-area-inset-right));
     padding-bottom: calc(2rem + env(safe-area-inset-bottom));
@@ -308,16 +317,16 @@ html[data-theme="amethyst"] {
     --cyan: #8f79e8;
     --cyan-bright: #b6a8f5;
     --cyan-soft: rgba(143, 121, 232, 0.13);
-    --coral: #ece165;
-    --coral-bright: #f2eba1;
-    --coral-soft: rgba(236, 225, 101, 0.14);
+    --coral: #f5e85a;
+    --coral-bright: #fff3a3;
+    --coral-soft: rgba(245, 232, 90, 0.14);
     --cream: #f8f6f1;
     --muted: #c0b9cf;
     --subtle: #938aa7;
     --on-accent: #100c1c;
     --focus-ring: rgba(194, 181, 250, 0.94);
     --accent-primary-rgb: 143, 121, 232;
-    --accent-secondary-rgb: 236, 225, 101;
+    --accent-secondary-rgb: 245, 232, 90;
     --panel-rgb: 20, 14, 44;
     --card-rgb: 27, 19, 58;
     --card-hover-rgb: 38, 27, 78;
@@ -327,18 +336,18 @@ html[data-theme="amethyst"] {
     --subtle-rgb: 147, 138, 167;
     --structure-rgb: 143, 121, 232;
     --cube-edge: #120e20;
-    --cube-primary-1: #c8bef4;
-    --cube-primary-2: #8c78e2;
-    --cube-primary-3: #674cc7;
+    --cube-primary-1: #8978d6;
+    --cube-primary-2: #7760dc;
+    --cube-primary-3: #6146c2;
     --cube-primary-4: #3b258d;
-    --cube-secondary-1: #ede7b1;
-    --cube-secondary-2: #ece165;
-    --cube-secondary-3: #d4c85e;
-    --cube-secondary-4: #baac45;
+    --cube-secondary-1: #ffed75;
+    --cube-secondary-2: #f5e85a;
+    --cube-secondary-3: #f5e133;
+    --cube-secondary-4: #e6d116;
     --cube-neutral-1: #fffefa;
     --cube-neutral-2: #f6f3d5;
     --cube-neutral-3: #f4f0cd;
-    --cube-neutral-4: #b9acf1;
+    --cube-neutral-4: #c8bef4;
     --shadow-panel: 0 24px 70px rgba(3, 2, 9, 0.46);
     --shadow-card: 0 14px 34px rgba(3, 2, 9, 0.32);
 }
@@ -572,6 +581,12 @@ div.app-container > main > :not(.hidden) {
     font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: 0.06em;
+}
+
+.brand-name > span {
+    font-family: "Yise QingKe Title", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-synthesis: none;
+    font-weight: 400;
 }
 
 .brand-name small {
@@ -1047,8 +1062,10 @@ html[data-theme="ivory"] .theme-cube-face--left {
     display: flex;
     justify-content: center;
     gap: 0.06em;
+    font-family: "Yise QingKe Title", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: clamp(3.7rem, 16vw, 6.8rem);
-    font-weight: 900;
+    font-synthesis: none;
+    font-weight: 400;
     line-height: 1;
     letter-spacing: -0.08em;
 }

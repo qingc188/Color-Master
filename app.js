@@ -85,9 +85,9 @@ const gameState = {
     recallTotalScore: 0, // 累计得分
     recallTotalScoreCenti: 0,
     recallBestScores: {
-        basic: Number(getStorageItem('colorMemoryBestRecallScore_basic_oklab_v3')) || 0,
-        advanced: Number(getStorageItem('colorMemoryBestRecallScore_advanced_oklab_v3')) || 0,
-        master: Number(getStorageItem('colorMemoryBestRecallScore_master_oklab_v3')) || 0
+        basic: Number(getStorageItem('colorMemoryBestRecallScore_basic_oklab_v4')) || 0,
+        advanced: Number(getStorageItem('colorMemoryBestRecallScore_advanced_oklab_v4')) || 0,
+        master: Number(getStorageItem('colorMemoryBestRecallScore_master_oklab_v4')) || 0
     },
     recallTargetHSL: null, // 目标HSL颜色
     recallTargetRGB: null,
@@ -361,7 +361,7 @@ const recallDifficultyConfig = {
         name: '基础',
         controlName: 'HSL 控制',
         preview: true,
-        storageKey: 'colorMemoryBestRecallScore_basic_oklab_v3',
+        storageKey: 'colorMemoryBestRecallScore_basic_oklab_v4',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
             '5 秒后目标颜色隐藏，进入复现环节',
@@ -374,7 +374,7 @@ const recallDifficultyConfig = {
         name: '进阶',
         controlName: 'RGB 控制',
         preview: true,
-        storageKey: 'colorMemoryBestRecallScore_advanced_oklab_v3',
+        storageKey: 'colorMemoryBestRecallScore_advanced_oklab_v4',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
             '5 秒后目标颜色隐藏，进入复现环节',
@@ -387,7 +387,7 @@ const recallDifficultyConfig = {
         name: '大师',
         controlName: 'RGB 盲调',
         preview: false,
-        storageKey: 'colorMemoryBestRecallScore_master_oklab_v3',
+        storageKey: 'colorMemoryBestRecallScore_master_oklab_v4',
         rules: [
             '每轮将显示一个目标颜色，观察并记住它',
             '5 秒后目标颜色隐藏，进入复现环节',
@@ -1556,8 +1556,8 @@ function updateScoreInfoDialog() {
     const squaredDistance = distanceDetails.rawDistance ** 2;
     const targetChroma = distanceDetails.targetChroma;
     const userChroma = distanceDetails.userChroma;
-    const minimumChroma = Math.min(targetChroma, userChroma);
-    const chromaDifference = Math.abs(targetChroma - userChroma);
+    const targetChromaStart = RECALL_NEUTRAL_CHROMA_THRESHOLD;
+    const targetChromaFull = RECALL_TARGET_CHROMA_FULL_THRESHOLD;
 
     elements.scoreInfoTitle.textContent = `为什么是 ${score.toFixed(2)} 分`;
     elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
@@ -1574,17 +1574,22 @@ function updateScoreInfoDialog() {
     elements.scoreInfoUserCode.textContent = rgbToCss(user);
     elements.scoreInfoGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
-        ? `当复现接近灰色、但明度恰好接近目标时，仅靠原始色差可能低估颜色丢失。游戏先用 C = √(a² + b²) 算出两种颜色的色彩强度；较小的 C 越接近 0，灰色修正越强。本轮修正值 ${neutralPenalty.toFixed(2)} 会加入最终差异，不是直接扣掉 ${neutralPenalty.toFixed(2)} 分。`
-        : `当复现接近灰色、但明度恰好接近目标时，仅靠原始色差可能低估颜色丢失。游戏先用 C = √(a² + b²) 算出两种颜色的色彩强度。本轮各项相乘后，修正值为 ${neutralPenalty.toFixed(2)}。`;
-    elements.scoreInfoNeutralStart.textContent = `色彩强度：目标 C = ${targetChroma.toFixed(4)}，复现 C = ${userChroma.toFixed(4)}；较小值 = ${minimumChroma.toFixed(4)}`;
-    if (distanceDetails.neutralRawAmount <= 0) {
-        elements.scoreInfoNeutralFormula.textContent = `较小值已达到 0.04，因此灰色程度 n = ${distanceDetails.neutralAmount.toFixed(3)}`;
-        elements.scoreInfoNeutralSmooth.textContent = `本轮不触发灰色修正，g = ${distanceDetails.neutralFactor.toFixed(3)}`;
+        ? `只有目标明显带色、复现接近灰色并且丢失色彩强度时，才会启用额外修正；目标本身接近灰色时不修正。本轮修正值 ${neutralPenalty.toFixed(2)} 会加入最终差异，不是直接扣掉 ${neutralPenalty.toFixed(2)} 分。`
+        : `只有目标明显带色、复现接近灰色并且丢失色彩强度时，才会启用额外修正；目标本身接近灰色时不修正。本轮各项相乘后，修正值为 ${neutralPenalty.toFixed(2)}。`;
+    elements.scoreInfoNeutralStart.textContent = `色彩强度：目标 C = ${targetChroma.toFixed(4)}，复现 C = ${userChroma.toFixed(4)}；两者相减，低于 0 时按 0 计算，丢失量 = ${distanceDetails.missingChroma.toFixed(4)}`;
+    if (distanceDetails.targetColorRawAmount <= 0) {
+        elements.scoreInfoNeutralFormula.textContent = `目标 C 未超过 ${targetChromaStart.toFixed(2)}，因此目标显色系数 q = ${distanceDetails.targetColorFactor.toFixed(3)}，不启用额外修正`;
+    } else if (distanceDetails.targetColorRawAmount >= 1) {
+        elements.scoreInfoNeutralFormula.textContent = `目标 C 已达到 ${targetChromaFull.toFixed(2)}，因此目标显色系数 q = ${distanceDetails.targetColorFactor.toFixed(3)}`;
     } else {
-        elements.scoreInfoNeutralFormula.textContent = `灰色程度初值 = 1 − ${minimumChroma.toFixed(4)} ÷ 0.04 ≈ ${distanceDetails.neutralRawAmount.toFixed(3)}；限制到 0–1 后 n = ${distanceDetails.neutralAmount.toFixed(3)}`;
-        elements.scoreInfoNeutralSmooth.textContent = `为避免修正突然变化，再平滑：g = n² × (3 − 2n) = ${distanceDetails.neutralFactor.toFixed(3)}`;
+        elements.scoreInfoNeutralFormula.textContent = `目标显色程度 t = (${targetChroma.toFixed(4)} − ${targetChromaStart.toFixed(2)}) ÷ (${targetChromaFull.toFixed(2)} − ${targetChromaStart.toFixed(2)}) ≈ ${distanceDetails.targetColorAmount.toFixed(3)}；平滑后 q = ${distanceDetails.targetColorFactor.toFixed(3)}`;
     }
-    elements.scoreInfoAdjustmentFormula.textContent = `修正值 = 色彩强度差 ${chromaDifference.toFixed(4)} × 100 × ${RECALL_NEUTRAL_PENALTY_WEIGHT.toFixed(1)} × g ≈ ${neutralPenalty.toFixed(2)}`;
+    if (distanceDetails.userNeutralRawAmount <= 0) {
+        elements.scoreInfoNeutralSmooth.textContent = `复现 C 已达到 ${RECALL_NEUTRAL_CHROMA_THRESHOLD.toFixed(2)}，因此复现灰色系数 n = ${distanceDetails.userNeutralFactor.toFixed(3)}`;
+    } else {
+        elements.scoreInfoNeutralSmooth.textContent = `复现灰色程度 r = 1 − ${userChroma.toFixed(4)} ÷ ${RECALL_NEUTRAL_CHROMA_THRESHOLD.toFixed(2)} ≈ ${distanceDetails.userNeutralAmount.toFixed(3)}；平滑后 n = ${distanceDetails.userNeutralFactor.toFixed(3)}`;
+    }
+    elements.scoreInfoAdjustmentFormula.textContent = `修正值 = 丢失量 ${distanceDetails.missingChroma.toFixed(4)} × 100 × ${RECALL_NEUTRAL_PENALTY_WEIGHT.toFixed(1)} × q ${distanceDetails.targetColorFactor.toFixed(3)} × n ${distanceDetails.userNeutralFactor.toFixed(3)} ≈ ${neutralPenalty.toFixed(2)}`;
 
     if (!elements.scoreInfoMappingBody.children.length) {
         for (let index = 0; index < OKLAB_SCORE_ANCHORS.length; index += 2) {
@@ -1680,7 +1685,7 @@ function submitRecallAnswer() {
     
     // 显示本轮得分
     elements.recallRoundScore.textContent = score.toFixed(2);
-    elements.recallRoundFeedback.textContent = getRecallFeedback(score, gameState.recallRound);
+    elements.recallRoundFeedback.textContent = `“${getRecallFeedback(score, gameState.recallRound)}”`;
     elements.recallRoundGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     
     // 显示目标颜色和用户复现

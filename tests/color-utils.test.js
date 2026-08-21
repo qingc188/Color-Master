@@ -97,7 +97,7 @@ test('perceptual score is symmetric, bounded, and decreases with distance', () =
     assert.ok(calculatePerceptualScore(black, samples[3]) < 1.1);
 });
 
-test('recall scoring penalizes a colored target reproduced as gray', () => {
+test('recall scoring only penalizes a clearly colored target reproduced as gray', () => {
     const grayAttempt = calculateRecallDistanceDetails(
         { r: 62, g: 124, b: 127 },
         { r: 128, g: 128, b: 128 }
@@ -106,44 +106,85 @@ test('recall scoring penalizes a colored target reproduced as gray', () => {
         { r: 118, g: 59, b: 135 },
         { r: 189, g: 97, b: 193 }
     );
+    const nearNeutralTarget = calculateRecallDistanceDetails(
+        { r: 63, g: 85, b: 94 },
+        { r: 128, g: 128, b: 128 }
+    );
 
     approximately(grayAttempt.baseDistance, 8.345652804580233);
     approximately(grayAttempt.rawDistance, grayAttempt.baseDistance / 100);
     approximately(grayAttempt.neutralPenalty, 10.256917866624654);
     approximately(grayAttempt.distance, 18.602570671204887);
-    assert.ok(grayAttempt.neutralRawAmount > 0.99999);
-    assert.ok(grayAttempt.neutralAmount > 0.99999);
-    assert.ok(grayAttempt.neutralFactor > 0.99999);
+    approximately(grayAttempt.targetColorAmount, 1);
+    approximately(grayAttempt.targetColorFactor, 1);
+    assert.ok(grayAttempt.userNeutralAmount > 0.99999);
+    assert.ok(grayAttempt.userNeutralFactor > 0.99999);
     approximately(sameHueAttempt.baseDistance, 18.043781400018073);
     approximately(sameHueAttempt.rawDistance, sameHueAttempt.baseDistance / 100);
     approximately(sameHueAttempt.neutralPenalty, 0);
-    assert.ok(sameHueAttempt.neutralRawAmount < 0);
-    approximately(sameHueAttempt.neutralAmount, 0);
-    approximately(sameHueAttempt.neutralFactor, 0);
+    assert.ok(sameHueAttempt.userNeutralRawAmount < 0);
+    approximately(sameHueAttempt.userNeutralAmount, 0);
+    approximately(sameHueAttempt.userNeutralFactor, 0);
+    approximately(nearNeutralTarget.baseDistance, 16.775377329009363);
+    approximately(nearNeutralTarget.targetColorAmount, 0);
+    approximately(nearNeutralTarget.targetColorFactor, 0);
+    approximately(nearNeutralTarget.neutralPenalty, 0);
+    approximately(nearNeutralTarget.distance, nearNeutralTarget.baseDistance);
     approximately(calculateRecallScore({ r: 62, g: 124, b: 127 }, { r: 128, g: 128, b: 128 }), 6.737562985895169);
     approximately(calculateRecallScore({ r: 118, g: 59, b: 135 }, { r: 189, g: 97, b: 193 }), 6.832557161996927);
+    approximately(calculateRecallScore({ r: 63, g: 85, b: 94 }, { r: 128, g: 128, b: 128 }), 7.048185854068408);
     assert.ok(sameHueAttempt.distance < grayAttempt.distance);
 });
 
-test('recall distance remains symmetric and exact matches keep full score', () => {
-    const first = { r: 62, g: 124, b: 127 };
-    const second = { r: 128, g: 128, b: 128 };
+test('recall correction is target-directed and exact matches keep full score', () => {
+    const colored = { r: 62, g: 124, b: 127 };
+    const gray = { r: 128, g: 128, b: 128 };
 
-    approximately(calculateRecallDistance(first, second), calculateRecallDistance(second, first));
-    approximately(calculateRecallDistance(first, first), 0);
-    approximately(calculateRecallScore(first, first), 10);
-    approximately(calculatePerceptualDistance(first, second), 8.345652804580233);
+    assert.ok(calculateRecallDistance(colored, gray) > calculateRecallDistance(gray, colored));
+    approximately(calculateRecallDistance(gray, colored), calculatePerceptualDistance(gray, colored));
+    approximately(calculateRecallDistance(colored, colored), 0);
+    approximately(calculateRecallScore(colored, colored), 10);
+    approximately(calculatePerceptualDistance(colored, gray), 8.345652804580233);
 });
 
-test('default gray is not a high-scoring recall baseline', () => {
-    const random = seededRandom(20260821);
-    const scores = Array.from({ length: 5000 }, (_, index) => (
-        calculateRecallScore(generateColor(index + 1, random), { r: 128, g: 128, b: 128 })
-    )).sort((first, second) => first - second);
-    const highScores = scores.filter((score) => score >= 8).length / scores.length;
+test('target chroma gate enables gray correction smoothly', () => {
+    const gray = { r: 128, g: 128, b: 128 };
+    const chromas = [0.039, 0.045, 0.05, 0.055, 0.061];
+    const details = chromas.map((chroma) => calculateRecallDistanceDetails(
+        oklabToRgb({ l: 0.6, a: chroma, b: 0 }),
+        gray
+    ));
 
-    assert.ok(scores[Math.floor(scores.length / 2)] <= 5.5);
-    assert.ok(highScores < 0.01);
+    approximately(details[0].targetColorFactor, 0);
+    approximately(details[0].neutralPenalty, 0);
+    assert.ok(details[2].targetColorFactor > 0.45 && details[2].targetColorFactor < 0.55);
+    approximately(details[details.length - 1].targetColorFactor, 1);
+    for (let index = 1; index < details.length; index++) {
+        assert.ok(details[index].targetColorFactor > details[index - 1].targetColorFactor);
+        assert.ok(details[index].neutralPenalty > details[index - 1].neutralPenalty);
+    }
+});
+
+test('default gray is not a high-scoring baseline for clearly chromatic targets', () => {
+    const random = seededRandom(20260821);
+    const samples = Array.from({ length: 5000 }, (_, index) => {
+        const target = parseColorToRgb(generateColor(index + 1, random));
+        const details = calculateRecallDistanceDetails(target, { r: 128, g: 128, b: 128 });
+        return {
+            score: scoreFromPerceptualDistance(details.distance),
+            targetChroma: details.targetChroma
+        };
+    });
+    const scores = samples.map(({ score }) => score).sort((first, second) => first - second);
+    const chromaticScores = samples
+        .filter(({ targetChroma }) => targetChroma >= 0.06)
+        .map(({ score }) => score);
+    const highChromaticScores = chromaticScores.filter((score) => score >= 8).length
+        / chromaticScores.length;
+
+    assert.ok(scores[Math.floor(scores.length / 2)] <= 5.6);
+    assert.ok(chromaticScores.length > 3000);
+    assert.ok(highChromaticScores < 0.01);
 });
 
 test('visually identical HSL strings resolve to the same canonical RGB', () => {
