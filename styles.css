@@ -2021,6 +2021,12 @@ body.modal-open {
     font-size: 0.68rem;
 }
 
+.score-calculation .score-scale-note {
+    margin-top: 0.3rem;
+    color: var(--subtle);
+    font-size: 0.7rem;
+}
+
 .score-conversion {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

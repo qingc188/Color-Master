@@ -1263,6 +1263,8 @@ async function run() {
             adjustment: document.querySelector('#score-info-adjustment').textContent,
             baseDistance: document.querySelector('#score-info-base-distance').textContent,
             oklabExplanation: document.querySelector('.score-calculation li:first-child p').textContent,
+            rawFormula: document.querySelector('#score-info-raw-formula').textContent,
+            scaleNote: document.querySelector('.score-scale-note').textContent,
             baseFormula: document.querySelector('#score-info-base-formula').textContent,
             neutralFormula: document.querySelector('#score-info-neutral-formula').textContent,
             adjustmentFormula: document.querySelector('#score-info-adjustment-formula').textContent,
@@ -1300,21 +1302,24 @@ async function run() {
         if (dialogReport.title !== '为什么是 10.00 分'
             || dialogReport.score !== '10.00 / 10'
             || dialogReport.distance !== '0.00'
-            || dialogReport.description !== '先用 Oklab 看两种颜色差多少，再换成 10 分制。差异越小，分数越高。'
+            || dialogReport.description !== '先计算两种颜色的 Oklab 感知色差，再按游戏映射换成 10 分制。最终差异越小，分数越高。'
             || dialogReport.description.includes('彩度')
-            || !dialogReport.adjustment.includes('本轮色彩强度差没有产生额外修正')
+            || !dialogReport.adjustment.includes('本轮平滑系数 g 为 0，因此修正值为 0')
             || dialogReport.baseDistance !== '0.00'
-            || !dialogReport.oklabExplanation.includes('RGB 数字差不等于人眼看到的差别')
-            || !dialogReport.oklabExplanation.includes('L 表示明度，a、b 表示颜色方向')
-            || dialogReport.baseFormula !== '100 × √[(0.0000)² + (0.0000)² + (0.0000)²] ≈ 0.00'
+            || !dialogReport.oklabExplanation.includes('RGB 各分量的数值差不能直接代表人眼看到的色差')
+            || !dialogReport.oklabExplanation.includes('L 表示明度，a、b 表示两个颜色轴')
+            || dialogReport.rawFormula !== '原始 ΔOK = √[(0.0000)² + (0.0000)² + (0.0000)²] ≈ 0.0000'
+            || !dialogReport.scaleNote.includes('完整距离整体乘以 100')
+            || !dialogReport.scaleNote.includes('不是分别放大 L、a、b')
+            || dialogReport.baseFormula !== '游戏展示差异 = 0.0000 × 100 ≈ 0.00'
             || !dialogReport.neutralFormula.includes('n²(3 − 2n) = 0.000')
             || !dialogReport.adjustmentFormula.endsWith('≈ 0.00')
             || dialogReport.targetCode !== dialogReport.userCode
             || dialogReport.guidance !== '色相、饱和度和明度都很接近'
             || dialogReport.totalFormula !== '0.00 + 0.00 ≈ 0.00'
-            || dialogReport.roundingNote !== '界面保留两位小数，实际计算使用未四舍五入的数值。'
+            || dialogReport.roundingNote !== '界面数值保留两位小数，评分使用未四舍五入的完整数值。'
             || dialogReport.range !== '最终差异是 0，表示两种颜色一致。'
-            || dialogReport.interpolation !== '0 → 10.00 分。'
+            || dialogReport.interpolation !== '映射点：差异 0 → 10.00 分。'
             || dialogReport.processSteps !== 3
             || dialogReport.grayStepTitle !== '防止灰色得到虚高分'
             || dialogReport.mappingAnchorCount !== 8
@@ -1374,14 +1379,22 @@ async function run() {
         `);
         await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
 
-        const interpolationDialogReport = await evaluate(client, `(() => {
-            gameState.recallLastRoundDistance = 3.5;
-            gameState.recallLastRoundBaseDistance = 3.5;
-            gameState.recallLastRoundNeutralPenalty = 0;
-            gameState.recallLastRoundScore = scoreFromPerceptualDistance(3.5);
+        const referenceDialogReport = await evaluate(client, `(() => {
+            const target = { r: 154, g: 65, b: 92 };
+            const user = { r: 185, g: 128, b: 191 };
+            const details = calculateRecallDistanceDetails(target, user);
+            gameState.recallTargetRGB = target;
+            gameState.recallUserRGB = user;
+            gameState.recallLastRoundDistance = details.distance;
+            gameState.recallLastRoundBaseDistance = details.baseDistance;
+            gameState.recallLastRoundNeutralPenalty = details.neutralPenalty;
+            gameState.recallLastRoundScore = Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100;
             openScoreInfoDialog();
             return {
                 title: elements.scoreInfoTitle.textContent,
+                rawFormula: elements.scoreInfoRawFormula.textContent,
+                baseFormula: elements.scoreInfoBaseFormula.textContent,
+                adjustment: elements.scoreInfoAdjustment.textContent,
                 range: elements.scoreInfoRange.textContent,
                 interpolation: elements.scoreInfoInterpolation.textContent,
                 activeMappingAnchors: Array.from(new Set(Array.from(
@@ -1390,12 +1403,16 @@ async function run() {
                 )))
             };
         })()`);
-        if (interpolationDialogReport.title !== '为什么是 9.55 分'
-            || !interpolationDialogReport.range.includes('2 和 5 之间')
-            || interpolationDialogReport.interpolation !== '9.8 + (9.3 − 9.8) × (3.50 − 2) ÷ (5 − 2) ≈ 9.55'
-            || JSON.stringify(interpolationDialogReport.activeMappingAnchors) !== '[2,5]') {
-            throw new Error(`Score interpolation dialog failed: ${JSON.stringify(interpolationDialogReport)}`);
+        if (referenceDialogReport.title !== '为什么是 6.58 分'
+            || referenceDialogReport.rawFormula !== '原始 ΔOK = √[(0.1778)² + (-0.0330)² + (-0.0733)²] ≈ 0.1952'
+            || referenceDialogReport.baseFormula !== '游戏展示差异 = 0.1952 × 100 ≈ 19.52'
+            || !referenceDialogReport.adjustment.includes('本轮平滑系数 g 为 0，因此修正值为 0')
+            || !referenceDialogReport.range.includes('10 和 20 之间')
+            || referenceDialogReport.interpolation !== '本轮得分 = 8.2 + (6.5 − 8.2) × (19.52 − 10) ÷ (20 − 10) ≈ 6.58'
+            || JSON.stringify(referenceDialogReport.activeMappingAnchors) !== '[10,20]') {
+            throw new Error(`Score reference dialog failed: ${JSON.stringify(referenceDialogReport)}`);
         }
+        await captureScreenshot(client, 'score-dialog-wording-reference-desktop.png');
         await evaluate(client, `closeScoreInfoDialog()`);
         await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
 
@@ -1412,6 +1429,7 @@ async function run() {
             openScoreInfoDialog();
             return {
                 title: elements.scoreInfoTitle.textContent,
+                rawFormula: elements.scoreInfoRawFormula.textContent,
                 baseFormula: elements.scoreInfoBaseFormula.textContent,
                 adjustment: elements.scoreInfoAdjustment.textContent,
                 neutralFormula: elements.scoreInfoNeutralFormula.textContent,
@@ -1425,8 +1443,9 @@ async function run() {
             };
         })()`);
         if (grayCorrectionDialogReport.title !== '为什么是 5.41 分'
+            || !grayCorrectionDialogReport.rawFormula.endsWith('≈ 0.2044')
             || !grayCorrectionDialogReport.baseFormula.endsWith('≈ 20.44')
-            || !grayCorrectionDialogReport.adjustment.includes('而不是直接扣掉同样多的分数')
+            || !grayCorrectionDialogReport.adjustment.includes('不是直接扣掉 6.85 分')
             || !grayCorrectionDialogReport.neutralFormula.endsWith('g = n²(3 − 2n) = 1.000')
             || !grayCorrectionDialogReport.adjustmentFormula.endsWith('≈ 6.85')
             || grayCorrectionDialogReport.totalFormula !== '20.44 + 6.85 ≈ 27.28'
@@ -1921,7 +1940,7 @@ async function run() {
             hslDragFlushReport,
             feedbackReport,
             dialogReport,
-            interpolationDialogReport,
+            referenceDialogReport,
             recallNavigationGuardReport,
             mobileReports,
             zoomReport,

@@ -108,11 +108,13 @@ test('recall scoring penalizes a colored target reproduced as gray', () => {
     );
 
     approximately(grayAttempt.baseDistance, 8.345652804580233);
+    approximately(grayAttempt.rawDistance, grayAttempt.baseDistance / 100);
     approximately(grayAttempt.neutralPenalty, 10.256917866624654);
     approximately(grayAttempt.distance, 18.602570671204887);
     assert.ok(grayAttempt.neutralAmount > 0.99999);
     assert.ok(grayAttempt.neutralFactor > 0.99999);
     approximately(sameHueAttempt.baseDistance, 18.043781400018073);
+    approximately(sameHueAttempt.rawDistance, sameHueAttempt.baseDistance / 100);
     approximately(sameHueAttempt.neutralPenalty, 0);
     approximately(sameHueAttempt.neutralAmount, 0);
     approximately(sameHueAttempt.neutralFactor, 0);
