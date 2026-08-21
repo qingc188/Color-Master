@@ -100,7 +100,7 @@ Keep the countdown progress linear and time-accurate. Do not apply decorative ea
 
 The landing cube is the signature interaction. On activation, rotate the real CSS 3D cube 120 degrees around its body diagonal, swap the theme at the midpoint, and settle within 520ms. Use only transform and opacity for spatial motion; under reduced motion, switch themes without rotation.
 
-At every settled theme angle, preserve the cube's face logic from the original mark: the top is a mixed, light-catching arrangement of neutral, primary, and secondary tiles; the screen-left face descends through the primary cool family; the screen-right face descends through the secondary warm family. Map physical faces per rotation rather than allowing a monochrome side to become the top face.
+At every settled theme angle, keep the cube's three visible color families distinct and map physical faces deliberately per rotation. Cyan/orange and mist-blue/soft-pink retain a mixed light-catching top, primary cool screen-left face, and secondary warm screen-right face. Starry violet/lemon intentionally exchanges the first two roles: the violet family occupies the top, the mixed light-catching family occupies screen-left, and lemon remains screen-right. Keep each face's tile order aligned to one light source.
 
 Gate hover-only movement to devices that actually support hover. Touch interaction must not inherit false hover lifts.
 
