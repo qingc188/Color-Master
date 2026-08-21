@@ -863,7 +863,7 @@ div.app-container > main > :not(.hidden) {
 .theme-cube-face i:nth-child(3) { background: var(--face-tone-3); }
 .theme-cube-face i:nth-child(4) { background: var(--face-tone-4); }
 
-/* Map physical faces so each settled turn exposes the intended visual color families. */
+/* Each settled turn keeps the reference composition: lit mixed top, cool left, warm right. */
 html[data-theme="cyan"] .theme-cube-face--front,
 html[data-theme="cyan"] .theme-cube-face--back,
 html[data-theme="amethyst"] .theme-cube-face--top,
@@ -878,8 +878,8 @@ html[data-theme="ivory"] .theme-cube-face--left {
 
 html[data-theme="cyan"] .theme-cube-face--right,
 html[data-theme="cyan"] .theme-cube-face--left,
-html[data-theme="amethyst"] .theme-cube-face--right,
-html[data-theme="amethyst"] .theme-cube-face--left,
+html[data-theme="amethyst"] .theme-cube-face--front,
+html[data-theme="amethyst"] .theme-cube-face--back,
 html[data-theme="ivory"] .theme-cube-face--top,
 html[data-theme="ivory"] .theme-cube-face--bottom {
     --face-tone-1: var(--cube-primary-1);
@@ -890,8 +890,8 @@ html[data-theme="ivory"] .theme-cube-face--bottom {
 
 html[data-theme="cyan"] .theme-cube-face--top,
 html[data-theme="cyan"] .theme-cube-face--bottom,
-html[data-theme="amethyst"] .theme-cube-face--front,
-html[data-theme="amethyst"] .theme-cube-face--back,
+html[data-theme="amethyst"] .theme-cube-face--right,
+html[data-theme="amethyst"] .theme-cube-face--left,
 html[data-theme="ivory"] .theme-cube-face--front,
 html[data-theme="ivory"] .theme-cube-face--back {
     --face-tone-1: var(--cube-neutral-1);
@@ -902,27 +902,21 @@ html[data-theme="ivory"] .theme-cube-face--back {
 
 /* The body-diagonal turn also rotates tile order, so remap each settled view to one light source. */
 html[data-theme="cyan"] .theme-cube-face--top,
-html[data-theme="cyan"] .theme-cube-face--bottom {
+html[data-theme="cyan"] .theme-cube-face--bottom,
+html[data-theme="amethyst"] .theme-cube-face--right,
+html[data-theme="amethyst"] .theme-cube-face--left {
     --face-tone-1: var(--cube-neutral-4);
     --face-tone-2: var(--cube-neutral-1);
     --face-tone-3: var(--cube-neutral-3);
     --face-tone-4: var(--cube-neutral-2);
 }
 
-html[data-theme="amethyst"] .theme-cube-face--right,
-html[data-theme="amethyst"] .theme-cube-face--left {
-    --face-tone-1: var(--cube-primary-4);
-    --face-tone-2: var(--cube-primary-1);
-    --face-tone-3: var(--cube-primary-3);
-    --face-tone-4: var(--cube-primary-2);
-}
-
 html[data-theme="amethyst"] .theme-cube-face--front,
 html[data-theme="amethyst"] .theme-cube-face--back {
-    --face-tone-1: var(--cube-neutral-3);
-    --face-tone-2: var(--cube-neutral-1);
-    --face-tone-3: var(--cube-neutral-4);
-    --face-tone-4: var(--cube-neutral-2);
+    --face-tone-1: var(--cube-primary-3);
+    --face-tone-2: var(--cube-primary-1);
+    --face-tone-3: var(--cube-primary-4);
+    --face-tone-4: var(--cube-primary-2);
 }
 
 html[data-theme="amethyst"] .theme-cube-face--top,
@@ -931,6 +925,15 @@ html[data-theme="amethyst"] .theme-cube-face--bottom {
     --face-tone-2: var(--cube-secondary-4);
     --face-tone-3: var(--cube-secondary-1);
     --face-tone-4: var(--cube-secondary-3);
+}
+
+/* Exchange only the two marked tiles in the settled amethyst view. */
+html[data-theme="amethyst"] .theme-cube-face--right {
+    --face-tone-1: var(--cube-primary-1);
+}
+
+html[data-theme="amethyst"] .theme-cube-face--front {
+    --face-tone-2: var(--cube-neutral-4);
 }
 
 html[data-theme="ivory"] .theme-cube-face--front,

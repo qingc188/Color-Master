@@ -588,8 +588,8 @@ async function run() {
             || amethystThemeReport.cubePrimary.join('|') !== '#c8bef4|#8c78e2|#674cc7|#3b258d'
             || amethystThemeReport.cubeSecondary.join('|') !== '#ede7b1|#ece165|#d4c85e|#baac45'
             || amethystThemeReport.cubeTopGold !== '#f4f0cd'
-            || amethystThemeReport.visualTopFace.join('|') !== 'rgb(59, 37, 141)|rgb(200, 190, 244)|rgb(103, 76, 199)|rgb(140, 120, 226)'
-            || amethystThemeReport.visualLeftFace.join('|') !== 'rgb(244, 240, 205)|rgb(255, 254, 250)|rgb(185, 172, 241)|rgb(246, 243, 213)'
+            || amethystThemeReport.visualTopFace.join('|') !== 'rgb(200, 190, 244)|rgb(255, 254, 250)|rgb(244, 240, 205)|rgb(246, 243, 213)'
+            || amethystThemeReport.visualLeftFace.join('|') !== 'rgb(103, 76, 199)|rgb(185, 172, 241)|rgb(59, 37, 141)|rgb(140, 120, 226)'
             || amethystThemeReport.visualRightFace.join('|') !== 'rgb(236, 225, 101)|rgb(186, 172, 69)|rgb(237, 231, 177)|rgb(212, 200, 94)'
             || amethystThemeReport.progressTrack !== 'rgb(45, 34, 91)'
             || amethystThemeReport.progressFill !== 'rgb(143, 121, 232)') {
