@@ -82,6 +82,7 @@ const gameState = {
     totalAnswers: 0, // 用于计算正确率
     matchRoundSubmitted: false,
     matchLastAnswerCorrect: false,
+    matchRoundCompletesGame: false,
     // 颜色复现模式专用
     recallDifficulty: 'basic',
     recallTotalScore: 0, // 累计得分
@@ -131,6 +132,9 @@ const elements = {
     targetColorScreen: document.getElementById('target-color-screen'),
     colorGridScreen: document.getElementById('color-grid-screen'),
     matchRoundTitle: document.getElementById('match-round-title'),
+    matchRoundIcon: document.getElementById('match-round-icon'),
+    matchRoundIconUse: document.getElementById('match-round-icon-use'),
+    matchRoundMessage: document.getElementById('match-round-message'),
     matchRoundActions: document.getElementById('match-round-actions'),
     matchContinueButton: document.getElementById('match-continue-button'),
     matchRestartButton: document.getElementById('match-restart-button'),
@@ -362,6 +366,19 @@ const matchDifficultyConfig = {
     }
 };
 
+const MATCH_FAILURE_MESSAGES = [
+    '匹配错误，再试试吧！',
+    '匹配错误，慢慢来！',
+    '匹配错误，别灰心!',
+    '匹配错误，再靠近一点点!',
+    '匹配错误，已经很接近了!'
+];
+
+const MATCH_FINAL_FAILURE_MESSAGES = [
+    '匹配错误，别灰心!',
+    '匹配错误，已经很接近了!'
+];
+
 const recallDifficultyConfig = {
     basic: {
         name: '基础',
@@ -562,42 +579,61 @@ function showMatchResultLayout() {
 }
 
 function resetMatchRoundFeedback() {
-    elements.matchRoundTitle.textContent = '找出与目标颜色相同的方块';
+    elements.matchRoundMessage.textContent = '找出与目标颜色相同的方块';
+    elements.matchRoundIcon.classList.add('hidden');
     elements.matchRoundTitle.classList.remove('is-success', 'is-failure');
     elements.matchRoundActions.classList.add('hidden');
     elements.matchContinueButton.textContent = '下一关';
+    gameState.matchRoundCompletesGame = false;
 }
 
-function addMatchCardResult(card, label, stateClass) {
+function getMatchFailureMessage(isFinalRound) {
+    const messages = isFinalRound ? MATCH_FINAL_FAILURE_MESSAGES : MATCH_FAILURE_MESSAGES;
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+function addMatchCardResult(card, label, stateClass, iconName) {
     if (!card) return;
     card.classList.add(stateClass);
     card.setAttribute('aria-label', `${card.getAttribute('aria-label')}，${label}`);
     const resultLabel = document.createElement('span');
     resultLabel.className = 'match-card-result';
-    resultLabel.textContent = label;
+    resultLabel.setAttribute('aria-hidden', 'true');
+    resultLabel.innerHTML = iconMarkup(iconName);
     card.appendChild(resultLabel);
 }
 
-function showMatchRoundFeedback(selectedCard, isCorrect) {
+function showMatchRoundFeedback(selectedCard, isCorrect, isFinalRound) {
     const cards = Array.from(elements.colorGrid.querySelectorAll('.color-card'));
     const targetHex = rgbToHex(gameState.currentTargetColor);
     const targetCard = cards.find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
 
     cards.forEach((card) => {
         card.disabled = true;
+        const colorCode = rgbToHex(card.style.backgroundColor);
+        card.setAttribute('aria-label', `${card.getAttribute('aria-label')}，色号 ${colorCode}`);
+        const codeLabel = document.createElement('code');
+        codeLabel.className = 'match-card-code';
+        codeLabel.setAttribute('aria-hidden', 'true');
+        codeLabel.textContent = colorCode;
+        card.appendChild(codeLabel);
+        if (card !== selectedCard && card !== targetCard) card.classList.add('is-match-muted');
     });
 
     if (isCorrect) {
-        addMatchCardResult(selectedCard, '正确选择', 'is-match-correct');
-        elements.matchRoundTitle.textContent = '完美匹配！';
+        addMatchCardResult(selectedCard, '正确选择', 'is-match-correct', 'check');
+        elements.matchRoundIconUse.setAttribute('href', '#icon-check-circle');
+        elements.matchRoundMessage.textContent = '完美匹配！';
         elements.matchRoundTitle.classList.add('is-success');
     } else {
-        addMatchCardResult(selectedCard, '你的选择', 'is-match-selected-wrong');
-        addMatchCardResult(targetCard, '正确答案', 'is-match-correct');
-        elements.matchRoundTitle.textContent = '匹配失败';
+        addMatchCardResult(selectedCard, '你的选择', 'is-match-selected-wrong', 'x');
+        addMatchCardResult(targetCard, '正确答案', 'is-match-correct', 'check');
+        elements.matchRoundIconUse.setAttribute('href', '#icon-x-circle');
+        elements.matchRoundMessage.textContent = getMatchFailureMessage(isFinalRound);
         elements.matchRoundTitle.classList.add('is-failure');
     }
 
+    elements.matchRoundIcon.classList.remove('hidden');
     elements.matchRoundActions.classList.remove('hidden');
     elements.matchRoundTitle.focus({ preventScroll: true });
 }
@@ -797,7 +833,7 @@ function initGame() {
     elements.startButton.addEventListener('click', startGame);
     elements.continueButton.addEventListener('click', nextLevel);
     elements.restartButton.addEventListener('click', handleRestartButton);
-    elements.matchContinueButton.addEventListener('click', nextLevel);
+    elements.matchContinueButton.addEventListener('click', handleMatchContinue);
     elements.matchRestartButton.addEventListener('click', restartCurrentMatchDifficulty);
     elements.restartRecallBtn.addEventListener('click', restartCurrentRecallDifficulty);
     elements.backButtons.forEach((button) => {
@@ -934,6 +970,7 @@ function restartCurrentMatchDifficulty() {
     gameState.correctAnswers = 0;
     gameState.totalAnswers = 0;
     gameState.lives = matchDifficultyConfig[gameState.matchDifficulty].endless ? 3 : 0;
+    gameState.matchRoundCompletesGame = false;
     resetResultColorBlocks();
     elements.continueButton.classList.remove('hidden');
     elements.continueButton.textContent = '下一关';
@@ -986,6 +1023,7 @@ function startGame() {
         const config = matchDifficultyConfig[gameState.matchDifficulty];
         gameState.totalLevels = config.totalLevels;
         gameState.lives = config.endless ? 3 : 0;
+        gameState.matchRoundCompletesGame = false;
     } else if (gameState.gameMode === 'colorRecall') {
         // 初始化颜色复现模式
         resetRecallAttemptState();
@@ -1010,6 +1048,7 @@ function showTargetColor() {
     }
     gameState.matchRoundSubmitted = false;
     gameState.matchLastAnswerCorrect = false;
+    gameState.matchRoundCompletesGame = false;
     
     // 生成目标颜色
     gameState.currentTargetColor = generateColor(gameState.level);
@@ -1125,21 +1164,18 @@ function checkColorSelection(selectedColor, selectedCard) {
         // 处理大师无尽模式的生命值
         if (config.endless) {
             gameState.lives--;
-            
-            // 检查是否游戏结束
-            if (gameState.lives <= 0) {
-                showGameEnd();
-                return;
-            }
         }
     }
 
-    if (!config.endless) {
+    const isFinalRound = config.endless
+        ? !isCorrect && gameState.lives <= 0
+        : gameState.level >= config.totalLevels;
+    gameState.matchRoundCompletesGame = isFinalRound;
+
+    if (isFinalRound) {
+        elements.matchContinueButton.textContent = '查看结果';
+    } else if (!config.endless) {
         elements.matchContinueButton.textContent = '下一关';
-        if (gameState.level >= config.totalLevels) {
-            showGameEnd();
-            return;
-        }
     } else if (isCorrect) {
         // 大师模式只有做对才进入下一关
         elements.matchContinueButton.textContent = '下一关';
@@ -1147,9 +1183,18 @@ function checkColorSelection(selectedColor, selectedCard) {
         elements.matchContinueButton.textContent = '继续本关';
     }
 
-    showMatchRoundFeedback(selectedCard, isCorrect);
+    showMatchRoundFeedback(selectedCard, isCorrect, isFinalRound);
     elements.resultScore.textContent = gameState.score;
     updateDisplays();
+}
+
+function handleMatchContinue() {
+    if (gameState.matchRoundCompletesGame) {
+        showGameEnd();
+        return;
+    }
+
+    nextLevel();
 }
 
 // 进入下一关

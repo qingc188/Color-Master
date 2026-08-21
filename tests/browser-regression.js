@@ -1235,10 +1235,21 @@ async function run() {
             const colors = cards.map((card) => card.style.backgroundColor);
             const band = getMatchDistanceBand(gameState.matchDifficulty, gameState.level);
             const targetHex = rgbToHex(gameState.currentTargetColor);
+            const originalRandom = Math.random;
+            const failureMessages = [0, 0.2, 0.4, 0.6, 0.8].map((value) => {
+                Math.random = () => value;
+                return getMatchFailureMessage(false);
+            });
+            const finalFailureMessages = [0, 0.5].map((value) => {
+                Math.random = () => value;
+                return getMatchFailureMessage(true);
+            });
+            Math.random = originalRandom;
             const distanceChecks = colors
                 .filter((color) => rgbToHex(color) !== targetHex)
                 .map((color) => calculatePerceptualDistance(gameState.currentTargetColor, color));
             const selected = cards.find((card) => rgbToHex(card.style.backgroundColor) !== targetHex) || cards[0];
+            const colorCodesBeforeSubmit = cards.filter((card) => card.querySelector('.match-card-code')).length;
             const screenTopBefore = elements.colorGridScreen.getBoundingClientRect().top;
             const scrollBefore = window.scrollY;
             const stableSurround = getComputedStyle(cards[0]).boxShadow.includes('rgb(16, 25, 29)');
@@ -1248,13 +1259,17 @@ async function run() {
                 cardCount: cards.length,
                 uniqueCount: new Set(colors.map(rgbToHex)).size,
                 targetCount: colors.filter((color) => rgbToHex(color) === targetHex).length,
+                colorCodesBeforeSubmit,
                 distancesInBand: distanceChecks.every((distance) => distance >= band.min && distance <= band.max),
+                failureMessages,
+                finalFailureMessages,
                 answersAfterDoubleClick: gameState.totalAnswers,
                 stableSurround,
                 gridStillVisible: !elements.colorGridScreen.classList.contains('hidden'),
                 resultScreenHidden: elements.resultScreen.classList.contains('hidden'),
                 brandStillHidden: elements.brandHeader.classList.contains('hidden'),
-                resultTitle: elements.matchRoundTitle.textContent,
+                resultTitle: elements.matchRoundMessage.textContent,
+                resultIcon: elements.matchRoundIconUse.getAttribute('href'),
                 titleFocused: document.activeElement === elements.matchRoundTitle,
                 actionsVisible: !elements.matchRoundActions.classList.contains('hidden'),
                 continueLabel: elements.matchContinueButton.textContent,
@@ -1262,6 +1277,11 @@ async function run() {
                 disabledCards: cards.filter((card) => card.disabled).length,
                 correctMarkers: cards.filter((card) => card.classList.contains('is-match-correct')).length,
                 wrongMarkers: cards.filter((card) => card.classList.contains('is-match-selected-wrong')).length,
+                mutedCards: cards.filter((card) => card.classList.contains('is-match-muted')).length,
+                markerIcons: cards.filter((card) => card.querySelector('.match-card-result .ui-icon')).length,
+                colorCodeCount: cards.filter((card) => card.querySelector('.match-card-code')).length,
+                colorCodesCorrect: cards.every((card) => card.querySelector('.match-card-code').textContent === rgbToHex(card.style.backgroundColor)),
+                accessibleColorCodes: cards.every((card) => card.getAttribute('aria-label').includes('色号 ' + rgbToHex(card.style.backgroundColor))),
                 screenTopShift: Math.abs(elements.colorGridScreen.getBoundingClientRect().top - screenTopBefore),
                 scrollShift: Math.abs(window.scrollY - scrollBefore)
             };
@@ -1270,13 +1290,26 @@ async function run() {
         if (matchReport.cardCount !== 9
             || matchReport.uniqueCount !== 9
             || matchReport.targetCount !== 1
+            || matchReport.colorCodesBeforeSubmit !== 0
             || !matchReport.distancesInBand
+            || JSON.stringify(matchReport.failureMessages) !== JSON.stringify([
+                '匹配错误，再试试吧！',
+                '匹配错误，慢慢来！',
+                '匹配错误，别灰心!',
+                '匹配错误，再靠近一点点!',
+                '匹配错误，已经很接近了!'
+            ])
+            || JSON.stringify(matchReport.finalFailureMessages) !== JSON.stringify([
+                '匹配错误，别灰心!',
+                '匹配错误，已经很接近了!'
+            ])
             || matchReport.answersAfterDoubleClick !== 1
             || !matchReport.stableSurround
             || !matchReport.gridStillVisible
             || !matchReport.resultScreenHidden
             || !matchReport.brandStillHidden
-            || matchReport.resultTitle !== '匹配失败'
+            || !matchReport.failureMessages.includes(matchReport.resultTitle)
+            || matchReport.resultIcon !== '#icon-x-circle'
             || !matchReport.titleFocused
             || !matchReport.actionsVisible
             || matchReport.continueLabel !== '下一关'
@@ -1284,6 +1317,11 @@ async function run() {
             || matchReport.disabledCards !== 9
             || matchReport.correctMarkers !== 1
             || matchReport.wrongMarkers !== 1
+            || matchReport.mutedCards !== 7
+            || matchReport.markerIcons !== 2
+            || matchReport.colorCodeCount !== 9
+            || !matchReport.colorCodesCorrect
+            || !matchReport.accessibleColorCodes
             || matchReport.screenTopShift > 1
             || matchReport.scrollShift > 1) {
             throw new Error(`Match regression failed: ${JSON.stringify(matchReport)}`);
@@ -1308,8 +1346,8 @@ async function run() {
             deviceScaleFactor: 2,
             mobile: true
         });
-        await evaluate(client, `showColorGrid()`);
-        await waitFor(client, `document.querySelectorAll('.color-card').length === 9`);
+        await evaluate(client, `gameState.matchDifficulty = 'advanced'; updateDisplays(); showColorGrid()`);
+        await waitFor(client, `document.querySelectorAll('.color-card').length === 16`);
         const matchMobileSuccessReport = await evaluate(client, `(() => {
             const cards = [...document.querySelectorAll('.color-card')];
             const targetHex = rgbToHex(gameState.currentTargetColor);
@@ -1319,15 +1357,31 @@ async function run() {
             target.click();
             const continueRect = elements.matchContinueButton.getBoundingClientRect();
             const screenRect = elements.colorGridScreen.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const targetCodeRect = target.querySelector('.match-card-code').getBoundingClientRect();
+            const targetMarkerRect = target.querySelector('.match-card-result').getBoundingClientRect();
             return {
+                cardCount: cards.length,
+                targetHex,
                 viewportWidth: document.documentElement.clientWidth,
                 scrollWidth: document.documentElement.scrollWidth,
                 gridStillVisible: !elements.colorGridScreen.classList.contains('hidden'),
                 resultScreenHidden: elements.resultScreen.classList.contains('hidden'),
-                resultTitle: elements.matchRoundTitle.textContent,
+                resultTitle: elements.matchRoundMessage.textContent,
+                resultIcon: elements.matchRoundIconUse.getAttribute('href'),
                 levelBeforeContinue: gameState.level,
                 correctMarkers: cards.filter((card) => card.classList.contains('is-match-correct')).length,
                 wrongMarkers: cards.filter((card) => card.classList.contains('is-match-selected-wrong')).length,
+                mutedCards: cards.filter((card) => card.classList.contains('is-match-muted')).length,
+                colorCodeCount: cards.filter((card) => card.querySelector('.match-card-code')).length,
+                colorCodesFit: cards.every((card) => {
+                    const cardRect = card.getBoundingClientRect();
+                    const codeRect = card.querySelector('.match-card-code').getBoundingClientRect();
+                    return codeRect.left >= cardRect.left && codeRect.right <= cardRect.right
+                        && codeRect.top >= cardRect.top && codeRect.bottom <= cardRect.bottom;
+                }),
+                targetCodeMarkerSeparate: targetCodeRect.right <= targetMarkerRect.left,
+                targetMetaFits: targetCodeRect.left >= targetRect.left && targetMarkerRect.right <= targetRect.right,
                 targetLabel: target.getAttribute('aria-label'),
                 actionsVisible: !elements.matchRoundActions.classList.contains('hidden'),
                 buttonsFit: continueRect.left >= screenRect.left - 1 && continueRect.right <= screenRect.right + 1,
@@ -1335,14 +1389,22 @@ async function run() {
                 scrollShift: Math.abs(window.scrollY - scrollBefore)
             };
         })()`);
-        if (matchMobileSuccessReport.scrollWidth !== matchMobileSuccessReport.viewportWidth
+        if (matchMobileSuccessReport.cardCount !== 16
+            || matchMobileSuccessReport.scrollWidth !== matchMobileSuccessReport.viewportWidth
             || !matchMobileSuccessReport.gridStillVisible
             || !matchMobileSuccessReport.resultScreenHidden
             || matchMobileSuccessReport.resultTitle !== '完美匹配！'
+            || matchMobileSuccessReport.resultIcon !== '#icon-check-circle'
             || matchMobileSuccessReport.levelBeforeContinue !== 2
             || matchMobileSuccessReport.correctMarkers !== 1
             || matchMobileSuccessReport.wrongMarkers !== 0
+            || matchMobileSuccessReport.mutedCards !== 15
+            || matchMobileSuccessReport.colorCodeCount !== 16
+            || !matchMobileSuccessReport.colorCodesFit
+            || !matchMobileSuccessReport.targetCodeMarkerSeparate
+            || !matchMobileSuccessReport.targetMetaFits
             || !matchMobileSuccessReport.targetLabel.includes('正确选择')
+            || !matchMobileSuccessReport.targetLabel.includes(`色号 ${matchMobileSuccessReport.targetHex}`)
             || !matchMobileSuccessReport.actionsVisible
             || !matchMobileSuccessReport.buttonsFit
             || matchMobileSuccessReport.screenTopShift > 1
@@ -1384,10 +1446,25 @@ async function run() {
             stopActiveCountdown();
             showColorGrid();
             const targetHex = rgbToHex(gameState.currentTargetColor);
-            const target = [...document.querySelectorAll('.color-card')]
-                .find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
-            target.click();
+            const cards = [...document.querySelectorAll('.color-card')];
+            const selected = cards.find((card) => rgbToHex(card.style.backgroundColor) !== targetHex);
+            const originalRandom = Math.random;
+            Math.random = () => 0;
+            selected.click();
+            Math.random = originalRandom;
+            const inlineFeedback = {
+                gridVisible: !elements.colorGridScreen.classList.contains('hidden'),
+                resultHidden: elements.resultScreen.classList.contains('hidden'),
+                title: elements.matchRoundMessage.textContent,
+                icon: elements.matchRoundIconUse.getAttribute('href'),
+                continueLabel: elements.matchContinueButton.textContent,
+                completesGame: gameState.matchRoundCompletesGame,
+                correctMarkers: cards.filter((card) => card.classList.contains('is-match-correct')).length,
+                wrongMarkers: cards.filter((card) => card.classList.contains('is-match-selected-wrong')).length
+            };
+            elements.matchContinueButton.click();
             return {
+                inlineFeedback,
                 gridHidden: elements.colorGridScreen.classList.contains('hidden'),
                 resultVisible: !elements.resultScreen.classList.contains('hidden'),
                 title: elements.resultText.textContent,
@@ -1395,12 +1472,66 @@ async function run() {
                 restartVisible: !elements.restartButton.classList.contains('hidden')
             };
         })()`);
-        if (!matchFinalSummaryReport.gridHidden
+        if (!matchFinalSummaryReport.inlineFeedback.gridVisible
+            || !matchFinalSummaryReport.inlineFeedback.resultHidden
+            || matchFinalSummaryReport.inlineFeedback.title !== '匹配错误，别灰心!'
+            || matchFinalSummaryReport.inlineFeedback.icon !== '#icon-x-circle'
+            || matchFinalSummaryReport.inlineFeedback.continueLabel !== '查看结果'
+            || !matchFinalSummaryReport.inlineFeedback.completesGame
+            || matchFinalSummaryReport.inlineFeedback.correctMarkers !== 1
+            || matchFinalSummaryReport.inlineFeedback.wrongMarkers !== 1
+            || !matchFinalSummaryReport.gridHidden
             || !matchFinalSummaryReport.resultVisible
             || matchFinalSummaryReport.title !== '基础颜色匹配完成！'
             || !matchFinalSummaryReport.continueHidden
             || !matchFinalSummaryReport.restartVisible) {
             throw new Error(`Match final summary failed: ${JSON.stringify(matchFinalSummaryReport)}`);
+        }
+
+        const masterFinalSummaryReport = await evaluate(client, `(() => {
+            gameState.matchDifficulty = 'master';
+            gameState.level = 4;
+            gameState.score = 3;
+            gameState.correctAnswers = 3;
+            gameState.totalAnswers = 3;
+            gameState.lives = 1;
+            gameState.isGameActive = true;
+            showTargetColor();
+            stopActiveCountdown();
+            showColorGrid();
+            const targetHex = rgbToHex(gameState.currentTargetColor);
+            const selected = [...document.querySelectorAll('.color-card')]
+                .find((card) => rgbToHex(card.style.backgroundColor) !== targetHex);
+            const originalRandom = Math.random;
+            Math.random = () => 0.99;
+            selected.click();
+            Math.random = originalRandom;
+            const inlineFeedback = {
+                lives: gameState.lives,
+                gridVisible: !elements.colorGridScreen.classList.contains('hidden'),
+                resultHidden: elements.resultScreen.classList.contains('hidden'),
+                title: elements.matchRoundMessage.textContent,
+                continueLabel: elements.matchContinueButton.textContent,
+                completesGame: gameState.matchRoundCompletesGame
+            };
+            elements.matchContinueButton.click();
+            return {
+                inlineFeedback,
+                resultVisible: !elements.resultScreen.classList.contains('hidden'),
+                title: elements.resultText.textContent,
+                restartVisible: !elements.restartButton.classList.contains('hidden')
+            };
+        })()`);
+        if (masterFinalSummaryReport.inlineFeedback.lives !== 0
+            || !masterFinalSummaryReport.inlineFeedback.gridVisible
+            || !masterFinalSummaryReport.inlineFeedback.resultHidden
+            || masterFinalSummaryReport.inlineFeedback.title !== '匹配错误，已经很接近了!'
+            || masterFinalSummaryReport.inlineFeedback.continueLabel !== '查看结果'
+            || !masterFinalSummaryReport.inlineFeedback.completesGame
+            || !masterFinalSummaryReport.resultVisible
+            || masterFinalSummaryReport.title !== '大师颜色匹配结束！'
+            || !masterFinalSummaryReport.restartVisible) {
+            throw new Error(`Master final summary failed: ${JSON.stringify(masterFinalSummaryReport)}`);
         }
 
         await navigate(client, appUrl);
