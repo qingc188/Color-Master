@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
     <link rel="stylesheet" href="tailwind.css">
-    <link rel="stylesheet" href="styles.css?v=20260821-score-math-steps">
+    <link rel="stylesheet" href="styles.css?v=20260821-score-receipt">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
     <svg class="icon-sprite" aria-hidden="true">
@@ -651,7 +651,7 @@
                 <button id="score-info-close" type="button" class="score-info-close" aria-label="关闭评分说明">×</button>
             </header>
             <div class="score-info-body">
-                <p id="score-info-description" class="score-info-intro">先计算两种颜色的 Oklab 感知色差，再按游戏映射换成 10 分制。最终差异越小，分数越高。</p>
+                <p id="score-info-description" class="score-info-intro">先用 Oklab 看两种颜色差多少，再换成 10 分制。差异越小，分数越高。</p>
                 <section class="score-color-pair" aria-label="本轮颜色对比">
                     <div class="score-color-sample">
                         <span id="score-info-target-swatch" class="score-color-swatch" aria-hidden="true"></span>
@@ -671,32 +671,21 @@
                             <span class="score-step-number">1</span>
                             <div>
                                 <strong>用 Oklab 比较颜色</strong>
-                                <p>RGB 各分量的数值差不能直接代表人眼看到的色差，因此先将两种颜色转换到感知更均匀的 Oklab 色彩空间。Oklab 中，L 表示明度，a、b 表示两个颜色轴。</p>
-                                <p>原始感知色差 ΔOK，就是三维直线距离。直白地说：把 L、a、b 的差值分别平方，三项相加，再开平方。</p>
-                                <p id="score-info-square-formula" class="score-detail-formula">三项平方和 = (0.0000)² + (0.0000)² + (0.0000)² ≈ 0.00000</p>
-                                <p id="score-info-raw-formula" class="score-detail-formula">原始 ΔOK = √(0.00000) ≈ 0.0000</p>
-                                <p class="score-scale-note">为方便阅读和设置游戏分数，再将上面算出的完整距离整体乘以 100。这不是分别放大 L、a、b，也不是标准 ΔOK 的写法。</p>
-                                <p id="score-info-base-formula" class="score-detail-formula">游戏展示差异 = <span id="score-info-scale-input">0.0000</span> × 100 ≈ <output id="score-info-base-distance">0.00</output></p>
+                                <p>RGB 是屏幕的红绿蓝数值，数字差不等于人眼看到的差别。Oklab 更接近人眼对明度、饱和度和色相变化的感受，本轮基础差异为 <output id="score-info-base-distance">0.0</output>。</p>
                             </div>
                         </li>
                         <li>
                             <span class="score-step-number">2</span>
                             <div>
-                                <strong>防止灰色得到虚高分</strong>
+                                <strong>再检查是否接近灰色</strong>
                                 <p id="score-info-adjustment"></p>
-                                <p id="score-info-neutral-start" class="score-detail-formula"></p>
-                                <p id="score-info-neutral-formula" class="score-detail-formula"></p>
-                                <p id="score-info-neutral-smooth" class="score-detail-formula"></p>
-                                <p id="score-info-adjustment-formula" class="score-detail-formula"></p>
                             </div>
                         </li>
                         <li>
                             <span class="score-step-number">3</span>
                             <div>
                                 <strong>得到最终差异</strong>
-                                <p>游戏展示差异加上灰色修正，得到用于分数映射的最终差异。</p>
-                                <p id="score-info-total-formula" class="score-total-formula"><output id="score-info-total-base">0.00</output> + <output id="score-info-total-adjustment">0.00</output> ≈ <output id="score-info-distance">0.00</output></p>
-                                <p class="score-rounding-note">界面数值保留两位小数，评分使用未四舍五入的完整数值。</p>
+                                <p id="score-info-total-formula" class="score-total-formula"><output id="score-info-total-base">0.0</output> + <output id="score-info-total-adjustment">0.0</output> = <output id="score-info-distance">0.0</output></p>
                             </div>
                         </li>
                     </ol>
@@ -704,36 +693,22 @@
                 <section class="score-conversion" aria-label="分数换算结果">
                     <div>
                         <h3>换成 10 分制</h3>
-                        <p class="score-conversion-method">先用最终差异在表中找到相邻的两个映射点，再根据它在该区间中的位置做线性插值。</p>
                         <p id="score-info-range"></p>
-                        <p id="score-info-interpolation" class="score-detail-formula"></p>
+                        <p id="score-info-interpolation"></p>
                     </div>
                     <div class="score-final-value">
                         <span>本轮得分</span>
                         <strong id="score-info-score">0.00 / 10</strong>
                     </div>
-                    <div class="score-mapping-table-wrap">
-                        <table class="score-mapping-table">
-                            <caption>最终差异与 10 分制映射表</caption>
-                            <thead>
-                                <tr>
-                                    <th scope="col">最终差异</th>
-                                    <th scope="col">得分</th>
-                                    <th scope="col">最终差异</th>
-                                    <th scope="col">得分</th>
-                                </tr>
-                            </thead>
-                            <tbody id="score-info-mapping-body"></tbody>
-                        </table>
-                    </div>
                 </section>
             </div>
+            <button id="score-info-confirm" type="button" class="score-info-confirm">关闭说明</button>
         </div>
     </div>
 
     <!-- 游戏脚本 -->
-    <script src="color-utils.js?v=20260821-score-math-steps"></script>
-    <script src="app.js?v=20260821-score-math-steps"></script>
+    <script src="color-utils.js?v=20260821-recall-v3"></script>
+    <script src="app.js?v=20260821-recall-v3"></script>
 </body>
 </html>
 

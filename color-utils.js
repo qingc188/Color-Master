@@ -274,16 +274,16 @@ function calculateRecallDistanceDetails(target, user) {
     const userOklab = rgbToOklab(user);
     const targetChroma = Math.hypot(targetOklab.a, targetOklab.b);
     const userChroma = Math.hypot(userOklab.a, userOklab.b);
-    const oklabDelta = {
-        l: userOklab.l - targetOklab.l,
-        a: userOklab.a - targetOklab.a,
-        b: userOklab.b - targetOklab.b
-    };
-    const rawDistance = Math.hypot(oklabDelta.l, oklabDelta.a, oklabDelta.b);
-    const baseDistance = rawDistance * 100;
-    const neutralRawAmount = 1
-        - Math.min(targetChroma, userChroma) / RECALL_NEUTRAL_CHROMA_THRESHOLD;
-    const neutralAmount = clamp(neutralRawAmount, 0, 1);
+    const baseDistance = Math.hypot(
+        userOklab.l - targetOklab.l,
+        userOklab.a - targetOklab.a,
+        userOklab.b - targetOklab.b
+    ) * 100;
+    const neutralAmount = clamp(
+        1 - Math.min(targetChroma, userChroma) / RECALL_NEUTRAL_CHROMA_THRESHOLD,
+        0,
+        1
+    );
     const smoothNeutralAmount = neutralAmount * neutralAmount * (3 - 2 * neutralAmount);
     const neutralPenalty = Math.abs(targetChroma - userChroma)
         * 100
@@ -294,14 +294,9 @@ function calculateRecallDistanceDetails(target, user) {
     const rawHueDifference = Math.abs(targetHue - userHue) % 360;
 
     return {
-        rawDistance,
         baseDistance,
         neutralPenalty,
-        neutralRawAmount,
-        neutralAmount,
-        neutralFactor: smoothNeutralAmount,
         distance: baseDistance + neutralPenalty,
-        oklabDelta,
         lightnessDelta: (userOklab.l - targetOklab.l) * 100,
         chromaDelta: (userChroma - targetChroma) * 100,
         hueDifference: Math.min(targetChroma, userChroma) < 0.00001
