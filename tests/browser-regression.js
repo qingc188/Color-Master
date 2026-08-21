@@ -441,6 +441,14 @@ async function run() {
             const brandName = document.querySelector('.brand-name');
             const brandTitle = brandName.querySelector(':scope > span');
             const footer = document.querySelector('.site-footer');
+            const landing = elements.landingScreen;
+            const landingStyle = getComputedStyle(landing);
+            const actions = document.querySelector('.landing-actions').getBoundingClientRect();
+            const english = document.querySelector('.landing-english');
+            const paletteIndicator = document.querySelector('.theme-palette-indicator');
+            const landingContentWidth = landing.clientWidth
+                - parseFloat(landingStyle.paddingLeft)
+                - parseFloat(landingStyle.paddingRight);
             return {
                 viewportWidth: document.documentElement.clientWidth,
                 viewportHeight: window.visualViewport?.height || window.innerHeight,
@@ -454,6 +462,10 @@ async function run() {
                 footerPosition: getComputedStyle(footer).position,
                 footerAfterMain: footer.offsetTop >= document.querySelector('.app-container > main').offsetTop
                     + document.querySelector('.app-container > main').offsetHeight,
+                paletteToEnglishGap: english.getBoundingClientRect().top
+                    - paletteIndicator.getBoundingClientRect().bottom,
+                englishFontSize: parseFloat(getComputedStyle(english).fontSize),
+                actionWidthRatio: actions.width / landingContentWidth,
                 backButtonHeights: Array.from(document.querySelectorAll('.back-button'))
                     .map((button) => parseFloat(getComputedStyle(button).minHeight))
             };
@@ -466,6 +478,9 @@ async function run() {
             || homepageMobileReport.brandTitleFontWeight !== '400'
             || homepageMobileReport.footerPosition !== 'static'
             || !homepageMobileReport.footerAfterMain
+            || homepageMobileReport.paletteToEnglishGap < 20
+            || Math.abs(homepageMobileReport.englishFontSize - 10.88) > 0.1
+            || Math.abs(homepageMobileReport.actionWidthRatio - 0.84) > 0.01
             || homepageMobileReport.backButtonHeights.some((height) => height !== 40)) {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
@@ -639,11 +654,11 @@ async function run() {
             || amethystThemeReport.yellow !== '#f5e85a'
             || amethystThemeReport.yellowBright !== '#fff3a3'
             || amethystThemeReport.yellowSoft !== 'rgba(245, 232, 90, 0.14)'
-            || amethystThemeReport.cubePrimary.join('|') !== '#8978d6|#7760dc|#6146c2|#3b258d'
+            || amethystThemeReport.cubePrimary.join('|') !== '#8e7dde|#7760dc|#6146c2|#3b258d'
             || amethystThemeReport.cubeSecondary.join('|') !== '#ffed75|#f5e85a|#f5e133|#e6d116'
-            || amethystThemeReport.cubeTopGold !== '#f4f0cd'
-            || amethystThemeReport.visualTopFace.join('|') !== 'rgb(137, 120, 214)|rgb(255, 254, 250)|rgb(244, 240, 205)|rgb(246, 243, 213)'
-            || amethystThemeReport.visualLeftFace.join('|') !== 'rgb(97, 70, 194)|rgb(200, 190, 244)|rgb(59, 37, 141)|rgb(119, 96, 220)'
+            || amethystThemeReport.cubeTopGold !== '#f0ebb9'
+            || amethystThemeReport.visualTopFace.join('|') !== 'rgb(142, 125, 222)|rgb(255, 254, 250)|rgb(240, 235, 185)|rgb(246, 243, 213)'
+            || amethystThemeReport.visualLeftFace.join('|') !== 'rgb(97, 70, 194)|rgb(209, 200, 246)|rgb(59, 37, 141)|rgb(119, 96, 220)'
             || amethystThemeReport.visualRightFace.join('|') !== 'rgb(245, 232, 90)|rgb(230, 209, 22)|rgb(255, 237, 117)|rgb(245, 225, 51)'
             || amethystThemeReport.progressTrack !== 'rgb(45, 34, 91)'
             || amethystThemeReport.progressFill !== 'rgb(143, 121, 232)') {

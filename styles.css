@@ -336,7 +336,7 @@ html[data-theme="amethyst"] {
     --subtle-rgb: 147, 138, 167;
     --structure-rgb: 143, 121, 232;
     --cube-edge: #120e20;
-    --cube-primary-1: #8978d6;
+    --cube-primary-1: #8e7dde;
     --cube-primary-2: #7760dc;
     --cube-primary-3: #6146c2;
     --cube-primary-4: #3b258d;
@@ -346,8 +346,8 @@ html[data-theme="amethyst"] {
     --cube-secondary-4: #e6d116;
     --cube-neutral-1: #fffefa;
     --cube-neutral-2: #f6f3d5;
-    --cube-neutral-3: #f4f0cd;
-    --cube-neutral-4: #c8bef4;
+    --cube-neutral-3: #f0ebb9;
+    --cube-neutral-4: #d1c8f6;
     --shadow-panel: 0 24px 70px rgba(3, 2, 9, 0.46);
     --shadow-card: 0 14px 34px rgba(3, 2, 9, 0.32);
 }
@@ -2652,6 +2652,18 @@ html.theme-transitioning .score-info-panel {
         gap: 0.8rem;
         padding: 1.25rem 1rem;
         border-radius: 1.5rem;
+    }
+
+    .landing-copy {
+        padding-top: 0.5rem;
+    }
+
+    .landing-english {
+        font-size: 0.68rem;
+    }
+
+    .landing-actions {
+        width: min(84%, 19rem);
     }
 
     .landing-orbit {
