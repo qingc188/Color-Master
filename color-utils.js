@@ -281,11 +281,9 @@ function calculateRecallDistanceDetails(target, user) {
     };
     const rawDistance = Math.hypot(oklabDelta.l, oklabDelta.a, oklabDelta.b);
     const baseDistance = rawDistance * 100;
-    const neutralAmount = clamp(
-        1 - Math.min(targetChroma, userChroma) / RECALL_NEUTRAL_CHROMA_THRESHOLD,
-        0,
-        1
-    );
+    const neutralRawAmount = 1
+        - Math.min(targetChroma, userChroma) / RECALL_NEUTRAL_CHROMA_THRESHOLD;
+    const neutralAmount = clamp(neutralRawAmount, 0, 1);
     const smoothNeutralAmount = neutralAmount * neutralAmount * (3 - 2 * neutralAmount);
     const neutralPenalty = Math.abs(targetChroma - userChroma)
         * 100
@@ -299,6 +297,7 @@ function calculateRecallDistanceDetails(target, user) {
         rawDistance,
         baseDistance,
         neutralPenalty,
+        neutralRawAmount,
         neutralAmount,
         neutralFactor: smoothNeutralAmount,
         distance: baseDistance + neutralPenalty,

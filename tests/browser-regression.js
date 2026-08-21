@@ -1263,10 +1263,13 @@ async function run() {
             adjustment: document.querySelector('#score-info-adjustment').textContent,
             baseDistance: document.querySelector('#score-info-base-distance').textContent,
             oklabExplanation: document.querySelector('.score-calculation li:first-child p').textContent,
+            squareFormula: document.querySelector('#score-info-square-formula').textContent,
             rawFormula: document.querySelector('#score-info-raw-formula').textContent,
             scaleNote: document.querySelector('.score-scale-note').textContent,
             baseFormula: document.querySelector('#score-info-base-formula').textContent,
+            neutralStart: document.querySelector('#score-info-neutral-start').textContent,
             neutralFormula: document.querySelector('#score-info-neutral-formula').textContent,
+            neutralSmooth: document.querySelector('#score-info-neutral-smooth').textContent,
             adjustmentFormula: document.querySelector('#score-info-adjustment-formula').textContent,
             targetCode: document.querySelector('#score-info-target-code').textContent,
             userCode: document.querySelector('#score-info-user-code').textContent,
@@ -1304,15 +1307,20 @@ async function run() {
             || dialogReport.distance !== '0.00'
             || dialogReport.description !== '先计算两种颜色的 Oklab 感知色差，再按游戏映射换成 10 分制。最终差异越小，分数越高。'
             || dialogReport.description.includes('彩度')
-            || !dialogReport.adjustment.includes('本轮平滑系数 g 为 0，因此修正值为 0')
+            || !dialogReport.adjustment.includes('本轮各项相乘后，修正值为 0.00')
             || dialogReport.baseDistance !== '0.00'
             || !dialogReport.oklabExplanation.includes('RGB 各分量的数值差不能直接代表人眼看到的色差')
             || !dialogReport.oklabExplanation.includes('L 表示明度，a、b 表示两个颜色轴')
-            || dialogReport.rawFormula !== '原始 ΔOK = √[(0.0000)² + (0.0000)² + (0.0000)²] ≈ 0.0000'
+            || dialogReport.squareFormula !== '三项平方和 = (0.0000)² + (0.0000)² + (0.0000)² ≈ 0.00000'
+            || dialogReport.rawFormula !== '原始 ΔOK = √(0.00000) ≈ 0.0000'
             || !dialogReport.scaleNote.includes('完整距离整体乘以 100')
             || !dialogReport.scaleNote.includes('不是分别放大 L、a、b')
             || dialogReport.baseFormula !== '游戏展示差异 = 0.0000 × 100 ≈ 0.00'
-            || !dialogReport.neutralFormula.includes('n²(3 − 2n) = 0.000')
+            || dialogReport.neutralStart.includes('clamp')
+            || dialogReport.neutralStart.includes('min(')
+            || dialogReport.neutralFormula.includes('clamp')
+            || !dialogReport.neutralFormula.includes('灰色程度')
+            || !dialogReport.neutralSmooth.includes('g =')
             || !dialogReport.adjustmentFormula.endsWith('≈ 0.00')
             || dialogReport.targetCode !== dialogReport.userCode
             || dialogReport.guidance !== '色相、饱和度和明度都很接近'
@@ -1392,6 +1400,7 @@ async function run() {
             openScoreInfoDialog();
             return {
                 title: elements.scoreInfoTitle.textContent,
+                squareFormula: elements.scoreInfoSquareFormula.textContent,
                 rawFormula: elements.scoreInfoRawFormula.textContent,
                 baseFormula: elements.scoreInfoBaseFormula.textContent,
                 adjustment: elements.scoreInfoAdjustment.textContent,
@@ -1404,9 +1413,10 @@ async function run() {
             };
         })()`);
         if (referenceDialogReport.title !== '为什么是 6.58 分'
-            || referenceDialogReport.rawFormula !== '原始 ΔOK = √[(0.1778)² + (-0.0330)² + (-0.0733)²] ≈ 0.1952'
+            || referenceDialogReport.squareFormula !== '三项平方和 = (0.1778)² + (-0.0330)² + (-0.0733)² ≈ 0.03809'
+            || referenceDialogReport.rawFormula !== '原始 ΔOK = √(0.03809) ≈ 0.1952'
             || referenceDialogReport.baseFormula !== '游戏展示差异 = 0.1952 × 100 ≈ 19.52'
-            || !referenceDialogReport.adjustment.includes('本轮平滑系数 g 为 0，因此修正值为 0')
+            || !referenceDialogReport.adjustment.includes('本轮各项相乘后，修正值为 0.00')
             || !referenceDialogReport.range.includes('10 和 20 之间')
             || referenceDialogReport.interpolation !== '本轮得分 = 8.2 + (6.5 − 8.2) × (19.52 − 10) ÷ (20 − 10) ≈ 6.58'
             || JSON.stringify(referenceDialogReport.activeMappingAnchors) !== '[10,20]') {
@@ -1429,10 +1439,13 @@ async function run() {
             openScoreInfoDialog();
             return {
                 title: elements.scoreInfoTitle.textContent,
+                squareFormula: elements.scoreInfoSquareFormula.textContent,
                 rawFormula: elements.scoreInfoRawFormula.textContent,
                 baseFormula: elements.scoreInfoBaseFormula.textContent,
                 adjustment: elements.scoreInfoAdjustment.textContent,
+                neutralStart: elements.scoreInfoNeutralStart.textContent,
                 neutralFormula: elements.scoreInfoNeutralFormula.textContent,
+                neutralSmooth: elements.scoreInfoNeutralSmooth.textContent,
                 adjustmentFormula: elements.scoreInfoAdjustmentFormula.textContent,
                 totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
                 interpolation: elements.scoreInfoInterpolation.textContent,
@@ -1443,10 +1456,13 @@ async function run() {
             };
         })()`);
         if (grayCorrectionDialogReport.title !== '为什么是 5.41 分'
-            || !grayCorrectionDialogReport.rawFormula.endsWith('≈ 0.2044')
+            || !grayCorrectionDialogReport.squareFormula.endsWith('≈ 0.04177')
+            || grayCorrectionDialogReport.rawFormula !== '原始 ΔOK = √(0.04177) ≈ 0.2044'
             || !grayCorrectionDialogReport.baseFormula.endsWith('≈ 20.44')
             || !grayCorrectionDialogReport.adjustment.includes('不是直接扣掉 6.85 分')
-            || !grayCorrectionDialogReport.neutralFormula.endsWith('g = n²(3 − 2n) = 1.000')
+            || grayCorrectionDialogReport.neutralStart !== '色彩强度：目标 C = 0.0428，复现 C = 0.0000；较小值 = 0.0000'
+            || grayCorrectionDialogReport.neutralFormula !== '灰色程度初值 = 1 − 0.0000 ÷ 0.04 ≈ 1.000；限制到 0–1 后 n = 1.000'
+            || grayCorrectionDialogReport.neutralSmooth !== '为避免修正突然变化，再平滑：g = n² × (3 − 2n) = 1.000'
             || !grayCorrectionDialogReport.adjustmentFormula.endsWith('≈ 6.85')
             || grayCorrectionDialogReport.totalFormula !== '20.44 + 6.85 ≈ 27.28'
             || !grayCorrectionDialogReport.interpolation.endsWith('≈ 5.41')

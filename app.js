@@ -228,12 +228,15 @@ const elements = {
     scoreInfoDistance: document.getElementById('score-info-distance'),
     scoreInfoBaseDistance: document.getElementById('score-info-base-distance'),
     scoreInfoBaseFormula: document.getElementById('score-info-base-formula'),
+    scoreInfoSquareFormula: document.getElementById('score-info-square-formula'),
     scoreInfoRawFormula: document.getElementById('score-info-raw-formula'),
     scoreInfoScaleInput: document.getElementById('score-info-scale-input'),
     scoreInfoTotalBase: document.getElementById('score-info-total-base'),
     scoreInfoTotalAdjustment: document.getElementById('score-info-total-adjustment'),
     scoreInfoAdjustment: document.getElementById('score-info-adjustment'),
+    scoreInfoNeutralStart: document.getElementById('score-info-neutral-start'),
     scoreInfoNeutralFormula: document.getElementById('score-info-neutral-formula'),
+    scoreInfoNeutralSmooth: document.getElementById('score-info-neutral-smooth'),
     scoreInfoAdjustmentFormula: document.getElementById('score-info-adjustment-formula'),
     scoreInfoRange: document.getElementById('score-info-range'),
     scoreInfoInterpolation: document.getElementById('score-info-interpolation'),
@@ -1550,14 +1553,18 @@ function updateScoreInfoDialog() {
     const distanceDetails = calculateRecallDistanceDetails(target, user);
     const { lower, upper } = getScoreBracket(distance);
     const formatOklabDelta = (value) => `(${value.toFixed(4)})²`;
+    const squaredDistance = distanceDetails.rawDistance ** 2;
     const targetChroma = distanceDetails.targetChroma;
     const userChroma = distanceDetails.userChroma;
+    const minimumChroma = Math.min(targetChroma, userChroma);
+    const chromaDifference = Math.abs(targetChroma - userChroma);
 
     elements.scoreInfoTitle.textContent = `为什么是 ${score.toFixed(2)} 分`;
     elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
     elements.scoreInfoDistance.textContent = distance.toFixed(2);
     elements.scoreInfoBaseDistance.textContent = baseDistance.toFixed(2);
-    elements.scoreInfoRawFormula.textContent = `原始 ΔOK = √[${formatOklabDelta(distanceDetails.oklabDelta.l)} + ${formatOklabDelta(distanceDetails.oklabDelta.a)} + ${formatOklabDelta(distanceDetails.oklabDelta.b)}] ≈ ${distanceDetails.rawDistance.toFixed(4)}`;
+    elements.scoreInfoSquareFormula.textContent = `三项平方和 = ${formatOklabDelta(distanceDetails.oklabDelta.l)} + ${formatOklabDelta(distanceDetails.oklabDelta.a)} + ${formatOklabDelta(distanceDetails.oklabDelta.b)} ≈ ${squaredDistance.toFixed(5)}`;
+    elements.scoreInfoRawFormula.textContent = `原始 ΔOK = √(${squaredDistance.toFixed(5)}) ≈ ${distanceDetails.rawDistance.toFixed(4)}`;
     elements.scoreInfoScaleInput.textContent = distanceDetails.rawDistance.toFixed(4);
     elements.scoreInfoTotalBase.textContent = baseDistance.toFixed(2);
     elements.scoreInfoTotalAdjustment.textContent = neutralPenalty.toFixed(2);
@@ -1568,9 +1575,16 @@ function updateScoreInfoDialog() {
     elements.scoreInfoGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
     elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
         ? `当复现接近灰色、但明度恰好接近目标时，仅靠原始色差可能低估颜色丢失。游戏先用 C = √(a² + b²) 算出两种颜色的色彩强度；较小的 C 越接近 0，灰色修正越强。本轮修正值 ${neutralPenalty.toFixed(2)} 会加入最终差异，不是直接扣掉 ${neutralPenalty.toFixed(2)} 分。`
-        : '当复现接近灰色、但明度恰好接近目标时，仅靠原始色差可能低估颜色丢失。游戏先用 C = √(a² + b²) 算出两种颜色的色彩强度。本轮平滑系数 g 为 0，因此修正值为 0。';
-    elements.scoreInfoNeutralFormula.textContent = `原始灰色程度：n = clamp(1 − min(${targetChroma.toFixed(4)}, ${userChroma.toFixed(4)}) ÷ 0.04, 0, 1) = ${distanceDetails.neutralAmount.toFixed(3)}（clamp 表示将结果限制在 0–1）；平滑系数：g = n²(3 − 2n) = ${distanceDetails.neutralFactor.toFixed(3)}`;
-    elements.scoreInfoAdjustmentFormula.textContent = `修正值 = |${targetChroma.toFixed(4)} − ${userChroma.toFixed(4)}| × 100 × ${RECALL_NEUTRAL_PENALTY_WEIGHT.toFixed(1)} × g ≈ ${neutralPenalty.toFixed(2)}`;
+        : `当复现接近灰色、但明度恰好接近目标时，仅靠原始色差可能低估颜色丢失。游戏先用 C = √(a² + b²) 算出两种颜色的色彩强度。本轮各项相乘后，修正值为 ${neutralPenalty.toFixed(2)}。`;
+    elements.scoreInfoNeutralStart.textContent = `色彩强度：目标 C = ${targetChroma.toFixed(4)}，复现 C = ${userChroma.toFixed(4)}；较小值 = ${minimumChroma.toFixed(4)}`;
+    if (distanceDetails.neutralRawAmount <= 0) {
+        elements.scoreInfoNeutralFormula.textContent = `较小值已达到 0.04，因此灰色程度 n = ${distanceDetails.neutralAmount.toFixed(3)}`;
+        elements.scoreInfoNeutralSmooth.textContent = `本轮不触发灰色修正，g = ${distanceDetails.neutralFactor.toFixed(3)}`;
+    } else {
+        elements.scoreInfoNeutralFormula.textContent = `灰色程度初值 = 1 − ${minimumChroma.toFixed(4)} ÷ 0.04 ≈ ${distanceDetails.neutralRawAmount.toFixed(3)}；限制到 0–1 后 n = ${distanceDetails.neutralAmount.toFixed(3)}`;
+        elements.scoreInfoNeutralSmooth.textContent = `为避免修正突然变化，再平滑：g = n² × (3 − 2n) = ${distanceDetails.neutralFactor.toFixed(3)}`;
+    }
+    elements.scoreInfoAdjustmentFormula.textContent = `修正值 = 色彩强度差 ${chromaDifference.toFixed(4)} × 100 × ${RECALL_NEUTRAL_PENALTY_WEIGHT.toFixed(1)} × g ≈ ${neutralPenalty.toFixed(2)}`;
 
     if (!elements.scoreInfoMappingBody.children.length) {
         for (let index = 0; index < OKLAB_SCORE_ANCHORS.length; index += 2) {
