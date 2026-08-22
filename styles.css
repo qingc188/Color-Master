@@ -3251,6 +3251,37 @@ html.theme-transitioning .palette-tray {
         border-radius: 0.8rem;
     }
 
+    #target-color-screen,
+    #color-grid-screen {
+        min-height: clamp(32rem, calc(100vw + 8.5rem), 36rem);
+    }
+
+    #target-color-screen {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #target-color-screen > .game-stage-title {
+        margin-top: auto;
+    }
+
+    #target-color-screen > #target-color {
+        margin-bottom: auto;
+    }
+
+    #color-grid-screen:not(.hidden) {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #color-grid-screen > .match-round-heading {
+        margin-top: auto;
+    }
+
+    #color-grid-screen > #color-grid {
+        margin-bottom: auto;
+    }
+
     .game-stage-toolbar {
         min-height: 2.5rem;
         margin-bottom: 0.35rem !important;
@@ -3278,7 +3309,6 @@ html.theme-transitioning .palette-tray {
         width: min(58vw, 14rem);
     }
 
-    #target-color-screen.game-stage--observation,
     #color-recall-screen > #recall-target-section.game-stage--observation {
         padding-bottom: clamp(
             5rem,

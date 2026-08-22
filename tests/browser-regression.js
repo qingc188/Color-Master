@@ -2663,6 +2663,7 @@ async function run() {
             { width: 360, height: 800 },
             { width: 430, height: 932 }
         ];
+        const mobileMatchStageReports = [];
         const mobileObservationReports = [];
         for (const viewport of viewports) {
             await client.send('Emulation.setDeviceMetricsOverride', {
@@ -2670,6 +2671,80 @@ async function run() {
                 deviceScaleFactor: 2,
                 mobile: true
             });
+            await openObservation(client, appUrl, 'match');
+            const matchStageReport = await evaluate(client, `(() => {
+                const measure = (stage) => {
+                    const rect = stage.getBoundingClientRect();
+                    return { top: rect.top, bottom: rect.bottom, height: rect.height };
+                };
+                const observation = measure(elements.targetColorScreen);
+                const observationToolbar = elements.targetColorScreen.querySelector('.game-stage-toolbar')
+                    .getBoundingClientRect();
+                const observationHeading = elements.targetColorScreen.querySelector('.game-stage-title')
+                    .getBoundingClientRect();
+                const observationSwatch = elements.targetColor.getBoundingClientRect();
+                const observationSpaceBefore = observationHeading.top - observationToolbar.bottom;
+                const observationSpaceAfter = observation.bottom - observationSwatch.bottom;
+                showColorGrid();
+                const selection = measure(elements.colorGridScreen);
+                const selectionToolbar = elements.colorGridScreen.querySelector('.game-stage-toolbar')
+                    .getBoundingClientRect();
+                const selectionHeading = elements.matchRoundTitle.getBoundingClientRect();
+                const selectionGrid = elements.colorGrid.getBoundingClientRect();
+                const selectionSpaceBefore = selectionHeading.top - selectionToolbar.bottom;
+                const selectionSpaceAfter = selection.bottom - selectionGrid.bottom;
+                const targetHex = rgbToHex(gameState.currentTargetColor);
+                const targetCard = Array.from(elements.colorGrid.querySelectorAll('.color-card'))
+                    .find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
+                targetCard.click();
+                const feedback = measure(elements.colorGridScreen);
+                const actions = elements.matchRoundActions.getBoundingClientRect();
+                const stages = [observation, selection, feedback];
+                return {
+                    viewportWidth: document.documentElement.clientWidth,
+                    viewportHeight: window.visualViewport?.height || window.innerHeight,
+                    scrollWidth: document.documentElement.scrollWidth,
+                    observation,
+                    selection,
+                    feedback,
+                    topDelta: Math.max(...stages.map((stage) => stage.top))
+                        - Math.min(...stages.map((stage) => stage.top)),
+                    bottomDelta: Math.max(...stages.map((stage) => stage.bottom))
+                        - Math.min(...stages.map((stage) => stage.bottom)),
+                    heightDelta: Math.max(...stages.map((stage) => stage.height))
+                        - Math.min(...stages.map((stage) => stage.height)),
+                    observationBalanceDelta: Math.abs(observationSpaceBefore - observationSpaceAfter),
+                    selectionBalanceDelta: Math.abs(selectionSpaceBefore - selectionSpaceAfter),
+                    feedbackActionsFit: actions.bottom <= feedback.bottom - 11
+                };
+            })()`);
+            mobileMatchStageReports.push({ ...viewport, ...matchStageReport });
+            if (matchStageReport.scrollWidth > matchStageReport.viewportWidth
+                || matchStageReport.topDelta > 1
+                || matchStageReport.bottomDelta > 1
+                || matchStageReport.heightDelta > 1
+                || matchStageReport.observationBalanceDelta > 20
+                || matchStageReport.selectionBalanceDelta > 20
+                || !matchStageReport.feedbackActionsFit
+                || matchStageReport.feedback.bottom > matchStageReport.viewportHeight + 1) {
+                throw new Error(`Mobile match stage alignment failed: ${JSON.stringify({
+                    viewport,
+                    report: matchStageReport
+                })}`);
+            }
+            if (viewport.width === 390 && viewport.height === 844) {
+                await openObservation(client, appUrl, 'match');
+                await captureScreenshot(client, 'match-stage-observation-mobile.png');
+                await evaluate(client, `showColorGrid()`);
+                await captureScreenshot(client, 'match-stage-selection-mobile.png');
+                await evaluate(client, `(() => {
+                    const targetHex = rgbToHex(gameState.currentTargetColor);
+                    const targetCard = Array.from(elements.colorGrid.querySelectorAll('.color-card'))
+                        .find((card) => rgbToHex(card.style.backgroundColor) === targetHex);
+                    targetCard.click();
+                })()`);
+                await captureScreenshot(client, 'match-stage-feedback-mobile.png');
+            }
             for (const mode of ['match', 'recall']) {
                 await openObservation(client, appUrl, mode);
                 const report = await evaluate(client, `(() => {
@@ -2705,9 +2780,10 @@ async function run() {
                     || report.scrollHeight > report.viewportHeight + 1
                     || report.stageTop < 0
                     || report.stageBottom > report.viewportHeight + 1
-                    || report.swatchToStageBottom < 79
+                    || (mode === 'match' && report.swatchToStageBottom < 56)
+                    || (mode === 'recall' && report.swatchToStageBottom < 79)
                     || report.stageToViewportBottom < -1
-                    || report.bottomGapBalanceDelta > 4) {
+                    || (mode === 'recall' && report.bottomGapBalanceDelta > 4)) {
                     throw new Error(`Mobile observation regression failed: ${JSON.stringify({ viewport, mode, report })}`);
                 }
             }
@@ -3022,6 +3098,7 @@ async function run() {
             feedbackReport,
             scoreExplanationRemovalReport,
             recallNavigationGuardReport,
+            mobileMatchStageReports,
             mobileObservationReports,
             mobileReports,
             zoomReport,
