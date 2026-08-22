@@ -609,11 +609,13 @@ async function run() {
             showScreen(elements.landingScreen);
             return { overviewScoreboard, gameScoreboard };
         })()`);
-        const mobileScoreboardsMatch = JSON.stringify(mobileScoreboardReport.overviewScoreboard)
-            === JSON.stringify(mobileScoreboardReport.gameScoreboard);
-        if (!mobileScoreboardsMatch
-            || mobileScoreboardReport.gameScoreboard.height > 48
-            || mobileScoreboardReport.gameScoreboard.barPaddingTop !== '2px') {
+        if (mobileScoreboardReport.gameScoreboard.height > 48
+            || mobileScoreboardReport.gameScoreboard.barPaddingTop !== '2px'
+            || mobileScoreboardReport.gameScoreboard.labelFontSize !== '11px'
+            || mobileScoreboardReport.gameScoreboard.valueFontSize !== '16px'
+            || mobileScoreboardReport.overviewScoreboard.height > 46
+            || mobileScoreboardReport.overviewScoreboard.labelFontSize !== '10.25px'
+            || mobileScoreboardReport.overviewScoreboard.valueFontSize !== '15px') {
             throw new Error(`Mobile scoreboard consistency failed: ${JSON.stringify(mobileScoreboardReport)}`);
         }
         const homepageMobileReport = await evaluate(client, `(() => {
@@ -670,7 +672,15 @@ async function run() {
                 englishFontSize: parseFloat(getComputedStyle(english).fontSize),
                 actionWidthRatio: actions.width / landingContentWidth,
                 backButtonHeights: Array.from(document.querySelectorAll('.back-button'))
-                    .map((button) => parseFloat(getComputedStyle(button).minHeight))
+                    .map((button) => parseFloat(getComputedStyle(button).minHeight)),
+                backButtonRadii: Array.from(document.querySelectorAll('.back-button'))
+                    .map((button) => getComputedStyle(button).borderRadius),
+                backButtonHitHeights: Array.from(document.querySelectorAll('.back-button'))
+                    .map((button) => {
+                        const style = getComputedStyle(button);
+                        const targetStyle = getComputedStyle(button, '::after');
+                        return parseFloat(style.minHeight) + 2 * Math.abs(parseFloat(targetStyle.top));
+                    })
             };
         })()`);
         if (homepageMobileReport.scrollWidth > homepageMobileReport.viewportWidth
@@ -692,7 +702,9 @@ async function run() {
             || homepageMobileReport.paletteToEnglishGap < 20
             || Math.abs(homepageMobileReport.englishFontSize - 10.88) > 0.1
             || Math.abs(homepageMobileReport.actionWidthRatio - 0.70) > 0.01
-            || homepageMobileReport.backButtonHeights.some((height) => height !== 40)) {
+            || homepageMobileReport.backButtonHeights.some((height) => height !== 38)
+            || homepageMobileReport.backButtonRadii.some((radius) => radius !== '8px')
+            || homepageMobileReport.backButtonHitHeights.some((height) => height < 40)) {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
@@ -715,6 +727,13 @@ async function run() {
                     && rect.top >= modeCardRect.top - 1
                     && rect.bottom <= modeCardRect.bottom + 1;
             });
+            const modeTypography = {
+                headingFontSize: getComputedStyle(elements.modeSelectionScreen.querySelector('h2')).fontSize,
+                eyebrowFontSize: getComputedStyle(elements.modeSelectionScreen.querySelector('.screen-eyebrow')).fontSize,
+                cardHeadingFontSize: getComputedStyle(modeCard.querySelector('h3')).fontSize,
+                cardBodyFontSize: getComputedStyle(modeCard.querySelector(':scope > p:not(.mode-card-code)')).fontSize,
+                cardListFontSize: getComputedStyle(modeCard.querySelector('ul')).fontSize
+            };
             showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
             const difficultyRect = elements.recallDifficultyScreen.getBoundingClientRect();
             const difficultyCards = Array.from(elements.recallDifficultyScreen.querySelectorAll('[data-recall-difficulty]'));
@@ -731,7 +750,9 @@ async function run() {
                 height: difficultyRect.height,
                 headingFontSize: getComputedStyle(elements.recallDifficultyScreen.querySelector(':scope > h2')).fontSize,
                 bodyFontSize: getComputedStyle(elements.recallDifficultyScreen.querySelector(':scope > p')).fontSize,
+                cardHeadingFontSize: getComputedStyle(difficultyCards[0].querySelector('h3')).fontSize,
                 cardBodyFontSize: getComputedStyle(difficultyCards[0].querySelector(':scope > p')).fontSize,
+                cardListFontSize: getComputedStyle(difficultyCards[0].querySelector('ul')).fontSize,
                 cardListColumns: getComputedStyle(difficultyCards[0].querySelector('ul')).gridTemplateColumns,
                 cardHeights: difficultyCardHeights,
                 cardContentFits: difficultyCardContentFits
@@ -743,7 +764,10 @@ async function run() {
                 bottom: preparationRect.bottom,
                 height: preparationRect.height,
                 headingFontSize: getComputedStyle(elements.startScreen.querySelector(':scope > h2')).fontSize,
+                contextFontSize: getComputedStyle(elements.startScreen.querySelector('.preparation-context')).fontSize,
                 rulesFontSize: getComputedStyle(document.getElementById('game-rules')).fontSize,
+                rulesHeadingFontSize: getComputedStyle(document.querySelector('#game-rules > h3')).fontSize,
+                startButtonFontSize: getComputedStyle(elements.startButton).fontSize,
                 startButtonHeight: startButtonRect.height,
                 contentFits: Array.from(elements.startScreen.children).every((child) => {
                     const rect = child.getBoundingClientRect();
@@ -759,6 +783,7 @@ async function run() {
                 footerTextOnOneLine: Math.max(...lineTops) - Math.min(...lineTops) <= 1,
                 footerTextFits: footerText.scrollWidth <= footerText.clientWidth + 1,
                 modeCardContentFits,
+                modeTypography,
                 difficultyReport,
                 preparationReport
             };
@@ -767,20 +792,33 @@ async function run() {
             || !embeddedTextScaleReport.footerTextOnOneLine
             || !embeddedTextScaleReport.footerTextFits
             || !embeddedTextScaleReport.modeCardContentFits
+            || embeddedTextScaleReport.modeTypography.headingFontSize !== '22.5px'
+            || embeddedTextScaleReport.modeTypography.eyebrowFontSize !== '10.25px'
+            || embeddedTextScaleReport.modeTypography.cardHeadingFontSize !== '20.25px'
+            || embeddedTextScaleReport.modeTypography.cardBodyFontSize !== '12.25px'
+            || embeddedTextScaleReport.modeTypography.cardListFontSize !== '11.75px'
             || embeddedTextScaleReport.difficultyReport.bottom > embeddedTextScaleReport.viewportHeight + 1
-            || embeddedTextScaleReport.difficultyReport.headingFontSize !== '24px'
-            || embeddedTextScaleReport.difficultyReport.bodyFontSize !== '14px'
-            || embeddedTextScaleReport.difficultyReport.cardBodyFontSize !== '13px'
+            || embeddedTextScaleReport.difficultyReport.headingFontSize !== '22.5px'
+            || embeddedTextScaleReport.difficultyReport.bodyFontSize !== '13.2px'
+            || embeddedTextScaleReport.difficultyReport.cardHeadingFontSize !== '17px'
+            || embeddedTextScaleReport.difficultyReport.cardBodyFontSize !== '12.25px'
+            || embeddedTextScaleReport.difficultyReport.cardListFontSize !== '11.75px'
             || embeddedTextScaleReport.difficultyReport.cardHeights.some((height) => height > 150)
             || !embeddedTextScaleReport.difficultyReport.cardContentFits
             || embeddedTextScaleReport.preparationReport.bottom > embeddedTextScaleReport.viewportHeight + 1
-            || embeddedTextScaleReport.preparationReport.headingFontSize !== '25px'
-            || embeddedTextScaleReport.preparationReport.rulesFontSize !== '13.5px'
+            || embeddedTextScaleReport.preparationReport.headingFontSize !== '23.5px'
+            || embeddedTextScaleReport.preparationReport.contextFontSize !== '11.75px'
+            || embeddedTextScaleReport.preparationReport.rulesFontSize !== '12.75px'
+            || embeddedTextScaleReport.preparationReport.rulesHeadingFontSize !== '17px'
+            || embeddedTextScaleReport.preparationReport.startButtonFontSize !== '15px'
             || embeddedTextScaleReport.preparationReport.startButtonHeight < 44
             || !embeddedTextScaleReport.preparationReport.contentFits
             || !embeddedTextScaleReport.preparationReport.bodyClassApplied) {
             throw new Error(`Embedded WebView text scaling failed: ${JSON.stringify(embeddedTextScaleReport)}`);
         }
+        await evaluate(client, `showScreen(elements.modeSelectionScreen)`);
+        await captureScreenshot(client, 'mode-selection-webview-mobile.png');
+        await evaluate(client, `selectRecallDifficulty('basic')`);
         await captureScreenshot(client, 'preparation-webview-mobile.png');
         await evaluate(client, `showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall')`);
         await captureScreenshot(client, 'difficulty-webview-mobile.png');
