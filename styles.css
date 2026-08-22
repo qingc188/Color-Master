@@ -2617,12 +2617,17 @@ html[data-theme="ivory"] .theme-cube-face--left {
 }
 
 .recap-color-pair > div:first-child code::before {
-    content: "T ";
+    content: "目标色 ";
     color: var(--subtle);
 }
 
 .recap-color-pair > div:last-child code::before {
-    content: "A ";
+    content: "你的选择 ";
+    color: var(--subtle);
+}
+
+.session-recap[data-mode="recall"] .recap-color-pair > div:last-child code::before {
+    content: "你的复现 ";
     color: var(--subtle);
 }
 
@@ -3423,7 +3428,7 @@ html.theme-transitioning .palette-tray {
     }
 
     .recap-color-pair {
-        grid-template-columns: repeat(auto-fit, minmax(min(4.5rem, 100%), 1fr));
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .recap-round-button i {

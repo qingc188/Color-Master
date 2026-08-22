@@ -13,8 +13,8 @@ const THEME_ORDER = ['cyan', 'amethyst', 'ivory'];
 const INITIAL_RECALL_HSL = Object.freeze({ h: 180, s: 0, l: 50 });
 const THEME_CONFIG = {
     cyan: { name: '青橙', themeColor: '#071820' },
-    amethyst: { name: '星夜紫金', themeColor: '#100B25' },
-    ivory: { name: '雾蓝柔粉', themeColor: '#151B2C' }
+    amethyst: { name: '紫金', themeColor: '#100B25' },
+    ivory: { name: '蓝粉', themeColor: '#151B2C' }
 };
 let storageAvailable = true;
 
@@ -391,7 +391,7 @@ const recallDifficultyConfig = {
             '5 秒后目标颜色隐藏，进入复现环节',
             '使用 HSL 色轮或色相、饱和度、明度滑杆调整颜色',
             '调整时可以实时看到当前复现颜色',
-            '每轮比较色相、饱和度和明度，满分 10 分，共 10 轮'
+            '每轮按颜色的视觉接近程度评分，满分 10 分，共 10 轮'
         ]
     },
     advanced: {
@@ -404,7 +404,7 @@ const recallDifficultyConfig = {
             '5 秒后目标颜色隐藏，进入复现环节',
             '使用 R、G、B 三个滑杆调整颜色',
             '调整时可以实时看到当前复现颜色',
-            '每轮比较色相、饱和度和明度，满分 10 分，共 10 轮'
+            '每轮按颜色的视觉接近程度评分，满分 10 分，共 10 轮'
         ]
     },
     master: {
@@ -417,7 +417,7 @@ const recallDifficultyConfig = {
             '5 秒后目标颜色隐藏，进入复现环节',
             '只使用 R、G、B 三个滑杆调整参数',
             '调整时不会显示实时颜色预览',
-            '每轮比较色相、饱和度和明度，满分 10 分，共 10 轮'
+            '每轮按颜色的视觉接近程度评分，满分 10 分，共 10 轮'
         ]
     }
 };
@@ -676,7 +676,8 @@ function getRecapRoundNumber(round, index = 0) {
 }
 
 function formatRecapRound(round, index = 0) {
-    return `R${String(getRecapRoundNumber(round, index)).padStart(2, '0')}`;
+    const unit = round.mode === 'colorMatch' ? '关' : '轮';
+    return `第${getRecapRoundNumber(round, index)}${unit}`;
 }
 
 function getRecapResultText(round) {
@@ -819,7 +820,10 @@ function updateRecapPage(page, selectFirst = true, animate = false) {
     elements.recapNext.disabled = nextPage === pageCount - 1;
     const startIndex = nextPage * 4;
     const endIndex = Math.min(startIndex + 4, recapState.rounds.length) - 1;
-    elements.recapFaceRange.textContent = `${formatRecapRound(recapState.rounds[startIndex], startIndex)}–${formatRecapRound(recapState.rounds[endIndex], endIndex)}`;
+    const firstRound = recapState.rounds[startIndex];
+    const lastRound = recapState.rounds[endIndex];
+    const unit = firstRound.mode === 'colorMatch' ? '关' : '轮';
+    elements.recapFaceRange.textContent = `第${getRecapRoundNumber(firstRound, startIndex)}–${getRecapRoundNumber(lastRound, endIndex)}${unit}`;
     elements.recapFaceIndex.textContent = `${nextPage + 1}/${pageCount}`;
     renderRecapRoundList();
     updateRecapSample(recapState.sample);
@@ -838,12 +842,19 @@ function renderSessionRecap() {
     recapState.sample = 'target';
     const isRecall = recapState.rounds[0].mode === 'colorRecall';
     elements.sessionRecap.dataset.mode = isRecall ? 'recall' : 'match';
-    elements.recapShowTarget.textContent = '目标颜色';
-    elements.recapShowAnswer.textContent = isRecall ? '复现颜色' : '选择颜色';
+    elements.recapShowTarget.textContent = '目标色';
+    elements.recapShowAnswer.textContent = isRecall ? '你的复现' : '你的选择';
     elements.recapShowTarget.parentElement.setAttribute(
         'aria-label',
-        isRecall ? '切换目标颜色或复现颜色' : '切换目标颜色或选择颜色'
+        isRecall ? '切换目标色或你的复现' : '切换目标色或你的选择'
     );
+    elements.recapCubeViewport.setAttribute(
+        'aria-label',
+        `三维本局复盘魔方，使用左右方向键切换${isRecall ? '轮次' : '关卡'}面`
+    );
+    elements.recapRoundList.setAttribute('aria-label', isRecall ? '当前魔方面轮次' : '当前魔方面关卡');
+    elements.recapDetailTargetHex.parentElement.setAttribute('aria-label', '目标色');
+    elements.recapDetailAnswerHex.parentElement.setAttribute('aria-label', isRecall ? '你的复现' : '你的选择');
     elements.sessionRecap.classList.remove('hidden');
     renderRecapFaces();
     updateRecapPage(0);
@@ -1519,7 +1530,7 @@ function showGameEnd() {
             primaryValue: String(gameState.score),
             primaryUnit: '分',
             stats: [
-                { label: '最高关', value: String(gameState.level) },
+                { label: '最高关卡', value: String(gameState.level) },
                 { label: '本机最佳', value: String(gameState.matchBestScores.master) }
             ],
             recordNote: isNewRecord ? '新纪录！！' : ''

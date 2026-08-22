@@ -853,7 +853,7 @@ async function run() {
         })`);
         if (amethystThemeReport.theme !== 'amethyst'
             || amethystThemeReport.stored !== 'amethyst'
-            || !amethystThemeReport.label.includes('当前星夜紫金')
+            || !amethystThemeReport.label.includes('当前紫金')
             || amethystThemeReport.activeDots !== 1
             || amethystThemeReport.activeDot !== 'amethyst'
             || amethystThemeReport.turn !== '120deg'
@@ -899,7 +899,7 @@ async function run() {
         })`);
         if (ivoryThemeReport.theme !== 'ivory'
             || ivoryThemeReport.stored !== 'ivory'
-            || !ivoryThemeReport.label.includes('当前雾蓝柔粉')
+            || !ivoryThemeReport.label.includes('当前蓝粉')
             || ivoryThemeReport.activeDot !== 'ivory'
             || ivoryThemeReport.bodyColor !== 'rgb(245, 240, 242)'
             || ivoryThemeReport.colorScheme !== 'dark'
@@ -1449,7 +1449,7 @@ async function run() {
             || !localRecordDisclosureReport.openedByClick
             || !localRecordDisclosureReport.closedByEscape
             || localRecordDisclosureReport.duration !== 5000
-            || localRecordDisclosureReport.note !== '成绩仅保存在当前设备的本地缓存；清理缓存或更换设备后会重置。') {
+            || localRecordDisclosureReport.note !== '成绩只保存在当前浏览器；清除网站数据或更换设备后会重置。') {
             throw new Error(`Local record disclosure failed: ${JSON.stringify(localRecordDisclosureReport)}`);
         }
         await evaluate(client, `document.querySelector('[data-match-difficulty="basic"]').click()`);
@@ -1737,6 +1737,13 @@ async function run() {
                 recapVisible: !elements.sessionRecap.classList.contains('hidden'),
                 recapMode: elements.sessionRecap.dataset.mode,
                 recapToggleLabels: [elements.recapShowTarget.textContent, elements.recapShowAnswer.textContent],
+                recapAriaLabels: {
+                    toggle: elements.recapShowTarget.parentElement.getAttribute('aria-label'),
+                    viewport: elements.recapCubeViewport.getAttribute('aria-label'),
+                    list: elements.recapRoundList.getAttribute('aria-label'),
+                    target: elements.recapDetailTargetHex.parentElement.getAttribute('aria-label'),
+                    answer: elements.recapDetailAnswerHex.parentElement.getAttribute('aria-label')
+                },
                 recapRounds: document.querySelectorAll('.session-recap-face [data-recap-index]').length,
                 footerHidden: elements.siteFooter.classList.contains('hidden'),
                 brandHidden: elements.brandHeader.classList.contains('hidden'),
@@ -1779,7 +1786,14 @@ async function run() {
             || matchFinalSummaryReport.lastRecap.outcome !== '未命中'
             || !matchFinalSummaryReport.recapVisible
             || matchFinalSummaryReport.recapMode !== 'match'
-            || JSON.stringify(matchFinalSummaryReport.recapToggleLabels) !== JSON.stringify(['目标颜色', '选择颜色'])
+            || JSON.stringify(matchFinalSummaryReport.recapToggleLabels) !== JSON.stringify(['目标色', '你的选择'])
+            || JSON.stringify(matchFinalSummaryReport.recapAriaLabels) !== JSON.stringify({
+                toggle: '切换目标色或你的选择',
+                viewport: '三维本局复盘魔方，使用左右方向键切换关卡面',
+                list: '当前魔方面关卡',
+                target: '目标色',
+                answer: '你的选择'
+            })
             || matchFinalSummaryReport.recapRounds < 1
             || !matchFinalSummaryReport.footerHidden
             || !matchFinalSummaryReport.brandHidden
@@ -1851,7 +1865,7 @@ async function run() {
             || masterFinalSummaryReport.primaryLabel !== '得分'
             || masterFinalSummaryReport.primaryValue !== String(masterFinalSummaryReport.score)
             || masterFinalSummaryReport.statOne !== String(masterFinalSummaryReport.level)
-            || JSON.stringify(masterFinalSummaryReport.statLabels) !== JSON.stringify(['最高关', '本机最佳'])
+            || JSON.stringify(masterFinalSummaryReport.statLabels) !== JSON.stringify(['最高关卡', '本机最佳'])
             || masterFinalSummaryReport.recordNote !== '新纪录！！'
             || masterFinalSummaryReport.recapOutcome !== '未命中') {
             throw new Error(`Master final summary failed: ${JSON.stringify(masterFinalSummaryReport)}`);
@@ -2119,6 +2133,13 @@ async function run() {
             recapVisible: !elements.sessionRecap.classList.contains('hidden'),
             recapMode: elements.sessionRecap.dataset.mode,
             recapToggleLabels: [elements.recapShowTarget.textContent, elements.recapShowAnswer.textContent],
+            recapAriaLabels: {
+                toggle: elements.recapShowTarget.parentElement.getAttribute('aria-label'),
+                viewport: elements.recapCubeViewport.getAttribute('aria-label'),
+                list: elements.recapRoundList.getAttribute('aria-label'),
+                target: elements.recapDetailTargetHex.parentElement.getAttribute('aria-label'),
+                answer: elements.recapDetailAnswerHex.parentElement.getAttribute('aria-label')
+            },
             recapRounds: document.querySelectorAll('.session-recap-face [data-recap-index]').length,
             recapListRounds: elements.recapRoundList.querySelectorAll('[data-recap-index]').length,
             shellMode: elements.resultScreen.dataset.finalShell,
@@ -2141,7 +2162,14 @@ async function run() {
             || JSON.stringify(persistenceReport.statLabels) !== JSON.stringify(['平均得分', '本机最佳'])
             || !persistenceReport.recapVisible
             || persistenceReport.recapMode !== 'recall'
-            || JSON.stringify(persistenceReport.recapToggleLabels) !== JSON.stringify(['目标颜色', '复现颜色'])
+            || JSON.stringify(persistenceReport.recapToggleLabels) !== JSON.stringify(['目标色', '你的复现'])
+            || JSON.stringify(persistenceReport.recapAriaLabels) !== JSON.stringify({
+                toggle: '切换目标色或你的复现',
+                viewport: '三维本局复盘魔方，使用左右方向键切换轮次面',
+                list: '当前魔方面轮次',
+                target: '目标色',
+                answer: '你的复现'
+            })
             || persistenceReport.recapRounds !== 10
             || persistenceReport.recapListRounds !== 4
             || persistenceReport.shellMode !== 'shared'
@@ -2282,7 +2310,7 @@ async function run() {
                 }))
             };
         })()`);
-        if (recapInteractionReport.initial.status !== 'R04–R07'
+        if (recapInteractionReport.initial.status !== '第4–7关'
             || recapInteractionReport.initial.firstRound !== '4'
             || recapInteractionReport.initial.lastRound !== '15'
             || recapInteractionReport.initial.tileCount !== 12
@@ -2291,23 +2319,23 @@ async function run() {
             || !recapInteractionReport.initial.previousDisabled
             || recapInteractionReport.initial.nextDisabled
             || recapInteractionReport.afterButton.page !== 1
-            || recapInteractionReport.afterButton.status !== 'R08–R11'
+            || recapInteractionReport.afterButton.status !== '第8–11关'
             || recapInteractionReport.afterButton.transform !== 'rotateY(-90deg)'
-            || recapInteractionReport.afterButton.selectedRound !== 'R08'
+            || recapInteractionReport.afterButton.selectedRound !== '第8关'
             || !recapInteractionReport.afterButton.turning
             || recapInteractionReport.answer.targetPressed !== 'false'
             || recapInteractionReport.answer.answerPressed !== 'true'
             || !recapInteractionReport.answer.colorChanged
             || recapInteractionReport.afterKeyboard.page !== 2
-            || recapInteractionReport.afterKeyboard.status !== 'R12–R15'
+            || recapInteractionReport.afterKeyboard.status !== '第12–15关'
             || recapInteractionReport.afterKeyboard.transform !== 'rotateY(-180deg)'
             || !recapInteractionReport.afterKeyboard.nextDisabled
             || recapInteractionReport.afterKeyboard.turning
             || recapInteractionReport.afterTouch.page !== 1
-            || recapInteractionReport.afterTouch.status !== 'R08–R11'
+            || recapInteractionReport.afterTouch.status !== '第8–11关'
             || recapInteractionReport.afterTouch.transform !== 'rotateY(-90deg)'
             || !recapInteractionReport.afterTouch.turning
-            || recapInteractionReport.selectedRound !== 'R09'
+            || recapInteractionReport.selectedRound !== '第9关'
             || recapInteractionReport.selectedCurrentCount !== 2
             || recapInteractionReport.tileKeyboard.page !== 2
             || !recapInteractionReport.tileKeyboard.focusReturnedToViewport

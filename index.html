@@ -9,7 +9,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
     <link rel="stylesheet" href="tailwind.css?v=20260822-feedback-cleanup">
-    <link rel="stylesheet" href="styles.css?v=20260822-xhs-safe-area">
+    <link rel="stylesheet" href="styles.css?v=20260822-copy-refresh">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
     <svg class="icon-sprite" aria-hidden="true">
@@ -115,7 +115,7 @@
                 <button id="local-record-hint" class="local-record-hint hidden" type="button" aria-label="查看本机成绩保存说明" aria-controls="local-record-note" aria-describedby="local-record-note" aria-expanded="false">
                     <svg class="ui-icon" aria-hidden="true"><use href="#icon-info"></use></svg>
                 </button>
-                <p id="local-record-note" class="local-record-note hidden" role="tooltip">成绩仅保存在当前设备的本地缓存；清理缓存或更换设备后会重置。</p>
+                <p id="local-record-note" class="local-record-note hidden" role="tooltip">成绩只保存在当前浏览器；清除网站数据或更换设备后会重置。</p>
             </div>
 
             <!-- 独立品牌首页 -->
@@ -194,7 +194,7 @@
                             <span></span><span></span><span></span>
                         </div>
                         <h3>还没有收录颜色</h3>
-                        <p>完成一次挑战后，遇到的颜色会自动出现在这里</p>
+                        <p>每次作答后，目标颜色会自动收录到这里</p>
                     </div>
 
                     <div id="color-history-collection" class="palette-collection hidden">
@@ -202,7 +202,7 @@
                             <div id="palette-inspector-swatch" class="palette-inspector-swatch" aria-hidden="true"></div>
                             <div class="palette-inspector-copy">
                                 <p class="palette-utility-label">CURRENT SAMPLE</p>
-                                <h3 id="palette-inspector-title">当前查看</h3>
+                                <h3 id="palette-inspector-title">当前色卡</h3>
                                 <strong id="palette-inspector-hex">#000000</strong>
                                 <div class="palette-inspector-values">
                                     <span id="palette-inspector-rgb">rgb(0, 0, 0)</span>
@@ -262,7 +262,7 @@
                         <ul class="text-left text-sm text-gray-400 space-y-2">
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 基础 / 进阶 / 大师</li>
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 3×3 到 4×4 色池</li>
-                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 独立最佳记录</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 答对越多，得分越高</li>
                         </ul>
                     </div>
                     <!-- 颜色复现模式 -->
@@ -280,9 +280,9 @@
                         <h3 class="text-xl font-bold mb-3 text-white">颜色复现</h3>
                         <p class="text-gray-300 mb-4">选择不同难度，用 HSL 或 RGB 复现颜色</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
-                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共10轮</li>
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 基础 / 进阶 / 大师</li>
-                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> Oklab 感知色差评分</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共10轮</li>
+                            <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 颜色越接近，得分越高</li>
                         </ul>
                     </div>
                 </div>
@@ -297,11 +297,11 @@
                     </button>
                 </div>
                 <h2 class="text-3xl font-bold mb-3">选择颜色匹配难度</h2>
-                <p class="text-gray-300 mb-6">同样是找到目标颜色，色池大小和挑战规则会逐级升级。</p>
+                <p class="text-gray-300 mb-6">难度越高，色池越大，干扰色也越接近目标色。</p>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-match-difficulty="basic">
                         <h3 class="text-xl font-bold mb-3 text-white">基础</h3>
-                        <p class="text-gray-300 mb-4">3×3 色池，感知差异较宽，适合热身。</p>
+                        <p class="text-gray-300 mb-4">3×3 色池，颜色容易区分，适合热身。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 9 个颜色方块</li>
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共 10 关</li>
@@ -310,7 +310,7 @@
                     </div>
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-match-difficulty="advanced">
                         <h3 class="text-xl font-bold mb-3 text-white">进阶</h3>
-                        <p class="text-gray-300 mb-4">4×4 色池，干扰色更多且更接近目标。</p>
+                        <p class="text-gray-300 mb-4">4×4 色池，干扰色更多，也更接近目标色。</p>
                         <ul class="text-left text-sm text-gray-400 space-y-2">
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 16 个颜色方块</li>
                             <li><svg class="ui-icon text-success mr-2" aria-hidden="true"><use href="#icon-check"></use></svg> 共 10 关</li>
@@ -338,7 +338,7 @@
                     </button>
                 </div>
                 <h2 class="text-3xl font-bold mb-3">选择颜色复现难度</h2>
-                <p class="text-gray-300 mb-6">同样是记住颜色，不同控制方式会考验完全不同的色彩理解。</p>
+                <p class="text-gray-300 mb-6">从 HSL 实时预览，到 RGB 控制和无预览复现。</p>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
                     <div role="button" tabindex="0" class="glass w-full rounded-xl p-6 hover:bg-opacity-40 transition-all duration-300 transform hover:scale-105 hover:shadow-xl cursor-pointer border border-white/10" data-recall-difficulty="basic">
                         <h3 class="text-xl font-bold mb-3 text-white">基础</h3>
@@ -596,15 +596,15 @@
                 <section id="session-recap" class="session-recap hidden" data-session-recap data-final-part="recap" aria-labelledby="session-recap-title">
                     <header class="session-recap-header">
                         <h3 id="session-recap-title">本局复盘</h3>
-                        <div class="recap-view-switch" role="group" aria-label="魔方面显示颜色">
-                            <button id="recap-show-target" type="button" data-recap-toggle="target" aria-pressed="true">目标颜色</button>
-                            <button id="recap-show-answer" type="button" data-recap-toggle="answer" aria-pressed="false">选择颜色</button>
+                        <div class="recap-view-switch" role="group" aria-label="切换目标色或你的选择">
+                            <button id="recap-show-target" type="button" data-recap-toggle="target" aria-pressed="true">目标色</button>
+                            <button id="recap-show-answer" type="button" data-recap-toggle="answer" aria-pressed="false">你的选择</button>
                         </div>
                     </header>
 
                     <div class="session-recap-layout">
                         <div class="recap-cube-column">
-                            <div id="session-recap-cube-viewport" class="session-recap-cube-viewport" data-recap-cube tabindex="0" role="group" aria-label="三维本局复盘魔方，使用左右方向键切换轮次面" aria-describedby="recap-face-status">
+                            <div id="session-recap-cube-viewport" class="session-recap-cube-viewport" data-recap-cube tabindex="0" role="group" aria-label="三维本局复盘魔方，使用左右方向键切换关卡面" aria-describedby="recap-face-status">
                                 <div id="session-recap-cube-stage" class="session-recap-cube-stage">
                                     <div id="session-recap-cube" class="session-recap-cube">
                                         <div id="recap-face-front" class="session-recap-face session-recap-face--front" data-recap-face="0"></div>
@@ -621,7 +621,7 @@
                                     <svg class="ui-icon" aria-hidden="true"><use href="#icon-recap-arrow-left"></use></svg>
                                 </button>
                                 <span id="recap-face-status" aria-live="polite">
-                                    <span id="recap-face-range">R01–R04</span>
+                                    <span id="recap-face-range">第1–4关</span>
                                     <span id="recap-face-index" class="recap-face-index">1/3</span>
                                 </span>
                                 <button id="recap-next" type="button" data-recap-next aria-label="查看下一面">
@@ -631,15 +631,15 @@
                         </div>
 
                         <div class="recap-inspector">
-                            <div id="recap-round-list" class="recap-round-list" aria-label="当前魔方面轮次"></div>
+                            <div id="recap-round-list" class="recap-round-list" aria-label="当前魔方面关卡"></div>
                             <div id="recap-round-detail" class="recap-round-detail" aria-live="polite" aria-atomic="true">
                                 <div class="recap-detail-heading">
-                                    <strong id="recap-detail-round">R01</strong>
+                                    <strong id="recap-detail-round">第1关</strong>
                                     <span id="recap-detail-result">正确</span>
                                 </div>
                                 <div class="recap-color-pair">
-                                    <div role="group" aria-label="目标颜色"><span id="recap-detail-target-swatch" aria-hidden="true"></span><code id="recap-detail-target-hex">#000000</code></div>
-                                    <div role="group" aria-label="答案颜色"><span id="recap-detail-answer-swatch" aria-hidden="true"></span><code id="recap-detail-answer-hex">#000000</code></div>
+                                    <div role="group" aria-label="目标色"><span id="recap-detail-target-swatch" aria-hidden="true"></span><code id="recap-detail-target-hex">#000000</code></div>
+                                    <div role="group" aria-label="你的选择"><span id="recap-detail-answer-swatch" aria-hidden="true"></span><code id="recap-detail-answer-hex">#000000</code></div>
                                 </div>
                                 <p id="recap-detail-guidance"></p>
                             </div>
@@ -672,7 +672,7 @@
 
     <!-- 游戏脚本 -->
     <script src="color-utils.js?v=20260822-feedback-cleanup"></script>
-    <script src="app.js?v=20260822-recall-neutral-start"></script>
+    <script src="app.js?v=20260822-copy-refresh"></script>
 </body>
 </html>
 
