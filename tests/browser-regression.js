@@ -151,16 +151,22 @@ async function captureScreenshot(client, name) {
 async function collectFinalZoomReport(client) {
     return evaluate(client, `({
         viewportWidth: document.documentElement.clientWidth,
+        viewportHeight: window.visualViewport?.height || window.innerHeight,
         scrollWidth: document.documentElement.scrollWidth,
-        score: elements.recallFinalScore.textContent,
-        average: elements.recallFinalAverage.textContent,
+        score: elements.finalPrimaryValue.textContent,
+        average: elements.finalStatOneValue.textContent,
         restartLabel: elements.restartButton.textContent,
         changeDifficultyVisible: !elements.resultChangeDifficulty.classList.contains('hidden'),
-        scorePanelFits: document.querySelector('.recall-final-score-panel').scrollWidth
-            <= document.querySelector('.recall-final-score-panel').clientWidth,
-        statsFit: Array.from(document.querySelectorAll('.recall-final-stat')).every((stat) => (
+        scorePanelFits: document.querySelector('.final-summary').scrollWidth
+            <= document.querySelector('.final-summary').clientWidth,
+        statsFit: Array.from(document.querySelectorAll('.final-stats > div')).every((stat) => (
             stat.scrollWidth <= stat.clientWidth
         )),
+        recapVisible: !elements.sessionRecap.classList.contains('hidden'),
+        footerHidden: elements.siteFooter.classList.contains('hidden'),
+        brandHidden: elements.brandHeader.classList.contains('hidden'),
+        shellParts: Array.from(elements.resultScreen.querySelectorAll('[data-final-part]'))
+            .map((part) => part.dataset.finalPart),
         overflowElements: Array.from(document.querySelectorAll('body *')).flatMap((element) => {
             const rect = element.getBoundingClientRect();
             if (rect.width && (rect.left < -0.5 || rect.right > document.documentElement.clientWidth + 0.5)) {
@@ -433,14 +439,47 @@ async function run() {
                 const screenRect = screen.getBoundingClientRect();
                 const mainRect = main.getBoundingClientRect();
                 const footerRect = footer.getBoundingClientRect();
+                const isDifficultyScreen = screen === elements.matchDifficultyScreen;
+                const gameInfoRect = elements.gameInfoBar.getBoundingClientRect();
+                const layoutTop = isDifficultyScreen ? Math.min(gameInfoRect.top, screenRect.top) : screenRect.top;
+                const layoutBottom = isDifficultyScreen ? Math.max(gameInfoRect.bottom, screenRect.bottom) : screenRect.bottom;
                 return {
                     screen: screen.id,
-                    screenCenter: (screenRect.top + screenRect.bottom) / 2,
+                    layoutCenter: (layoutTop + layoutBottom) / 2,
                     mainCenter: (mainRect.top + mainRect.bottom) / 2,
+                    statsGap: isDifficultyScreen ? screenRect.top - gameInfoRect.bottom : null,
                     footerTop: footerRect.top,
                     footerBottom: footerRect.bottom
                 };
             });
+            const measureScoreboard = (panel) => {
+                const barStyle = getComputedStyle(elements.gameInfoBar);
+                const panelStyle = getComputedStyle(panel);
+                const cell = panel.children[0];
+                const cellStyle = getComputedStyle(cell);
+                const separator = getComputedStyle(panel.children[1], '::before');
+                return {
+                    height: elements.gameInfoBar.getBoundingClientRect().height,
+                    barPaddingTop: barStyle.paddingTop,
+                    barPaddingBottom: barStyle.paddingBottom,
+                    gap: panelStyle.columnGap,
+                    cellPaddingTop: cellStyle.paddingTop,
+                    cellPaddingBottom: cellStyle.paddingBottom,
+                    labelFontSize: getComputedStyle(cell.children[0]).fontSize,
+                    labelLineHeight: getComputedStyle(cell.children[0]).lineHeight,
+                    valueFontSize: getComputedStyle(cell.children[1]).fontSize,
+                    valueLineHeight: getComputedStyle(cell.children[1]).lineHeight,
+                    separatorWidth: separator.width,
+                    separatorHeight: separator.height,
+                    separatorContent: separator.content
+                };
+            };
+            showScreen(elements.matchDifficultyScreen);
+            const overviewScoreboard = measureScoreboard(elements.modeBestOverview);
+            showScreen(elements.targetColorScreen);
+            const gameScoreboard = measureScoreboard(elements.gameStatsPanel);
+            showScreen(elements.matchDifficultyScreen);
+            const overviewSeparator = getComputedStyle(elements.modeBestOverview.children[1], '::before');
             showScreen(elements.landingScreen);
             const backButtonHeights = Array.from(document.querySelectorAll('.back-button'))
                 .map((button) => parseFloat(getComputedStyle(button).minHeight));
@@ -448,21 +487,43 @@ async function run() {
                 viewportHeight: window.innerHeight,
                 footerPosition: getComputedStyle(footer).position,
                 measurements,
+                scoreboards: { overviewScoreboard, gameScoreboard },
+                overviewSeparator: {
+                    width: overviewSeparator.width,
+                    height: overviewSeparator.height,
+                    content: overviewSeparator.content
+                },
                 backButtonHeights
             };
         })()`);
         const desktopFooterTops = desktopShellReport.measurements.map(({ footerTop }) => footerTop);
+        const desktopScoreboardsMatch = JSON.stringify(desktopShellReport.scoreboards.overviewScoreboard)
+            === JSON.stringify(desktopShellReport.scoreboards.gameScoreboard);
         if (desktopShellReport.footerPosition !== 'static'
             || desktopShellReport.measurements.some(({ footerBottom }) => (
                 footerBottom > desktopShellReport.viewportHeight + 1
             ))
             || Math.max(...desktopFooterTops) - Math.min(...desktopFooterTops) > 1
-            || desktopShellReport.measurements.some(({ screenCenter, mainCenter }) => (
-                Math.abs(screenCenter - mainCenter) > 1
+            || desktopShellReport.measurements.some(({ layoutCenter, mainCenter }) => (
+                Math.abs(layoutCenter - mainCenter) > 1
             ))
+            || desktopShellReport.measurements.some(({ statsGap }) => statsGap !== null && statsGap < 16)
+            || desktopShellReport.overviewSeparator.width !== '1px'
+            || desktopShellReport.overviewSeparator.height !== '20px'
+            || desktopShellReport.overviewSeparator.content === 'none'
+            || !desktopScoreboardsMatch
+            || desktopShellReport.scoreboards.gameScoreboard.height > 70
+            || desktopShellReport.scoreboards.gameScoreboard.barPaddingTop !== '4px'
+            || desktopShellReport.scoreboards.gameScoreboard.cellPaddingTop !== '4px'
             || desktopShellReport.backButtonHeights.some((height) => height !== 36)) {
             throw new Error(`Desktop shell layout failed: ${JSON.stringify(desktopShellReport)}`);
         }
+        await evaluate(client, `showScreen(elements.matchDifficultyScreen)`);
+        await captureScreenshot(client, 'difficulty-desktop.png');
+        await evaluate(client, `elements.localRecordHint.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse', bubbles: true }))`);
+        await captureScreenshot(client, 'difficulty-hint-desktop.png');
+        await evaluate(client, `elements.localRecordHint.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse', bubbles: true }))`);
+        await evaluate(client, `showScreen(elements.landingScreen)`);
         await captureScreenshot(client, 'landing-desktop.png');
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 390,
@@ -470,6 +531,42 @@ async function run() {
             deviceScaleFactor: 2,
             mobile: true
         });
+        const mobileScoreboardReport = await evaluate(client, `(() => {
+            const measureScoreboard = (panel) => {
+                const barStyle = getComputedStyle(elements.gameInfoBar);
+                const cell = panel.children[0];
+                const cellStyle = getComputedStyle(cell);
+                const separator = getComputedStyle(panel.children[1], '::before');
+                return {
+                    height: elements.gameInfoBar.getBoundingClientRect().height,
+                    barPaddingTop: barStyle.paddingTop,
+                    barPaddingBottom: barStyle.paddingBottom,
+                    gap: getComputedStyle(panel).columnGap,
+                    cellPaddingTop: cellStyle.paddingTop,
+                    cellPaddingBottom: cellStyle.paddingBottom,
+                    labelFontSize: getComputedStyle(cell.children[0]).fontSize,
+                    labelLineHeight: getComputedStyle(cell.children[0]).lineHeight,
+                    valueFontSize: getComputedStyle(cell.children[1]).fontSize,
+                    valueLineHeight: getComputedStyle(cell.children[1]).lineHeight,
+                    separatorWidth: separator.width,
+                    separatorHeight: separator.height,
+                    separatorContent: separator.content
+                };
+            };
+            showScreen(elements.matchDifficultyScreen);
+            const overviewScoreboard = measureScoreboard(elements.modeBestOverview);
+            showScreen(elements.targetColorScreen);
+            const gameScoreboard = measureScoreboard(elements.gameStatsPanel);
+            showScreen(elements.landingScreen);
+            return { overviewScoreboard, gameScoreboard };
+        })()`);
+        const mobileScoreboardsMatch = JSON.stringify(mobileScoreboardReport.overviewScoreboard)
+            === JSON.stringify(mobileScoreboardReport.gameScoreboard);
+        if (!mobileScoreboardsMatch
+            || mobileScoreboardReport.gameScoreboard.height > 60
+            || mobileScoreboardReport.gameScoreboard.barPaddingTop !== '4px') {
+            throw new Error(`Mobile scoreboard consistency failed: ${JSON.stringify(mobileScoreboardReport)}`);
+        }
         const homepageMobileReport = await evaluate(client, `(() => {
             const primary = elements.enterGameButton.getBoundingClientRect();
             const paletteEntry = elements.colorHistoryEntry.getBoundingClientRect();
@@ -520,6 +617,11 @@ async function run() {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
+        await evaluate(client, `showScreen(elements.matchDifficultyScreen)`);
+        await captureScreenshot(client, 'difficulty-mobile.png');
+        await evaluate(client, `elements.localRecordHint.click()`);
+        await captureScreenshot(client, 'difficulty-hint-mobile.png');
+        await evaluate(client, `showScreen(elements.landingScreen)`);
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 360,
             height: 800,
@@ -1183,17 +1285,24 @@ async function run() {
                 { r: 118, g: 59, b: 135 },
                 { r: 189, g: 97, b: 193 }
             );
+            const grayFeedback = getRecallDifferenceFeedback(grayAttempt);
+            const sameHueFeedback = getRecallDifferenceFeedback(sameHueAttempt);
             return {
                 grayScore: Math.round(scoreFromPerceptualDistance(grayAttempt.distance) * 100) / 100,
                 sameHueScore: Math.round(scoreFromPerceptualDistance(sameHueAttempt.distance) * 100) / 100,
-                grayFeedback: getRecallDifferenceFeedback(grayAttempt),
-                sameHueFeedback: getRecallDifferenceFeedback(sameHueAttempt)
+                grayFeedback,
+                sameHueFeedback,
+                playerFacingTerminology: !/(?:Oklab|OKLab|ΔOK|RGB|Lab|色差|彩度)/.test(
+                    grayFeedback + sameHueFeedback
+                )
             };
         })()`);
         if (recallSemanticReport.grayScore !== 6.74
             || recallSemanticReport.sameHueScore !== 6.83
             || recallSemanticReport.sameHueScore <= recallSemanticReport.grayScore
-            || recallSemanticReport.grayFeedback !== '明度接近，但饱和度明显偏低，颜色接近灰色'
+            || recallSemanticReport.grayFeedback !== '明度接近，但饱和度明显偏低'
+            || recallSemanticReport.grayFeedback.includes('灰色')
+            || !recallSemanticReport.playerFacingTerminology
             || recallSemanticReport.sameHueFeedback !== '色相很接近，但明度明显偏亮') {
             throw new Error(`Recall semantic scoring failed: ${JSON.stringify(recallSemanticReport)}`);
         }
@@ -1202,13 +1311,72 @@ async function run() {
         await waitFor(client, `!document.querySelector('#mode-selection-screen').classList.contains('hidden')`);
         await evaluate(client, `document.querySelector('#color-match-mode').click()`);
         await waitFor(client, `!document.querySelector('#match-difficulty-screen').classList.contains('hidden')`);
-        const localRecordDisclosureReport = await evaluate(client, `({
-            bestOverviewVisible: !elements.modeBestOverview.classList.contains('hidden'),
-            noteVisible: !elements.localRecordNote.classList.contains('hidden'),
-            note: elements.localRecordNote.textContent
-        })`);
+        const localRecordDisclosureReport = await evaluate(client, `(() => {
+            const triggerRect = elements.localRecordHint.getBoundingClientRect();
+            const initial = {
+                triggerVisible: !elements.localRecordHint.classList.contains('hidden'),
+                noteAvailable: !elements.localRecordNote.classList.contains('hidden'),
+                noteVisibility: getComputedStyle(elements.localRecordNote).visibility,
+                expanded: elements.localRecordHint.getAttribute('aria-expanded'),
+                label: elements.localRecordHint.getAttribute('aria-label'),
+                controls: elements.localRecordHint.getAttribute('aria-controls'),
+                role: elements.localRecordNote.getAttribute('role'),
+                icon: elements.localRecordHint.querySelector('use').getAttribute('href'),
+                triggerWidth: triggerRect.width,
+                triggerHeight: triggerRect.height
+            };
+            elements.localRecordHint.dispatchEvent(new PointerEvent('pointerenter', {
+                pointerType: 'mouse',
+                bubbles: true
+            }));
+            const hover = {
+                visible: elements.localRecordNote.classList.contains('is-visible'),
+                visibility: getComputedStyle(elements.localRecordNote).visibility,
+                expanded: elements.localRecordHint.getAttribute('aria-expanded')
+            };
+            elements.localRecordHint.dispatchEvent(new PointerEvent('pointerleave', {
+                pointerType: 'mouse',
+                bubbles: true
+            }));
+            const closedAfterLeave = !elements.localRecordNote.classList.contains('is-visible');
+            elements.localRecordHint.click();
+            const openedByClick = elements.localRecordNote.classList.contains('is-visible')
+                && elements.localRecordHint.getAttribute('aria-expanded') === 'true';
+            elements.localRecordHint.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Escape',
+                bubbles: true,
+                cancelable: true
+            }));
+            return {
+                bestOverviewVisible: !elements.modeBestOverview.classList.contains('hidden'),
+                note: elements.localRecordNote.textContent,
+                duration: LOCAL_RECORD_HINT_DURATION_MS,
+                initial,
+                hover,
+                closedAfterLeave,
+                openedByClick,
+                closedByEscape: !elements.localRecordNote.classList.contains('is-visible')
+                    && elements.localRecordHint.getAttribute('aria-expanded') === 'false'
+            };
+        })()`);
         if (!localRecordDisclosureReport.bestOverviewVisible
-            || !localRecordDisclosureReport.noteVisible
+            || !localRecordDisclosureReport.initial.triggerVisible
+            || !localRecordDisclosureReport.initial.noteAvailable
+            || localRecordDisclosureReport.initial.noteVisibility !== 'hidden'
+            || localRecordDisclosureReport.initial.expanded !== 'false'
+            || localRecordDisclosureReport.initial.label !== '查看本机成绩保存说明'
+            || localRecordDisclosureReport.initial.controls !== 'local-record-note'
+            || localRecordDisclosureReport.initial.role !== 'tooltip'
+            || localRecordDisclosureReport.initial.icon !== '#icon-info'
+            || localRecordDisclosureReport.initial.triggerWidth < 40
+            || localRecordDisclosureReport.initial.triggerHeight < 40
+            || !localRecordDisclosureReport.hover.visible
+            || localRecordDisclosureReport.hover.visibility !== 'visible'
+            || localRecordDisclosureReport.hover.expanded !== 'true'
+            || !localRecordDisclosureReport.closedAfterLeave
+            || !localRecordDisclosureReport.openedByClick
+            || !localRecordDisclosureReport.closedByEscape
+            || localRecordDisclosureReport.duration !== 5000
             || localRecordDisclosureReport.note !== '成绩仅保存在当前设备的本地缓存；清理缓存或更换设备后会重置。') {
             throw new Error(`Local record disclosure failed: ${JSON.stringify(localRecordDisclosureReport)}`);
         }
@@ -1217,11 +1385,15 @@ async function run() {
         const matchPreparationReport = await evaluate(client, `({
             gameInfoHidden: elements.gameInfoBar.classList.contains('hidden'),
             startVisible: !elements.startScreen.classList.contains('hidden'),
+            hintHidden: elements.localRecordHint.classList.contains('hidden'),
+            hintExpanded: elements.localRecordHint.getAttribute('aria-expanded'),
             mode: elements.preparationMode.textContent,
             difficulty: elements.preparationDifficulty.textContent
         })`);
         if (!matchPreparationReport.gameInfoHidden
             || !matchPreparationReport.startVisible
+            || !matchPreparationReport.hintHidden
+            || matchPreparationReport.hintExpanded !== 'false'
             || matchPreparationReport.mode !== '颜色匹配'
             || matchPreparationReport.difficulty !== '基础 · 3×3 色池') {
             throw new Error(`Match preparation stats visibility failed: ${JSON.stringify(matchPreparationReport)}`);
@@ -1367,6 +1539,7 @@ async function run() {
                 scrollWidth: document.documentElement.scrollWidth,
                 gridStillVisible: !elements.colorGridScreen.classList.contains('hidden'),
                 resultScreenHidden: elements.resultScreen.classList.contains('hidden'),
+                footerHidden: elements.siteFooter.classList.contains('hidden'),
                 resultTitle: elements.matchRoundMessage.textContent,
                 resultIcon: elements.matchRoundIconUse.getAttribute('href'),
                 levelBeforeContinue: gameState.level,
@@ -1393,6 +1566,7 @@ async function run() {
             || matchMobileSuccessReport.scrollWidth !== matchMobileSuccessReport.viewportWidth
             || !matchMobileSuccessReport.gridStillVisible
             || !matchMobileSuccessReport.resultScreenHidden
+            || !matchMobileSuccessReport.footerHidden
             || matchMobileSuccessReport.resultTitle !== '完美匹配！'
             || matchMobileSuccessReport.resultIcon !== '#icon-check-circle'
             || matchMobileSuccessReport.levelBeforeContinue !== 2
@@ -1448,6 +1622,7 @@ async function run() {
             const targetHex = rgbToHex(gameState.currentTargetColor);
             const cards = [...document.querySelectorAll('.color-card')];
             const selected = cards.find((card) => rgbToHex(card.style.backgroundColor) !== targetHex);
+            const selectedHex = rgbToHex(selected.style.backgroundColor);
             const originalRandom = Math.random;
             Math.random = () => 0;
             selected.click();
@@ -1463,13 +1638,47 @@ async function run() {
                 wrongMarkers: cards.filter((card) => card.classList.contains('is-match-selected-wrong')).length
             };
             elements.matchContinueButton.click();
+            const recapTiles = [...document.querySelectorAll('.session-recap-face [data-recap-index]')];
+            const lastRecapTile = recapTiles[recapTiles.length - 1];
             return {
                 inlineFeedback,
                 gridHidden: elements.colorGridScreen.classList.contains('hidden'),
                 resultVisible: !elements.resultScreen.classList.contains('hidden'),
                 title: elements.resultText.textContent,
-                continueHidden: elements.continueButton.classList.contains('hidden'),
-                restartVisible: !elements.restartButton.classList.contains('hidden')
+                restartVisible: !elements.restartButton.classList.contains('hidden'),
+                primaryLabel: elements.finalPrimaryLabel.textContent,
+                primaryValue: elements.finalPrimaryValue.textContent,
+                correctAnswers: gameState.correctAnswers,
+                totalAnswers: gameState.totalAnswers,
+                statOne: elements.finalStatOneValue.textContent,
+                statThreeLabel: elements.finalStatThreeLabel.textContent,
+                statThree: elements.finalStatThreeValue.textContent,
+                lastRecap: {
+                    targetHex: lastRecapTile.dataset.targetHex,
+                    answerHex: lastRecapTile.dataset.answerHex,
+                    outcome: lastRecapTile.dataset.outcome
+                },
+                expectedTargetHex: targetHex,
+                expectedAnswerHex: selectedHex,
+                recapVisible: !elements.sessionRecap.classList.contains('hidden'),
+                recapMode: elements.sessionRecap.dataset.mode,
+                recapToggleLabels: [elements.recapShowTarget.textContent, elements.recapShowAnswer.textContent],
+                recapRounds: document.querySelectorAll('.session-recap-face [data-recap-index]').length,
+                footerHidden: elements.siteFooter.classList.contains('hidden'),
+                brandHidden: elements.brandHeader.classList.contains('hidden'),
+                statsHidden: elements.gameInfoBar.classList.contains('hidden'),
+                bodyImmersive: document.body.classList.contains('is-immersive-screen'),
+                shellMode: elements.resultScreen.dataset.finalShell,
+                shellParts: Array.from(elements.resultScreen.querySelectorAll('[data-final-part]'))
+                    .map((part) => part.dataset.finalPart),
+                legacyNodesAbsent: [
+                    'continue-button',
+                    'result-target-color',
+                    'result-selected-color',
+                    'target-color-code',
+                    'selected-color-code',
+                    'recall-final-summary'
+                ].every((id) => !document.getElementById(id))
             };
         })()`);
         if (!matchFinalSummaryReport.inlineFeedback.gridVisible
@@ -1482,11 +1691,34 @@ async function run() {
             || matchFinalSummaryReport.inlineFeedback.wrongMarkers !== 1
             || !matchFinalSummaryReport.gridHidden
             || !matchFinalSummaryReport.resultVisible
-            || matchFinalSummaryReport.title !== '基础颜色匹配完成！'
-            || !matchFinalSummaryReport.continueHidden
-            || !matchFinalSummaryReport.restartVisible) {
+            || matchFinalSummaryReport.title !== '基础 · 颜色匹配'
+            || !matchFinalSummaryReport.restartVisible
+            || matchFinalSummaryReport.primaryLabel !== '正确率'
+            || matchFinalSummaryReport.primaryValue !== String(Math.round(
+                (matchFinalSummaryReport.correctAnswers / matchFinalSummaryReport.totalAnswers) * 100
+            ))
+            || matchFinalSummaryReport.statOne !== `${matchFinalSummaryReport.correctAnswers} / ${matchFinalSummaryReport.totalAnswers}`
+            || matchFinalSummaryReport.statThreeLabel !== '完成'
+            || matchFinalSummaryReport.statThree !== String(matchFinalSummaryReport.totalAnswers)
+            || matchFinalSummaryReport.lastRecap.targetHex !== matchFinalSummaryReport.expectedTargetHex
+            || matchFinalSummaryReport.lastRecap.answerHex !== matchFinalSummaryReport.expectedAnswerHex
+            || matchFinalSummaryReport.lastRecap.outcome !== '未命中'
+            || !matchFinalSummaryReport.recapVisible
+            || matchFinalSummaryReport.recapMode !== 'match'
+            || JSON.stringify(matchFinalSummaryReport.recapToggleLabels) !== JSON.stringify(['目标颜色', '选择颜色'])
+            || matchFinalSummaryReport.recapRounds < 1
+            || !matchFinalSummaryReport.footerHidden
+            || !matchFinalSummaryReport.brandHidden
+            || !matchFinalSummaryReport.statsHidden
+            || !matchFinalSummaryReport.bodyImmersive
+            || matchFinalSummaryReport.shellMode !== 'shared'
+            || JSON.stringify(matchFinalSummaryReport.shellParts) !== JSON.stringify([
+                'header', 'summary', 'recap', 'actions'
+            ])
+            || !matchFinalSummaryReport.legacyNodesAbsent) {
             throw new Error(`Match final summary failed: ${JSON.stringify(matchFinalSummaryReport)}`);
         }
+        await captureScreenshot(client, 'match-final-desktop.png');
 
         const masterFinalSummaryReport = await evaluate(client, `(() => {
             gameState.matchDifficulty = 'master';
@@ -1515,11 +1747,21 @@ async function run() {
                 completesGame: gameState.matchRoundCompletesGame
             };
             elements.matchContinueButton.click();
+            const recapTiles = [...document.querySelectorAll('.session-recap-face [data-recap-index]')];
+            const lastRecapTile = recapTiles[recapTiles.length - 1];
             return {
                 inlineFeedback,
                 resultVisible: !elements.resultScreen.classList.contains('hidden'),
                 title: elements.resultText.textContent,
-                restartVisible: !elements.restartButton.classList.contains('hidden')
+                restartVisible: !elements.restartButton.classList.contains('hidden'),
+                primaryLabel: elements.finalPrimaryLabel.textContent,
+                primaryValue: elements.finalPrimaryValue.textContent,
+                score: gameState.score,
+                statOne: elements.finalStatOneValue.textContent,
+                level: gameState.level,
+                statThree: elements.finalStatThreeValue.textContent,
+                totalAnswers: gameState.totalAnswers,
+                recapOutcome: lastRecapTile.dataset.outcome
             };
         })()`);
         if (masterFinalSummaryReport.inlineFeedback.lives !== 0
@@ -1529,9 +1771,47 @@ async function run() {
             || masterFinalSummaryReport.inlineFeedback.continueLabel !== '查看结果'
             || !masterFinalSummaryReport.inlineFeedback.completesGame
             || !masterFinalSummaryReport.resultVisible
-            || masterFinalSummaryReport.title !== '大师颜色匹配结束！'
-            || !masterFinalSummaryReport.restartVisible) {
+            || masterFinalSummaryReport.title !== '大师 · 颜色匹配'
+            || !masterFinalSummaryReport.restartVisible
+            || masterFinalSummaryReport.primaryLabel !== '得分'
+            || masterFinalSummaryReport.primaryValue !== String(masterFinalSummaryReport.score)
+            || masterFinalSummaryReport.statOne !== String(masterFinalSummaryReport.level)
+            || masterFinalSummaryReport.statThree !== String(masterFinalSummaryReport.totalAnswers)
+            || masterFinalSummaryReport.recapOutcome !== '未命中') {
             throw new Error(`Master final summary failed: ${JSON.stringify(masterFinalSummaryReport)}`);
+        }
+
+        const matchFinalActionReport = await evaluate(client, `(() => {
+            elements.resultChangeDifficulty.click();
+            const difficultyVisible = !elements.matchDifficultyScreen.classList.contains('hidden');
+            const recapResetForDifficulty = elements.sessionRecap.classList.contains('hidden')
+                && gameState.sessionRounds.length > 0;
+
+            gameState.gameMode = 'colorMatch';
+            gameState.matchDifficulty = 'basic';
+            gameState.score = 5;
+            gameState.correctAnswers = 5;
+            gameState.totalAnswers = 10;
+            showGameEnd();
+            elements.restartButton.click();
+            stopActiveCountdown();
+            return {
+                difficultyVisible,
+                recapResetForDifficulty,
+                restarted: gameState.isGameActive
+                    && gameState.level === 1
+                    && gameState.score === 0
+                    && gameState.correctAnswers === 0
+                    && gameState.totalAnswers === 0
+                    && gameState.sessionRounds.length === 0
+                    && !elements.targetColorScreen.classList.contains('hidden')
+                    && elements.resultScreen.classList.contains('hidden')
+            };
+        })()`);
+        if (!matchFinalActionReport.difficultyVisible
+            || !matchFinalActionReport.recapResetForDifficulty
+            || !matchFinalActionReport.restarted) {
+            throw new Error(`Match final actions failed: ${JSON.stringify(matchFinalActionReport)}`);
         }
 
         await navigate(client, appUrl);
@@ -1561,7 +1841,6 @@ async function run() {
         await waitFor(client, `document.activeElement.id === 'recall-control-title'`);
         const recallStatsReport = await evaluate(client, `({
             gameInfoVisible: !elements.gameInfoBar.classList.contains('hidden'),
-            compactRecallStats: elements.gameInfoBar.classList.contains('recall-stats'),
             levelLabel: elements.levelLabel.textContent,
             level: elements.levelDisplay.textContent,
             scoreLabel: elements.scoreLabel.textContent,
@@ -1569,12 +1848,14 @@ async function run() {
             bestLabel: elements.bestScoreLabel.textContent,
             best: elements.bestScoreDisplay.textContent,
             duplicateProgressRemoved: !document.querySelector('#recall-control-progress'),
-            statsParent: elements.gameInfoBar.parentElement.id,
+            statsAnchored: elements.gameInfoAnchor.nextElementSibling === elements.gameInfoBar,
+            footerHidden: elements.siteFooter.classList.contains('hidden'),
+            brandHidden: elements.brandHeader.classList.contains('hidden'),
+            bodyImmersive: document.body.classList.contains('is-immersive-screen'),
             joinedGap: elements.recallControlSection.getBoundingClientRect().top
                 - elements.gameInfoBar.getBoundingClientRect().bottom
         })`);
         if (!recallStatsReport.gameInfoVisible
-            || !recallStatsReport.compactRecallStats
             || recallStatsReport.levelLabel !== '当前轮次'
             || recallStatsReport.level !== '1'
             || recallStatsReport.scoreLabel !== '累计得分'
@@ -1582,8 +1863,11 @@ async function run() {
             || recallStatsReport.bestLabel !== '进阶最佳'
             || recallStatsReport.best !== '0.00'
             || !recallStatsReport.duplicateProgressRemoved
-            || recallStatsReport.statsParent !== 'color-recall-screen'
-            || Math.abs(recallStatsReport.joinedGap) > 1) {
+            || !recallStatsReport.statsAnchored
+            || !recallStatsReport.footerHidden
+            || !recallStatsReport.brandHidden
+            || recallStatsReport.joinedGap < 0
+            || recallStatsReport.joinedGap > 24) {
             throw new Error(`Recall stats bar failed: ${JSON.stringify(recallStatsReport)}`);
         }
         await captureScreenshot(client, 'recall-control-desktop.png');
@@ -1608,20 +1892,26 @@ async function run() {
         await waitFor(client, `!document.querySelector('#recall-result-section').classList.contains('hidden')`);
         await waitFor(client, `document.activeElement.id === 'recall-result-title'`);
 
-        const recallReport = await evaluate(client, `({
-            score: gameState.recallLastRoundScore,
-            totalCenti: gameState.recallTotalScoreCenti,
-            distance: gameState.recallLastRoundDistance,
-            displayedScore: document.querySelector('#recall-round-score').textContent,
-            feedback: document.querySelector('#recall-round-feedback').textContent,
-            guidance: elements.recallRoundGuidance.textContent,
-            baseDistance: gameState.recallLastRoundBaseDistance,
-            neutralPenalty: gameState.recallLastRoundNeutralPenalty,
-            focused: document.activeElement.id,
-            topStatsVisible: !elements.gameInfoBar.classList.contains('hidden'),
-            topRound: elements.levelDisplay.textContent,
-            topScore: elements.scoreDisplay.textContent
-        })`);
+        const recallReport = await evaluate(client, `(() => {
+            const details = calculateRecallDistanceDetails(
+                gameState.recallTargetRGB,
+                gameState.recallUserRGB
+            );
+            return {
+                score: Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100,
+                totalCenti: gameState.recallTotalScoreCenti,
+                distance: details.distance,
+                displayedScore: document.querySelector('#recall-round-score').textContent,
+                feedback: document.querySelector('#recall-round-feedback').textContent,
+                guidance: elements.recallRoundGuidance.textContent,
+                baseDistance: details.baseDistance,
+                neutralPenalty: details.neutralPenalty,
+                focused: document.activeElement.id,
+                topStatsVisible: !elements.gameInfoBar.classList.contains('hidden'),
+                topRound: elements.levelDisplay.textContent,
+                topScore: elements.scoreDisplay.textContent
+            };
+        })()`);
         if (recallReport.score !== 10
             || recallReport.totalCenti !== 1000
             || recallReport.distance !== 0
@@ -1640,316 +1930,32 @@ async function run() {
         }
         await captureScreenshot(client, 'recall-result-desktop.png');
 
-        await evaluate(client, `document.querySelector('#score-info-button').click()`);
-        await waitFor(client, `!document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-        const dialogReport = await evaluate(client, `({
-            title: document.querySelector('#score-info-title').textContent,
-            score: document.querySelector('#score-info-score').textContent,
-            distance: document.querySelector('#score-info-distance').textContent,
-            description: document.querySelector('#score-info-description').textContent,
-            adjustment: document.querySelector('#score-info-adjustment').textContent,
-            baseDistance: document.querySelector('#score-info-base-distance').textContent,
-            oklabExplanation: document.querySelector('.score-calculation li:first-child p').textContent,
-            squareFormula: document.querySelector('#score-info-square-formula').textContent,
-            rawFormula: document.querySelector('#score-info-raw-formula').textContent,
-            scaleNote: document.querySelector('.score-scale-note').textContent,
-            baseFormula: document.querySelector('#score-info-base-formula').textContent,
-            neutralStart: document.querySelector('#score-info-neutral-start').textContent,
-            neutralFormula: document.querySelector('#score-info-neutral-formula').textContent,
-            neutralSmooth: document.querySelector('#score-info-neutral-smooth').textContent,
-            adjustmentFormula: document.querySelector('#score-info-adjustment-formula').textContent,
-            targetCode: document.querySelector('#score-info-target-code').textContent,
-            userCode: document.querySelector('#score-info-user-code').textContent,
-            guidance: document.querySelector('#score-info-guidance').textContent,
-            totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
-            roundingNote: document.querySelector('.score-rounding-note').textContent,
-            range: document.querySelector('#score-info-range').textContent,
-            interpolation: document.querySelector('#score-info-interpolation').textContent,
-            processSteps: document.querySelectorAll('.score-calculation li').length,
-            grayStepTitle: document.querySelector('.score-calculation li:nth-child(2) strong').textContent,
-            mappingAnchorCount: new Set(Array.from(
-                document.querySelectorAll('#score-info-mapping-body [data-score-anchor]'),
-                (cell) => cell.dataset.scoreAnchor
-            )).size,
-            mappingRows: document.querySelectorAll('#score-info-mapping-body tr').length,
-            activeMappingAnchors: Array.from(new Set(Array.from(
-                document.querySelectorAll('#score-info-mapping-body .is-active'),
-                (cell) => Number(cell.dataset.scoreAnchor)
-            ))),
-            genericCardsRemoved: !document.querySelector('.score-info-current')
-                && !document.querySelector('.score-info-formula')
-                && !document.querySelector('.score-anchor-section')
-                && !document.querySelector('.score-anchor-grid'),
-            singleCloseControl: document.querySelectorAll('.score-info-panel button').length === 1
-                && !document.querySelector('#score-info-confirm'),
-            helpHitWidth: elements.scoreInfoButton.getBoundingClientRect().width,
-            helpVisualWidth: parseFloat(getComputedStyle(elements.scoreInfoButton, '::before').width),
-            focused: document.activeElement.id,
-            role: document.querySelector('#score-info-dialog').getAttribute('role'),
-            modal: document.querySelector('#score-info-dialog').getAttribute('aria-modal'),
-            hidden: document.querySelector('#score-info-dialog').getAttribute('aria-hidden')
-        })`);
-        if (dialogReport.title !== '为什么是 10.00 分'
-            || dialogReport.score !== '10.00 / 10'
-            || dialogReport.distance !== '0.00'
-            || dialogReport.description !== '先计算两种颜色的 Oklab 感知色差，再按游戏映射换成 10 分制。最终差异越小，分数越高。'
-            || dialogReport.description.includes('彩度')
-            || !dialogReport.adjustment.includes('本轮各项相乘后，修正值为 0.00')
-            || dialogReport.baseDistance !== '0.00'
-            || !dialogReport.oklabExplanation.includes('RGB 各分量的数值差不能直接代表人眼看到的色差')
-            || !dialogReport.oklabExplanation.includes('L 表示明度，a、b 表示两个颜色轴')
-            || dialogReport.squareFormula !== '三项平方和 = (0.0000)² + (0.0000)² + (0.0000)² ≈ 0.00000'
-            || dialogReport.rawFormula !== '原始 ΔOK = √(0.00000) ≈ 0.0000'
-            || !dialogReport.scaleNote.includes('完整距离整体乘以 100')
-            || !dialogReport.scaleNote.includes('不是分别放大 L、a、b')
-            || dialogReport.baseFormula !== '游戏展示差异 = 0.0000 × 100 ≈ 0.00'
-            || dialogReport.neutralStart.includes('clamp')
-            || dialogReport.neutralStart.includes('min(')
-            || dialogReport.neutralStart.includes('max(')
-            || dialogReport.neutralFormula.includes('clamp')
-            || !dialogReport.neutralFormula.includes('目标显色')
-            || !dialogReport.neutralSmooth.includes('复现灰色')
-            || !dialogReport.adjustmentFormula.endsWith('≈ 0.00')
-            || dialogReport.targetCode !== dialogReport.userCode
-            || dialogReport.guidance !== '色相、饱和度和明度都很接近'
-            || dialogReport.totalFormula !== '0.00 + 0.00 ≈ 0.00'
-            || dialogReport.roundingNote !== '界面数值保留两位小数，评分使用未四舍五入的完整数值。'
-            || dialogReport.range !== '最终差异是 0，表示两种颜色一致。'
-            || dialogReport.interpolation !== '映射点：差异 0 → 10.00 分。'
-            || dialogReport.processSteps !== 3
-            || dialogReport.grayStepTitle !== '防止明显颜色被做成灰色'
-            || dialogReport.mappingAnchorCount !== 8
-            || dialogReport.mappingRows !== 4
-            || JSON.stringify(dialogReport.activeMappingAnchors) !== '[0]'
-            || !dialogReport.genericCardsRemoved
-            || !dialogReport.singleCloseControl
-            || dialogReport.helpHitWidth !== 44
-            || dialogReport.helpVisualWidth !== 28
-            || dialogReport.focused !== 'score-info-title'
-            || dialogReport.role !== 'dialog'
-            || dialogReport.modal !== 'true'
-            || dialogReport.hidden !== 'false') {
-            throw new Error(`Score dialog regression failed: ${JSON.stringify(dialogReport)}`);
-        }
-        await captureScreenshot(client, 'score-dialog-desktop.png');
-        await client.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Tab', code: 'Tab' });
-        await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab' });
-        await waitFor(client, `document.activeElement.id === 'score-info-close'`);
-        await client.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Tab', code: 'Tab' });
-        await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab' });
-        await waitFor(client, `document.activeElement.id === 'score-info-close'`);
-        await evaluate(client, `document.querySelector('#score-info-close').click()`);
-        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-        await waitFor(client, `document.activeElement.id === 'score-info-button'`);
-        const closeFocus = await evaluate(client, `document.activeElement.id`);
-        if (closeFocus !== 'score-info-button') {
-            throw new Error(`Dialog focus returned to ${closeFocus}, expected score-info-button.`);
-        }
-
-        await evaluate(client, `document.querySelector('#score-info-button').click()`);
-        await waitFor(client, `!document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-        await client.send('Input.dispatchKeyEvent', {
-            type: 'rawKeyDown',
-            key: 'Escape',
-            code: 'Escape',
-            windowsVirtualKeyCode: 27,
-            nativeVirtualKeyCode: 27
-        });
-        await client.send('Input.dispatchKeyEvent', {
-            type: 'keyUp',
-            key: 'Escape',
-            code: 'Escape',
-            windowsVirtualKeyCode: 27,
-            nativeVirtualKeyCode: 27
-        });
-        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-        await waitFor(client, `document.activeElement.id === 'score-info-button'`);
-        const escapeFocus = await evaluate(client, `document.activeElement.id`);
-        if (escapeFocus !== 'score-info-button') {
-            throw new Error(`Escape returned focus to ${escapeFocus}, expected score-info-button.`);
-        }
-
-        await evaluate(client, `
-            document.querySelector('#score-info-button').click();
-            document.querySelector('#score-info-dialog').click();
-        `);
-        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-
-        const referenceDialogReport = await evaluate(client, `(() => {
-            const target = { r: 154, g: 65, b: 92 };
-            const user = { r: 185, g: 128, b: 191 };
-            const details = calculateRecallDistanceDetails(target, user);
-            gameState.recallTargetRGB = target;
-            gameState.recallUserRGB = user;
-            gameState.recallLastRoundDistance = details.distance;
-            gameState.recallLastRoundBaseDistance = details.baseDistance;
-            gameState.recallLastRoundNeutralPenalty = details.neutralPenalty;
-            gameState.recallLastRoundScore = Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100;
-            openScoreInfoDialog();
+        const scoreExplanationRemovalReport = await evaluate(client, `(() => {
+            const removedPrefix = ['score', 'info'].join('-');
+            const result = document.querySelector('#recall-result-section').getBoundingClientRect();
+            const feedback = document.querySelector('#recall-round-feedback');
+            const feedbackRect = feedback.getBoundingClientRect();
             return {
-                title: elements.scoreInfoTitle.textContent,
-                squareFormula: elements.scoreInfoSquareFormula.textContent,
-                rawFormula: elements.scoreInfoRawFormula.textContent,
-                baseFormula: elements.scoreInfoBaseFormula.textContent,
-                adjustment: elements.scoreInfoAdjustment.textContent,
-                range: elements.scoreInfoRange.textContent,
-                interpolation: elements.scoreInfoInterpolation.textContent,
-                activeMappingAnchors: Array.from(new Set(Array.from(
-                    elements.scoreInfoMappingBody.querySelectorAll('.is-active'),
-                    (cell) => Number(cell.dataset.scoreAnchor)
-                )))
+                buttonAbsent: !document.querySelector('#' + removedPrefix + '-button'),
+                dialogAbsent: !document.querySelector('#' + removedPrefix + '-dialog'),
+                prefixedIdsAbsent: document.querySelectorAll('[id^="' + removedPrefix + '-"]').length === 0,
+                panelAbsent: !document.querySelector('.' + removedPrefix + '-panel'),
+                centerDelta: Math.abs(
+                    (feedbackRect.left + feedbackRect.right) / 2 - (result.left + result.right) / 2
+                ),
+                textAlign: getComputedStyle(feedback).textAlign
             };
         })()`);
-        if (referenceDialogReport.title !== '为什么是 6.58 分'
-            || referenceDialogReport.squareFormula !== '三项平方和 = (0.1778)² + (-0.0330)² + (-0.0733)² ≈ 0.03809'
-            || referenceDialogReport.rawFormula !== '原始 ΔOK = √(0.03809) ≈ 0.1952'
-            || referenceDialogReport.baseFormula !== '游戏展示差异 = 0.1952 × 100 ≈ 19.52'
-            || !referenceDialogReport.adjustment.includes('本轮各项相乘后，修正值为 0.00')
-            || !referenceDialogReport.range.includes('10 和 20 之间')
-            || referenceDialogReport.interpolation !== '本轮得分 = 8.2 + (6.5 − 8.2) × (19.52 − 10) ÷ (20 − 10) ≈ 6.58'
-            || JSON.stringify(referenceDialogReport.activeMappingAnchors) !== '[10,20]') {
-            throw new Error(`Score reference dialog failed: ${JSON.stringify(referenceDialogReport)}`);
+        if (!scoreExplanationRemovalReport.buttonAbsent
+            || !scoreExplanationRemovalReport.dialogAbsent
+            || !scoreExplanationRemovalReport.prefixedIdsAbsent
+            || !scoreExplanationRemovalReport.panelAbsent
+            || scoreExplanationRemovalReport.centerDelta > 1
+            || scoreExplanationRemovalReport.textAlign !== 'center') {
+            throw new Error(
+                `Score explanation removal failed: ${JSON.stringify(scoreExplanationRemovalReport)}`
+            );
         }
-        await captureScreenshot(client, 'score-dialog-wording-reference-desktop.png');
-        await evaluate(client, `closeScoreInfoDialog()`);
-        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-
-        const grayCorrectionDialogReport = await evaluate(client, `(() => {
-            const target = { r: 62, g: 124, b: 127 };
-            const user = { r: 128, g: 128, b: 128 };
-            const details = calculateRecallDistanceDetails(target, user);
-            gameState.recallTargetRGB = target;
-            gameState.recallUserRGB = user;
-            gameState.recallLastRoundDistance = details.distance;
-            gameState.recallLastRoundBaseDistance = details.baseDistance;
-            gameState.recallLastRoundNeutralPenalty = details.neutralPenalty;
-            gameState.recallLastRoundScore = Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100;
-            openScoreInfoDialog();
-            return {
-                title: elements.scoreInfoTitle.textContent,
-                squareFormula: elements.scoreInfoSquareFormula.textContent,
-                rawFormula: elements.scoreInfoRawFormula.textContent,
-                baseFormula: elements.scoreInfoBaseFormula.textContent,
-                adjustment: elements.scoreInfoAdjustment.textContent,
-                neutralStart: elements.scoreInfoNeutralStart.textContent,
-                neutralFormula: elements.scoreInfoNeutralFormula.textContent,
-                neutralSmooth: elements.scoreInfoNeutralSmooth.textContent,
-                adjustmentFormula: elements.scoreInfoAdjustmentFormula.textContent,
-                totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
-                interpolation: elements.scoreInfoInterpolation.textContent,
-                activeMappingAnchors: Array.from(new Set(Array.from(
-                    elements.scoreInfoMappingBody.querySelectorAll('.is-active'),
-                    (cell) => Number(cell.dataset.scoreAnchor)
-                )))
-            };
-        })()`);
-        if (grayCorrectionDialogReport.title !== '为什么是 6.74 分'
-            || !grayCorrectionDialogReport.squareFormula.endsWith('≈ 0.00696')
-            || grayCorrectionDialogReport.rawFormula !== '原始 ΔOK = √(0.00696) ≈ 0.0835'
-            || !grayCorrectionDialogReport.baseFormula.endsWith('≈ 8.35')
-            || !grayCorrectionDialogReport.adjustment.includes('不是直接扣掉 10.26 分')
-            || grayCorrectionDialogReport.neutralStart !== '色彩强度：目标 C = 0.0641，复现 C = 0.0000；两者相减，低于 0 时按 0 计算，丢失量 = 0.0641'
-            || grayCorrectionDialogReport.neutralFormula !== '目标 C 已达到 0.06，因此目标显色系数 q = 1.000'
-            || grayCorrectionDialogReport.neutralSmooth !== '复现灰色程度 r = 1 − 0.0000 ÷ 0.04 ≈ 1.000；平滑后 n = 1.000'
-            || !grayCorrectionDialogReport.adjustmentFormula.endsWith('≈ 10.26')
-            || grayCorrectionDialogReport.totalFormula !== '8.35 + 10.26 ≈ 18.60'
-            || !grayCorrectionDialogReport.interpolation.endsWith('≈ 6.74')
-            || JSON.stringify(grayCorrectionDialogReport.activeMappingAnchors) !== '[10,20]') {
-            throw new Error(`Gray correction dialog failed: ${JSON.stringify(grayCorrectionDialogReport)}`);
-        }
-        await captureScreenshot(client, 'score-dialog-gray-correction-desktop.png');
-        await client.send('Emulation.setDeviceMetricsOverride', {
-            width: 320,
-            height: 667,
-            deviceScaleFactor: 2,
-            mobile: true
-        });
-        await evaluate(client, `document.documentElement.style.fontSize = '200%'`);
-        await delay(100);
-        const scoreDialogZoomReport = await evaluate(client, `(() => {
-            const panel = document.querySelector('.score-info-panel');
-            const close = elements.scoreInfoClose;
-            const tableWrap = document.querySelector('.score-mapping-table-wrap');
-            const panelRect = panel.getBoundingClientRect();
-            const closeRect = close.getBoundingClientRect();
-            const tableRect = tableWrap.getBoundingClientRect();
-            return {
-                viewportWidth: document.documentElement.clientWidth,
-                documentScrollWidth: document.documentElement.scrollWidth,
-                panelLeft: panelRect.left,
-                panelRight: panelRect.right,
-                panelHeight: panelRect.height,
-                closeTop: closeRect.top,
-                closeRight: closeRect.right,
-                tableLeft: tableRect.left,
-                tableRight: tableRect.right,
-                bodyScrollable: elements.scoreInfoDialog.querySelector('.score-info-body').scrollHeight
-                    > elements.scoreInfoDialog.querySelector('.score-info-body').clientHeight,
-                formulasFit: Array.from(document.querySelectorAll('.score-detail-formula')).every((formula) => (
-                    formula.scrollWidth <= formula.clientWidth
-                ))
-            };
-        })()`);
-        if (scoreDialogZoomReport.documentScrollWidth > scoreDialogZoomReport.viewportWidth
-            || scoreDialogZoomReport.panelLeft < 0
-            || scoreDialogZoomReport.panelRight > scoreDialogZoomReport.viewportWidth
-            || scoreDialogZoomReport.panelHeight > 667
-            || scoreDialogZoomReport.closeTop < 0
-            || scoreDialogZoomReport.closeRight > scoreDialogZoomReport.viewportWidth
-            || scoreDialogZoomReport.tableLeft < scoreDialogZoomReport.panelLeft
-            || scoreDialogZoomReport.tableRight > scoreDialogZoomReport.panelRight
-            || !scoreDialogZoomReport.bodyScrollable
-            || !scoreDialogZoomReport.formulasFit) {
-            throw new Error(`Score dialog text scaling failed: ${JSON.stringify(scoreDialogZoomReport)}`);
-        }
-        await captureScreenshot(client, 'score-dialog-gray-correction-zoom.png');
-        await evaluate(client, `document.documentElement.style.fontSize = ''`);
-        await client.send('Emulation.setDeviceMetricsOverride', {
-            width: 1440,
-            height: 1000,
-            deviceScaleFactor: 1,
-            mobile: false
-        });
-        await evaluate(client, `closeScoreInfoDialog()`);
-        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
-
-        const nearNeutralDialogReport = await evaluate(client, `(() => {
-            const target = { r: 63, g: 85, b: 94 };
-            const user = { r: 128, g: 128, b: 128 };
-            const details = calculateRecallDistanceDetails(target, user);
-            gameState.recallTargetRGB = target;
-            gameState.recallUserRGB = user;
-            gameState.recallLastRoundDistance = details.distance;
-            gameState.recallLastRoundBaseDistance = details.baseDistance;
-            gameState.recallLastRoundNeutralPenalty = details.neutralPenalty;
-            gameState.recallLastRoundScore = Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100;
-            openScoreInfoDialog();
-            return {
-                title: elements.scoreInfoTitle.textContent,
-                adjustment: elements.scoreInfoAdjustment.textContent,
-                neutralStart: elements.scoreInfoNeutralStart.textContent,
-                neutralFormula: elements.scoreInfoNeutralFormula.textContent,
-                adjustmentFormula: elements.scoreInfoAdjustmentFormula.textContent,
-                totalFormula: document.querySelector('#score-info-total-formula').textContent.trim(),
-                activeMappingAnchors: Array.from(new Set(Array.from(
-                    elements.scoreInfoMappingBody.querySelectorAll('.is-active'),
-                    (cell) => Number(cell.dataset.scoreAnchor)
-                )))
-            };
-        })()`);
-        if (nearNeutralDialogReport.title !== '为什么是 7.05 分'
-            || !nearNeutralDialogReport.adjustment.includes('目标本身接近灰色时不修正')
-            || !nearNeutralDialogReport.adjustment.includes('修正值为 0.00')
-            || nearNeutralDialogReport.neutralStart !== '色彩强度：目标 C = 0.0307，复现 C = 0.0000；两者相减，低于 0 时按 0 计算，丢失量 = 0.0307'
-            || nearNeutralDialogReport.neutralFormula !== '目标 C 未超过 0.04，因此目标显色系数 q = 0.000，不启用额外修正'
-            || !nearNeutralDialogReport.adjustmentFormula.endsWith('≈ 0.00')
-            || nearNeutralDialogReport.totalFormula !== '16.78 + 0.00 ≈ 16.78'
-            || JSON.stringify(nearNeutralDialogReport.activeMappingAnchors) !== '[10,20]') {
-            throw new Error(`Near-neutral target dialog failed: ${JSON.stringify(nearNeutralDialogReport)}`);
-        }
-        await captureScreenshot(client, 'score-dialog-near-neutral-target-desktop.png');
-        await evaluate(client, `closeScoreInfoDialog()`);
-        await waitFor(client, `document.querySelector('#score-info-dialog').classList.contains('hidden')`);
 
         const recallNavigationGuardReport = await evaluate(client, `(() => {
             nextRecallRoundOrEnd();
@@ -2000,6 +2006,7 @@ async function run() {
 
         await evaluate(client, `(() => {
             stopActiveCountdown();
+            gameState.sessionRounds = [];
             resetRecallAttemptState();
             gameState.isGameActive = true;
             startColorRecallRound();
@@ -2027,8 +2034,19 @@ async function run() {
             storedV3: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v3'),
             storedV2: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v2'),
             legacyValue: localStorage.getItem('colorMemoryBestRecallScore_advanced'),
-            bestLabel: document.querySelector('#recall-final-summary .recall-final-stat:nth-child(2) p').textContent,
-            recordNote: elements.recallFinalRecordNote.textContent,
+            bestLabel: elements.finalStatTwoLabel.textContent,
+            recordNote: elements.finalRecordNote.textContent,
+            primaryValue: elements.finalPrimaryValue.textContent,
+            averageValue: elements.finalStatOneValue.textContent,
+            completedLabel: elements.finalStatThreeLabel.textContent,
+            recapVisible: !elements.sessionRecap.classList.contains('hidden'),
+            recapMode: elements.sessionRecap.dataset.mode,
+            recapToggleLabels: [elements.recapShowTarget.textContent, elements.recapShowAnswer.textContent],
+            recapRounds: document.querySelectorAll('.session-recap-face [data-recap-index]').length,
+            recapListRounds: elements.recapRoundList.querySelectorAll('[data-recap-index]').length,
+            shellMode: elements.resultScreen.dataset.finalShell,
+            footerHidden: elements.siteFooter.classList.contains('hidden'),
+            brandHidden: elements.brandHeader.classList.contains('hidden'),
             focused: document.activeElement.id
         })`);
         if (persistenceReport.total !== 100
@@ -2041,8 +2059,259 @@ async function run() {
             || persistenceReport.legacyValue !== '99'
             || persistenceReport.bestLabel !== '本机最佳'
             || persistenceReport.recordNote !== '首次完成，已记录为本机最佳'
+            || persistenceReport.primaryValue !== '100.00'
+            || persistenceReport.averageValue !== '10.00 / 10'
+            || persistenceReport.completedLabel !== '完成轮数'
+            || !persistenceReport.recapVisible
+            || persistenceReport.recapMode !== 'recall'
+            || JSON.stringify(persistenceReport.recapToggleLabels) !== JSON.stringify(['目标颜色', '复现颜色'])
+            || persistenceReport.recapRounds !== 10
+            || persistenceReport.recapListRounds !== 4
+            || persistenceReport.shellMode !== 'shared'
+            || !persistenceReport.footerHidden
+            || !persistenceReport.brandHidden
             || persistenceReport.focused !== 'result-text') {
             throw new Error(`Score persistence regression failed: ${JSON.stringify(persistenceReport)}`);
+        }
+        await captureScreenshot(client, 'recall-final-desktop.png');
+
+        const recapInteractionReport = await evaluate(client, `(() => {
+            gameState.sessionRounds = Array.from({ length: 15 }, (_, index) => ({
+                mode: 'colorMatch',
+                attempt: index + 1,
+                round: index + 1,
+                targetHex: index === 3 ? '#ffffff' : '#' + (index + 1).toString(16).padStart(6, '0'),
+                answerHex: index === 4 ? '#f7f7f7' : '#' + (index + 101).toString(16).padStart(6, '0'),
+                correct: index % 3 !== 0
+            }));
+            renderSessionRecap();
+            const visibleTiles = () => Array.from(
+                document.querySelectorAll('.session-recap-face [data-recap-index]')
+            );
+            const initial = {
+                status: elements.recapFaceRange.textContent,
+                firstRound: visibleTiles()[0].dataset.recapRound,
+                lastRound: visibleTiles()[visibleTiles().length - 1].dataset.recapRound,
+                tileCount: visibleTiles().length,
+                targetColor: visibleTiles()[0].style.backgroundColor,
+                tileLabelsAbsent: visibleTiles().every((tile) => tile.childElementCount === 0),
+                tilesAccessible: visibleTiles().every((tile) => tile.getAttribute('aria-label')),
+                previousDisabled: elements.recapPrevious.disabled,
+                nextDisabled: elements.recapNext.disabled
+            };
+
+            elements.recapNext.click();
+            const afterButton = {
+                page: recapState.page,
+                status: elements.recapFaceRange.textContent,
+                transform: elements.recapCube.style.transform,
+                selectedRound: elements.recapDetailRound.textContent,
+                turning: elements.recapCube.classList.contains('is-turning')
+            };
+            const pageTile = document.querySelector('.session-recap-face--right [data-recap-index="4"]');
+            const targetColor = pageTile.style.backgroundColor;
+            elements.recapShowAnswer.click();
+            const answer = {
+                targetPressed: elements.recapShowTarget.getAttribute('aria-pressed'),
+                answerPressed: elements.recapShowAnswer.getAttribute('aria-pressed'),
+                colorChanged: pageTile.style.backgroundColor !== targetColor
+            };
+
+            elements.recapCubeViewport.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'ArrowRight',
+                bubbles: true,
+                cancelable: true
+            }));
+            const afterKeyboard = {
+                page: recapState.page,
+                status: elements.recapFaceRange.textContent,
+                transform: elements.recapCube.style.transform,
+                nextDisabled: elements.recapNext.disabled,
+                turning: elements.recapCube.classList.contains('is-turning')
+            };
+
+            const touchStart = new Event('touchstart', { bubbles: true });
+            Object.defineProperty(touchStart, 'touches', {
+                value: [{ clientX: 200, clientY: 100 }]
+            });
+            const touchEnd = new Event('touchend', { bubbles: true });
+            Object.defineProperty(touchEnd, 'changedTouches', {
+                value: [{ clientX: 260, clientY: 104 }]
+            });
+            elements.recapCubeViewport.dispatchEvent(touchStart);
+            elements.recapCubeViewport.dispatchEvent(touchEnd);
+            const afterTouch = {
+                page: recapState.page,
+                status: elements.recapFaceRange.textContent,
+                transform: elements.recapCube.style.transform,
+                turning: elements.recapCube.classList.contains('is-turning')
+            };
+
+            const secondRoundOnPage = elements.recapRoundList.querySelector('[data-recap-index="5"]');
+            secondRoundOnPage.click();
+            const selectedRound = elements.recapDetailRound.textContent;
+            const selectedCurrentCount = elements.sessionRecap.querySelectorAll('[aria-current="true"]').length;
+            const focusedTile = document.querySelector('.session-recap-face--right [data-recap-index="5"]');
+            focusedTile.focus();
+            focusedTile.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'ArrowRight',
+                bubbles: true,
+                cancelable: true
+            }));
+            const tileKeyboard = {
+                page: recapState.page,
+                focusReturnedToViewport: document.activeElement === elements.recapCubeViewport,
+                previousFaceHidden: elements.recapFaces[1].getAttribute('aria-hidden') === 'true',
+                previousTileUntabbable: focusedTile.tabIndex === -1,
+                turning: elements.recapCube.classList.contains('is-turning')
+            };
+            updateRecapPage(1);
+            return {
+                initial,
+                afterButton,
+                answer,
+                afterKeyboard,
+                afterTouch,
+                selectedRound,
+                selectedCurrentCount,
+                tileKeyboard,
+                faceAccessibility: Array.from(elements.recapFaces, (face) => ({
+                    hidden: face.getAttribute('aria-hidden'),
+                    tabbable: face.querySelectorAll('button[tabindex="0"]').length
+                }))
+            };
+        })()`);
+        if (recapInteractionReport.initial.status !== 'R04–R07'
+            || recapInteractionReport.initial.firstRound !== '4'
+            || recapInteractionReport.initial.lastRound !== '15'
+            || recapInteractionReport.initial.tileCount !== 12
+            || !recapInteractionReport.initial.tileLabelsAbsent
+            || !recapInteractionReport.initial.tilesAccessible
+            || !recapInteractionReport.initial.previousDisabled
+            || recapInteractionReport.initial.nextDisabled
+            || recapInteractionReport.afterButton.page !== 1
+            || recapInteractionReport.afterButton.status !== 'R08–R11'
+            || recapInteractionReport.afterButton.transform !== 'rotateY(-90deg)'
+            || recapInteractionReport.afterButton.selectedRound !== 'R08'
+            || !recapInteractionReport.afterButton.turning
+            || recapInteractionReport.answer.targetPressed !== 'false'
+            || recapInteractionReport.answer.answerPressed !== 'true'
+            || !recapInteractionReport.answer.colorChanged
+            || recapInteractionReport.afterKeyboard.page !== 2
+            || recapInteractionReport.afterKeyboard.status !== 'R12–R15'
+            || recapInteractionReport.afterKeyboard.transform !== 'rotateY(-180deg)'
+            || !recapInteractionReport.afterKeyboard.nextDisabled
+            || recapInteractionReport.afterKeyboard.turning
+            || recapInteractionReport.afterTouch.page !== 1
+            || recapInteractionReport.afterTouch.status !== 'R08–R11'
+            || recapInteractionReport.afterTouch.transform !== 'rotateY(-90deg)'
+            || !recapInteractionReport.afterTouch.turning
+            || recapInteractionReport.selectedRound !== 'R09'
+            || recapInteractionReport.selectedCurrentCount !== 2
+            || recapInteractionReport.tileKeyboard.page !== 2
+            || !recapInteractionReport.tileKeyboard.focusReturnedToViewport
+            || !recapInteractionReport.tileKeyboard.previousFaceHidden
+            || !recapInteractionReport.tileKeyboard.previousTileUntabbable
+            || recapInteractionReport.tileKeyboard.turning
+            || JSON.stringify(recapInteractionReport.faceAccessibility) !== JSON.stringify([
+                { hidden: 'true', tabbable: 0 },
+                { hidden: 'false', tabbable: 4 },
+                { hidden: 'true', tabbable: 0 }
+            ])) {
+            throw new Error(`Session recap interaction failed: ${JSON.stringify(recapInteractionReport)}`);
+        }
+        await captureScreenshot(client, 'session-recap-desktop.png');
+
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 390,
+            height: 844,
+            deviceScaleFactor: 2,
+            mobile: true
+        });
+        await delay(100);
+        const recapMobileReport = await evaluate(client, `(() => {
+            const viewport = elements.recapCubeViewport.getBoundingClientRect();
+            const controls = document.querySelector('.recap-navigation').getBoundingClientRect();
+            const result = elements.resultScreen.getBoundingClientRect();
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                viewportLeft: viewport.left,
+                viewportRight: viewport.right,
+                controlsLeft: controls.left,
+                controlsRight: controls.right,
+                resultLeft: result.left,
+                resultRight: result.right,
+                footerHidden: elements.siteFooter.classList.contains('hidden'),
+                rangeHidden: getComputedStyle(elements.recapFaceRange).display === 'none',
+                indexVisible: getComputedStyle(elements.recapFaceIndex).display !== 'none',
+                indexText: elements.recapFaceIndex.textContent,
+                buttonsFit: Array.from(elements.sessionRecap.querySelectorAll('button')).every((button) => {
+                    const rect = button.getBoundingClientRect();
+                    return rect.left >= result.left - 1 && rect.right <= result.right + 1;
+                })
+            };
+        })()`);
+        if (recapMobileReport.scrollWidth > recapMobileReport.viewportWidth
+            || recapMobileReport.viewportLeft < recapMobileReport.resultLeft - 1
+            || recapMobileReport.viewportRight > recapMobileReport.resultRight + 1
+            || recapMobileReport.controlsLeft < recapMobileReport.resultLeft - 1
+            || recapMobileReport.controlsRight > recapMobileReport.resultRight + 1
+            || !recapMobileReport.footerHidden
+            || !recapMobileReport.rangeHidden
+            || !recapMobileReport.indexVisible
+            || recapMobileReport.indexText !== '2/3'
+            || !recapMobileReport.buttonsFit) {
+            throw new Error(`Session recap mobile layout failed: ${JSON.stringify(recapMobileReport)}`);
+        }
+        await captureScreenshot(client, 'session-recap-mobile.png');
+        await client.send('Emulation.setDeviceMetricsOverride', {
+            width: 1440,
+            height: 1000,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
+        await client.send('Emulation.setEmulatedMedia', {
+            features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
+        });
+        const recapReducedMotionReport = await evaluate(client, `(() => {
+            updateRecapPage(2, true, true);
+            return {
+                page: recapState.page,
+                transform: elements.recapCube.style.transform,
+                turning: elements.recapCube.classList.contains('is-turning')
+            };
+        })()`);
+        if (recapReducedMotionReport.page !== 2
+            || recapReducedMotionReport.transform !== 'rotateY(-180deg)'
+            || recapReducedMotionReport.turning) {
+            throw new Error(`Session recap reduced motion failed: ${JSON.stringify(recapReducedMotionReport)}`);
+        }
+        await client.send('Emulation.setEmulatedMedia', {
+            features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }]
+        });
+
+        const recapFlatFallbackReport = await evaluate(client, `(() => {
+            const originalSupports = window.CSS.supports;
+            window.CSS.supports = () => false;
+            updateRecapPage(0, true, true);
+            const report = {
+                flat: elements.recapCubeStage.classList.contains('is-flat'),
+                turning: elements.recapCube.classList.contains('is-turning'),
+                activeFaceDisplay: getComputedStyle(elements.recapFaces[0]).display,
+                hiddenFaceDisplay: getComputedStyle(elements.recapFaces[1]).display,
+                cubeTransform: getComputedStyle(elements.recapCube).transform
+            };
+            window.CSS.supports = originalSupports;
+            updateRecapPage(1);
+            return report;
+        })()`);
+        if (!recapFlatFallbackReport.flat
+            || recapFlatFallbackReport.turning
+            || recapFlatFallbackReport.activeFaceDisplay !== 'grid'
+            || recapFlatFallbackReport.hiddenFaceDisplay !== 'none'
+            || recapFlatFallbackReport.cubeTransform !== 'none') {
+            throw new Error(`Session recap flat fallback failed: ${JSON.stringify(recapFlatFallbackReport)}`);
         }
 
         const finalActionReport = await evaluate(client, `(() => {
@@ -2109,9 +2378,13 @@ async function run() {
             elements.saturationSlider.dispatchEvent(new Event('input', { bubbles: true }));
             elements.lightnessSlider.dispatchEvent(new Event('input', { bubbles: true }));
             submitRecallAnswer();
+            const details = calculateRecallDistanceDetails(
+                gameState.recallTargetRGB,
+                getRecallUserRGB()
+            );
             return {
-                score: gameState.recallLastRoundScore,
-                distance: gameState.recallLastRoundDistance,
+                score: Math.round(scoreFromPerceptualDistance(details.distance) * 100) / 100,
+                distance: details.distance,
                 selectedHsl: { ...gameState.recallUserHSL },
                 targetHsl: { ...gameState.recallTargetHSL }
             };
@@ -2140,14 +2413,18 @@ async function run() {
                 shellBottom: shell.bottom,
                 submitBottom: submit.bottom,
                 horizontalWorkbench: sliders.left >= wheel.right,
-                statsInsideShell: elements.gameInfoBar.parentElement === elements.colorRecallScreen
+                statsAnchored: elements.gameInfoAnchor.nextElementSibling === elements.gameInfoBar,
+                statsOutsideShell: elements.gameInfoBar.parentElement !== elements.colorRecallScreen,
+                footerHidden: elements.siteFooter.classList.contains('hidden')
             };
         })()`);
         if (basicDesktopWorkbenchReport.shellTop < 0
             || basicDesktopWorkbenchReport.shellBottom > basicDesktopWorkbenchReport.viewportHeight + 1
             || basicDesktopWorkbenchReport.submitBottom > basicDesktopWorkbenchReport.viewportHeight + 1
             || !basicDesktopWorkbenchReport.horizontalWorkbench
-            || !basicDesktopWorkbenchReport.statsInsideShell) {
+            || !basicDesktopWorkbenchReport.statsAnchored
+            || !basicDesktopWorkbenchReport.statsOutsideShell
+            || !basicDesktopWorkbenchReport.footerHidden) {
             throw new Error(`Basic desktop workbench failed: ${JSON.stringify(basicDesktopWorkbenchReport)}`);
         }
         const hslDragFlushReport = await evaluate(client, `(() => {
@@ -2168,7 +2445,7 @@ async function run() {
                 saturation: gameState.recallUserHSL.s
             };
         })()`);
-        if (hslDragFlushReport.hue !== 90 || hslDragFlushReport.saturation !== 100) {
+        if (Math.abs(hslDragFlushReport.hue - 90) > 1 || hslDragFlushReport.saturation !== 100) {
             throw new Error(`HSL drag flush failed: ${JSON.stringify(hslDragFlushReport)}`);
         }
         await captureScreenshot(client, 'recall-control-basic-desktop.png');
@@ -2278,11 +2555,16 @@ async function run() {
         const finalZoomReport = await collectFinalZoomReport(client);
         if (finalZoomReport.scrollWidth > finalZoomReport.viewportWidth
             || finalZoomReport.score !== '100.00'
-            || finalZoomReport.average !== '10.00'
+            || finalZoomReport.average !== '10.00 / 10'
             || finalZoomReport.restartLabel !== '再玩一次'
             || !finalZoomReport.changeDifficultyVisible
             || !finalZoomReport.scorePanelFits
             || !finalZoomReport.statsFit
+            || !finalZoomReport.footerHidden
+            || !finalZoomReport.brandHidden
+            || JSON.stringify(finalZoomReport.shellParts) !== JSON.stringify([
+                'header', 'summary', 'recap', 'actions'
+            ])
             || finalZoomReport.overflowElements.length) {
             throw new Error(`Final summary text scaling failed: ${JSON.stringify(finalZoomReport)}`);
         }
@@ -2301,6 +2583,72 @@ async function run() {
             || narrowFinalZoomReport.overflowElements.length) {
             throw new Error(`Narrow final summary scaling failed: ${JSON.stringify(narrowFinalZoomReport)}`);
         }
+
+        const populatedRecapZoomReport = await evaluate(client, `(() => {
+            gameState.sessionRounds = Array.from({ length: 12 }, (_, index) => ({
+                mode: 'colorRecall',
+                round: index + 1,
+                targetHex: index === 0 ? '#ffffff' : '#' + (index + 17).toString(16).padStart(6, '0'),
+                answerHex: index === 0 ? '#f0f0f0' : '#' + (index + 117).toString(16).padStart(6, '0'),
+                score: 8.25,
+                perceptualDistance: 9.5,
+                guidance: '色相接近，继续校准明度与饱和度'
+            }));
+            renderSessionRecap();
+            const result = elements.resultScreen.getBoundingClientRect();
+            const recap = elements.sessionRecap.getBoundingClientRect();
+            const layout = document.querySelector('.session-recap-layout');
+            const cubeColumn = document.querySelector('.recap-cube-column').getBoundingClientRect();
+            const cubeViewport = elements.recapCubeViewport.getBoundingClientRect();
+            const cubeStage = elements.recapCubeStage.getBoundingClientRect();
+            const inspector = document.querySelector('.recap-inspector').getBoundingClientRect();
+            const countColumns = (element) => getComputedStyle(element).gridTemplateColumns
+                .split(' ')
+                .filter(Boolean)
+                .length;
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                resultFits: elements.resultScreen.scrollWidth <= elements.resultScreen.clientWidth,
+                recapFits: elements.sessionRecap.scrollWidth <= elements.sessionRecap.clientWidth,
+                recapVisible: !elements.sessionRecap.classList.contains('hidden'),
+                layoutColumns: countColumns(layout),
+                roundListColumns: countColumns(elements.recapRoundList),
+                colorPairColumns: countColumns(document.querySelector('.recap-color-pair')),
+                inspectorWidth: inspector.width,
+                inspectorWithinResult: inspector.left >= result.left - 1 && inspector.right <= result.right + 1,
+                inspectorBelowCube: inspector.top >= cubeColumn.bottom - 1,
+                cubeFitsViewport: cubeStage.width <= cubeViewport.width + 1,
+                recapWithinResult: recap.left >= result.left - 1 && recap.right <= result.right + 1,
+                controlsFit: Array.from(elements.sessionRecap.querySelectorAll('button')).every((button) => {
+                    const rect = button.getBoundingClientRect();
+                    return rect.left >= result.left - 1 && rect.right <= result.right + 1;
+                }),
+                roundButtonsFit: Array.from(elements.recapRoundList.children).every((button) => (
+                    button.scrollWidth <= button.clientWidth
+                )),
+                footerHidden: elements.siteFooter.classList.contains('hidden')
+            };
+        })()`);
+        if (populatedRecapZoomReport.scrollWidth > populatedRecapZoomReport.viewportWidth
+            || !populatedRecapZoomReport.resultFits
+            || !populatedRecapZoomReport.recapFits
+            || !populatedRecapZoomReport.recapVisible
+            || populatedRecapZoomReport.layoutColumns !== 1
+            || populatedRecapZoomReport.roundListColumns !== 1
+            || populatedRecapZoomReport.colorPairColumns !== 1
+            || populatedRecapZoomReport.inspectorWidth <= 0
+            || !populatedRecapZoomReport.inspectorWithinResult
+            || !populatedRecapZoomReport.inspectorBelowCube
+            || !populatedRecapZoomReport.cubeFitsViewport
+            || !populatedRecapZoomReport.recapWithinResult
+            || !populatedRecapZoomReport.controlsFit
+            || !populatedRecapZoomReport.roundButtonsFit
+            || !populatedRecapZoomReport.footerHidden) {
+            throw new Error(`Populated recap text scaling failed: ${JSON.stringify(populatedRecapZoomReport)}`);
+        }
+        await evaluate(client, `elements.sessionRecap.scrollIntoView({ block: 'start' })`);
+        await captureScreenshot(client, 'session-recap-zoom.png');
 
         const offlineReport = await evaluate(client, `(() => {
             const resultIcon = elements.resultIcon.querySelector('.ui-icon');
@@ -2372,11 +2720,19 @@ async function run() {
             observationReport,
             countdownRenderReport,
             observationTimingReport,
+            matchMobileSuccessReport,
+            matchFinalSummaryReport,
+            masterFinalSummaryReport,
+            matchFinalActionReport,
             recallReport,
             recallPreparationReport,
             recallStatsReport,
             centiAccumulationReport,
             persistenceReport,
+            recapInteractionReport,
+            recapMobileReport,
+            recapReducedMotionReport,
+            recapFlatFallbackReport,
             finalActionReport,
             reloadedBest,
             basicRecallReport,
@@ -2385,13 +2741,13 @@ async function run() {
             basicDesktopWorkbenchReport,
             hslDragFlushReport,
             feedbackReport,
-            dialogReport,
-            referenceDialogReport,
+            scoreExplanationRemovalReport,
             recallNavigationGuardReport,
             mobileReports,
             zoomReport,
             finalZoomReport,
             narrowFinalZoomReport,
+            populatedRecapZoomReport,
             offlineReport
         }, null, 2));
     } finally {

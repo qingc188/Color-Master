@@ -7,12 +7,15 @@
     <meta id="theme-color-meta" name="theme-color" content="#071820">
     <link rel="icon" type="image/svg+xml" href="assets/yise-cube-app-icon.svg">
     <title>忆色 ColorMaster</title>
-    <link rel="stylesheet" href="tailwind.css?v=20260821-match-bands">
-    <link rel="stylesheet" href="styles.css?v=20260821-match-bands">
+    <link rel="stylesheet" href="tailwind.css?v=20260822-feedback-cleanup">
+    <link rel="stylesheet" href="styles.css?v=20260822-recap-copy-v3">
 </head>
 <body class="site-body min-h-screen text-light overflow-x-hidden">
     <svg class="icon-sprite" aria-hidden="true">
         <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 5 3 12l7 7"></path><path d="M3 12h18"></path>
+        </symbol>
+        <symbol id="icon-recap-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10 5 3 12l7 7"></path><path d="M3 12h18"></path>
         </symbol>
         <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -29,6 +32,9 @@
         </symbol>
         <symbol id="icon-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6M15 9l-6 6"></path>
+        </symbol>
+        <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path>
         </symbol>
         <symbol id="icon-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"></path><path d="M8 6H4v1a4 4 0 0 0 4 4M16 6h4v1a4 4 0 0 1-4 4M12 12v5M8 21h8M9 17h6"></path>
@@ -68,46 +74,49 @@
             <p class="brand-context">观察 · 记忆 · 重现</p>
         </header>
 
-        <!-- 游戏信息栏 -->
-        <span id="game-info-anchor" hidden></span>
-        <div id="game-info-bar" class="hidden glass-dark rounded-xl p-3 sm:p-4 mb-6 grid grid-cols-1 items-center gap-3 sm:gap-4 border border-white/10 shadow-lg">
-            <div id="game-stats-panel" class="grid grid-cols-3 gap-3">
-                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
-                    <p id="level-label" class="text-sm text-gray-400">当前关卡</p>
-                    <p id="level" class="text-2xl font-bold text-white">1</p>
-                </div>
-                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
-                    <p id="score-label" class="text-sm text-gray-400">得分</p>
-                    <p id="score" class="text-2xl font-bold text-white">0</p>
-                </div>
-                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0">
-                    <p id="best-score-label" class="text-sm text-gray-400">最佳记录</p>
-                    <p id="best-score" class="text-2xl font-bold text-white">0</p>
-                </div>
-                <div class="text-center rounded-lg bg-white/5 px-3 py-2 min-w-0" id="lives-display">
-                    <p class="text-sm text-gray-400">生命值</p>
-                    <p id="lives" class="text-2xl font-bold text-danger">3</p>
-                </div>
-            </div>
-            <div id="mode-best-overview" class="hidden grid grid-cols-3 gap-2 sm:gap-3 min-w-0">
-                <div class="text-center rounded-lg bg-white/5 border border-white/10 px-2 py-2 sm:px-4 min-w-0">
-                    <p id="overview-best-basic-label" class="text-xs sm:text-sm text-gray-400 truncate">基础最佳</p>
-                    <p id="overview-best-basic" class="text-xl sm:text-2xl font-bold text-white">0</p>
-                </div>
-                <div class="text-center rounded-lg bg-white/5 border border-white/10 px-2 py-2 sm:px-4 min-w-0">
-                    <p id="overview-best-advanced-label" class="text-xs sm:text-sm text-gray-400 truncate">进阶最佳</p>
-                    <p id="overview-best-advanced" class="text-xl sm:text-2xl font-bold text-white">0</p>
-                </div>
-                <div class="text-center rounded-lg bg-white/5 border border-white/10 px-2 py-2 sm:px-4 min-w-0">
-                    <p id="overview-best-master-label" class="text-xs sm:text-sm text-gray-400 truncate">大师最佳</p>
-                    <p id="overview-best-master" class="text-xl sm:text-2xl font-bold text-white">0</p>
-                </div>
-            </div>
-            <p id="local-record-note" class="local-record-note hidden">成绩仅保存在当前设备的本地缓存；清理缓存或更换设备后会重置。</p>
-        </div>
-
         <!-- 游戏主区域 -->
         <main class="relative">
+            <!-- 游戏信息栏 -->
+            <span id="game-info-anchor" class="hidden" hidden></span>
+            <div id="game-info-bar" class="hidden game-info-bar">
+                <div id="game-stats-panel" class="grid grid-cols-3 min-w-0">
+                    <div class="text-center min-w-0">
+                        <p id="level-label" class="text-sm text-gray-400">当前关卡</p>
+                        <p id="level" class="text-2xl font-bold text-white">1</p>
+                    </div>
+                    <div class="text-center min-w-0">
+                        <p id="score-label" class="text-sm text-gray-400">得分</p>
+                        <p id="score" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                    <div class="text-center min-w-0">
+                        <p id="best-score-label" class="text-sm text-gray-400">最佳记录</p>
+                        <p id="best-score" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                    <div class="text-center min-w-0" id="lives-display">
+                        <p class="text-sm text-gray-400">生命值</p>
+                        <p id="lives" class="text-2xl font-bold text-danger">3</p>
+                    </div>
+                </div>
+                <div id="mode-best-overview" class="hidden grid grid-cols-3 min-w-0">
+                    <div class="text-center min-w-0">
+                        <p id="overview-best-basic-label" class="text-sm text-gray-400">基础最佳</p>
+                        <p id="overview-best-basic" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                    <div class="text-center min-w-0">
+                        <p id="overview-best-advanced-label" class="text-sm text-gray-400">进阶最佳</p>
+                        <p id="overview-best-advanced" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                    <div class="text-center min-w-0">
+                        <p id="overview-best-master-label" class="text-sm text-gray-400">大师最佳</p>
+                        <p id="overview-best-master" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                </div>
+                <button id="local-record-hint" class="local-record-hint hidden" type="button" aria-label="查看本机成绩保存说明" aria-controls="local-record-note" aria-describedby="local-record-note" aria-expanded="false">
+                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-info"></use></svg>
+                </button>
+                <p id="local-record-note" class="local-record-note hidden" role="tooltip">成绩仅保存在当前设备的本地缓存；清理缓存或更换设备后会重置。</p>
+            </div>
+
             <!-- 独立品牌首页 -->
             <section id="landing-screen" class="landing-screen" aria-labelledby="landing-title">
                 <div class="landing-orbit">
@@ -385,14 +394,14 @@
             </div>
 
             <!-- 目标颜色显示区域 -->
-            <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
-                <div class="flex justify-start mb-4">
+            <div id="target-color-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center game-stage game-stage--observation">
+                <div class="flex justify-start mb-4 game-stage-toolbar">
                     <button class="back-button" data-back-target="start">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>退出本局</span>
                     </button>
                 </div>
-                <h2 class="text-2xl font-bold mb-4">记住这个颜色</h2>
+                <h2 class="text-2xl font-bold mb-4 game-stage-title">记住这个颜色</h2>
                 <div class="mb-6">
                     <div id="countdown" class="text-5xl font-bold mb-4 text-primary">5</div>
                     <div class="progress-track w-full rounded-full h-2.5 mb-4">
@@ -400,12 +409,11 @@
                     </div>
                 </div>
                 <div id="target-color" class="w-full max-w-64 aspect-square mx-auto rounded-2xl shadow-2xl"></div>
-                <p class="mt-6 text-gray-400">倒计时结束后开始选择，请记住它的色相、鲜艳程度和明暗</p>
             </div>
 
             <!-- 颜色选择区域 -->
-            <div id="color-grid-screen" class="hidden">
-                <div class="flex justify-start mb-4">
+            <div id="color-grid-screen" class="hidden game-stage game-stage--selection">
+                <div class="flex justify-start mb-4 game-stage-toolbar">
                     <button class="back-button" data-back-target="start">
                         <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                         <span>退出本局</span>
@@ -423,33 +431,32 @@
             </div>
 
             <!-- 颜色复现游戏区域 -->
-            <div id="color-recall-screen" class="hidden">
+            <div id="color-recall-screen" class="hidden game-mode-shell">
                 <!-- 目标颜色展示区域 -->
-                <div id="recall-target-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center">
-                    <div class="flex justify-start mb-4">
+                <div id="recall-target-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center game-stage game-stage--observation">
+                    <div class="flex justify-start mb-4 game-stage-toolbar">
                         <button class="back-button" data-back-target="start">
                             <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                             <span>退出本局</span>
                         </button>
                     </div>
-                    <h2 id="recall-target-title" class="text-2xl font-bold mb-4" tabindex="-1">记住这个颜色</h2>
+                    <h2 id="recall-target-title" class="text-2xl font-bold mb-4 game-stage-title" tabindex="-1">记住这个颜色</h2>
                     <div id="recall-countdown" class="text-5xl font-bold mb-4 text-primary">5</div>
                     <div class="progress-track w-full rounded-full h-2.5 mb-4">
                         <div id="recall-progress-bar" class="progress-fill h-2.5 rounded-full progress-bar" style="width: 100%"></div>
                     </div>
                     <div id="recall-target-color" class="w-full max-w-64 aspect-square mx-auto rounded-2xl shadow-2xl"></div>
-                    <p class="mt-6 text-gray-400">目标色将在倒计时结束后隐藏</p>
                 </div>
 
                 <!-- HSL控制区域 -->
-                <div id="recall-control-section" class="glass-dark rounded-2xl p-4 sm:p-8 hidden">
-                    <div class="recall-control-toolbar">
+                <div id="recall-control-section" class="glass-dark rounded-2xl p-4 sm:p-8 hidden game-stage game-stage--control">
+                    <div class="recall-control-toolbar game-stage-toolbar">
                         <button class="back-button" data-back-target="start">
                             <svg class="ui-icon" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
                             <span>退出本局</span>
                         </button>
                     </div>
-                    <h2 id="recall-control-title" class="text-2xl font-bold mb-6 text-center" tabindex="-1">你的复现</h2>
+                    <h2 id="recall-control-title" class="text-2xl font-bold mb-6 text-center game-stage-title" tabindex="-1">你的复现</h2>
                     
                     <div class="recall-workbench flex flex-col md:flex-row items-center justify-center gap-8 mb-6">
                         <!-- HSL 控制 -->
@@ -532,16 +539,13 @@
                 </div>
 
                 <!-- 复现结果区域 -->
-                <div id="recall-result-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center hidden">
+                <div id="recall-result-section" class="glass-dark rounded-2xl p-4 sm:p-8 text-center hidden game-stage game-stage--round-result">
                     <h2 id="recall-result-title" class="text-3xl font-bold mb-6" tabindex="-1">本轮得分</h2>
                     <div class="text-primary mb-2">
                         <span id="recall-round-score" class="text-6xl font-bold">0.00</span>
                         <span class="text-xl font-semibold">/ 10</span>
                     </div>
-                    <div class="recall-feedback-row">
-                        <p id="recall-round-feedback">“感觉对了”</p>
-                        <button id="score-info-button" type="button" aria-label="查看评分说明" title="查看评分说明">?</button>
-                    </div>
+                    <p id="recall-round-feedback">“感觉对了”</p>
                     <p id="recall-round-guidance" class="recall-round-guidance">色相、饱和度和明度都很接近</p>
                     <div class="result-color-grid grid grid-cols-2 gap-3 sm:gap-8 justify-center mb-8">
                         <div class="text-center min-w-0">
@@ -566,73 +570,91 @@
                 </div>
             </div>
 
-            <!-- 结果反馈区域 -->
-            <div id="result-screen" class="hidden glass-dark rounded-2xl p-4 sm:p-8 text-center">
-                <div id="result-icon" class="text-6xl mb-4"></div>
-                <h2 id="result-text" class="text-3xl font-bold mb-6" tabindex="-1"></h2>
-                <div id="result-detail" class="mb-6 hidden"></div>
-                <div id="match-result-summary">
-                    <div class="flex justify-center space-x-6 mb-8">
-                        <div class="text-center">
-                            <p id="result-level-label" class="text-sm text-gray-400">当前关卡</p>
-                            <p id="result-level" class="text-2xl font-bold">1</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-sm text-gray-400">得分</p>
-                            <p id="result-score" class="text-2xl font-bold">0</p>
-                        </div>
+            <!-- 统一结算区域 -->
+            <section id="result-screen" class="hidden glass-dark final-screen" data-final-shell="shared" aria-labelledby="result-text">
+                <header class="final-header" data-final-part="header">
+                    <div id="result-icon" class="final-mode-icon" aria-hidden="true"></div>
+                    <div>
+                        <p id="result-eyebrow" class="final-eyebrow">本局完成</p>
+                        <h2 id="result-text" tabindex="-1"></h2>
                     </div>
-                    <div class="result-color-grid grid grid-cols-2 gap-3 sm:gap-8 justify-center">
-                        <div class="text-center min-w-0">
-                            <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto" id="result-target-color"></div>
-                            <p class="mt-2 text-sm text-gray-400">目标颜色</p>
-                            <p id="target-color-code" class="mt-1 font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded break-all"></p>
-                        </div>
-                        <div class="text-center min-w-0">
-                            <div class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl shadow-lg mx-auto" id="result-selected-color"></div>
-                            <p class="mt-2 text-sm text-gray-400">选择颜色</p>
-                            <p id="selected-color-code" class="mt-1 font-mono text-xs sm:text-sm bg-gray-800 px-2 py-1 rounded break-all"></p>
-                        </div>
+                </header>
+
+                <div class="final-summary" data-final-part="summary" aria-live="polite">
+                    <div class="final-primary">
+                        <span id="final-primary-label">正确率</span>
+                        <p><strong id="final-primary-value">0</strong><span id="final-primary-unit">%</span></p>
                     </div>
+                    <div class="final-stats">
+                        <div><span id="final-stat-one-label">答对</span><strong id="final-stat-one-value">0 / 10</strong></div>
+                        <div><span id="final-stat-two-label">本机最佳</span><strong id="final-stat-two-value">0</strong></div>
+                        <div><span id="final-stat-three-label">完成轮数</span><strong id="final-stat-three-value">10</strong></div>
+                    </div>
+                    <p id="final-record-note" class="final-record-note hidden"></p>
                 </div>
-                <div id="recall-final-summary" class="recall-final-summary hidden" aria-live="polite">
-                    <div class="recall-final-score-panel">
-                        <p class="recall-final-score-line">
-                            <span id="recall-final-score">0.00</span>
-                            <span id="recall-final-max" class="recall-final-total">/ 100</span>
-                        </p>
+
+                <section id="session-recap" class="session-recap hidden" data-session-recap data-final-part="recap" aria-labelledby="session-recap-title">
+                    <header class="session-recap-header">
+                        <h3 id="session-recap-title">本局复盘</h3>
+                        <div class="recap-view-switch" role="group" aria-label="魔方面显示颜色">
+                            <button id="recap-show-target" type="button" data-recap-toggle="target" aria-pressed="true">目标颜色</button>
+                            <button id="recap-show-answer" type="button" data-recap-toggle="answer" aria-pressed="false">选择颜色</button>
+                        </div>
+                    </header>
+
+                    <div class="session-recap-layout">
+                        <div class="recap-cube-column">
+                            <div id="session-recap-cube-viewport" class="session-recap-cube-viewport" data-recap-cube tabindex="0" role="group" aria-label="三维本局复盘魔方，使用左右方向键切换轮次面" aria-describedby="recap-face-status">
+                                <div id="session-recap-cube-stage" class="session-recap-cube-stage">
+                                    <div id="session-recap-cube" class="session-recap-cube">
+                                        <div id="recap-face-front" class="session-recap-face session-recap-face--front" data-recap-face="0"></div>
+                                        <div id="recap-face-right" class="session-recap-face session-recap-face--right" data-recap-face="1"></div>
+                                        <div id="recap-face-back" class="session-recap-face session-recap-face--back" data-recap-face="2"></div>
+                                        <div class="session-recap-face session-recap-face--left" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                                        <div class="session-recap-face session-recap-face--top" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                                        <div class="session-recap-face session-recap-face--bottom" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="recap-navigation">
+                                <button id="recap-previous" type="button" data-recap-previous aria-label="查看上一面">
+                                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-recap-arrow-left"></use></svg>
+                                </button>
+                                <span id="recap-face-status" aria-live="polite">
+                                    <span id="recap-face-range">R01–R04</span>
+                                    <span id="recap-face-index" class="recap-face-index">1/3</span>
+                                </span>
+                                <button id="recap-next" type="button" data-recap-next aria-label="查看下一面">
+                                    <svg class="ui-icon" aria-hidden="true"><use href="#icon-recap-arrow-left"></use></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="recap-inspector">
+                            <div id="recap-round-list" class="recap-round-list" aria-label="当前魔方面轮次"></div>
+                            <div id="recap-round-detail" class="recap-round-detail" aria-live="polite" aria-atomic="true">
+                                <div class="recap-detail-heading">
+                                    <strong id="recap-detail-round">R01</strong>
+                                    <span id="recap-detail-result">正确</span>
+                                </div>
+                                <div class="recap-color-pair">
+                                    <div role="group" aria-label="目标颜色"><span id="recap-detail-target-swatch" aria-hidden="true"></span><code id="recap-detail-target-hex">#000000</code></div>
+                                    <div role="group" aria-label="答案颜色"><span id="recap-detail-answer-swatch" aria-hidden="true"></span><code id="recap-detail-answer-hex">#000000</code></div>
+                                </div>
+                                <p id="recap-detail-guidance"></p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="recall-final-stats">
-                        <div class="recall-final-stat">
-                            <p>平均每轮</p>
-                            <strong><span id="recall-final-average">0.00</span> / 10</strong>
-                        </div>
-                        <div class="recall-final-stat">
-                            <p>本机最佳</p>
-                            <strong id="recall-final-best">0.00</strong>
-                        </div>
-                        <div class="recall-final-stat">
-                            <p>完成轮数</p>
-                            <strong id="recall-final-rounds">10</strong>
-                        </div>
-                    </div>
-                    <p id="recall-final-record-note" class="recall-final-record-note"></p>
+                </section>
+
+                <div class="result-actions" data-final-part="actions">
+                    <button id="restart-button" type="button">再玩一次</button>
+                    <button id="result-change-difficulty" type="button">更换难度</button>
                 </div>
-                <div class="result-actions mt-8">
-                    <button id="continue-button" class="bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg">
-                        下一关
-                    </button>
-                    <button id="restart-button" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg mt-4 md:mt-0 md:ml-4">
-                        重新开始
-                    </button>
-                    <button id="result-change-difficulty" class="hidden bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 shadow-lg">
-                        更换难度
-                    </button>
-                </div>
-            </div>
+            </section>
         </main>
 
-        <footer class="site-footer" aria-label="版权信息">
+        <footer id="site-footer" class="site-footer" aria-label="版权信息">
             <span class="site-footer-spectrum" aria-hidden="true"></span>
             <p>
                 <span class="site-footer-name">忆色 ColorMaster</span>
@@ -648,99 +670,9 @@
         <span>本局仍可正常游戏</span>
     </div>
 
-    <div id="score-info-dialog" class="score-info-dialog hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="score-info-title" aria-describedby="score-info-description">
-        <div class="score-info-panel">
-            <header class="score-info-header">
-                <div>
-                    <p class="score-info-eyebrow">本轮校色单</p>
-                    <h2 id="score-info-title" tabindex="-1">为什么是 0.00 分</h2>
-                </div>
-                <button id="score-info-close" type="button" class="score-info-close" aria-label="关闭评分说明">×</button>
-            </header>
-            <div class="score-info-body">
-                <p id="score-info-description" class="score-info-intro">先计算两种颜色的 Oklab 感知色差，再按游戏映射换成 10 分制。最终差异越小，分数越高。</p>
-                <section class="score-color-pair" aria-label="本轮颜色对比">
-                    <div class="score-color-sample">
-                        <span id="score-info-target-swatch" class="score-color-swatch" aria-hidden="true"></span>
-                        <span><small>目标颜色</small><code id="score-info-target-code">rgb(0, 0, 0)</code></span>
-                    </div>
-                    <span class="score-color-arrow" aria-hidden="true">→</span>
-                    <div class="score-color-sample">
-                        <span id="score-info-user-swatch" class="score-color-swatch" aria-hidden="true"></span>
-                        <span><small>你的复现</small><code id="score-info-user-code">rgb(0, 0, 0)</code></span>
-                    </div>
-                </section>
-                <p id="score-info-guidance" class="score-info-guidance">色相、饱和度和明度都很接近</p>
-                <section class="score-calculation" aria-labelledby="score-calculation-title">
-                    <h3 id="score-calculation-title">计算过程</h3>
-                    <ol>
-                        <li>
-                            <span class="score-step-number">1</span>
-                            <div>
-                                <strong>用 Oklab 比较颜色</strong>
-                                <p>RGB 各分量的数值差不能直接代表人眼看到的色差，因此先将两种颜色转换到感知更均匀的 Oklab 色彩空间。Oklab 中，L 表示明度，a、b 表示两个颜色轴。</p>
-                                <p>原始感知色差 ΔOK，就是三维直线距离。直白地说：把 L、a、b 的差值分别平方，三项相加，再开平方。</p>
-                                <p id="score-info-square-formula" class="score-detail-formula">三项平方和 = (0.0000)² + (0.0000)² + (0.0000)² ≈ 0.00000</p>
-                                <p id="score-info-raw-formula" class="score-detail-formula">原始 ΔOK = √(0.00000) ≈ 0.0000</p>
-                                <p class="score-scale-note">为方便阅读和设置游戏分数，再将上面算出的完整距离整体乘以 100。这不是分别放大 L、a、b，也不是标准 ΔOK 的写法。</p>
-                                <p id="score-info-base-formula" class="score-detail-formula">游戏展示差异 = <span id="score-info-scale-input">0.0000</span> × 100 ≈ <output id="score-info-base-distance">0.00</output></p>
-                            </div>
-                        </li>
-                        <li>
-                            <span class="score-step-number">2</span>
-                            <div>
-                                <strong>防止明显颜色被做成灰色</strong>
-                                <p id="score-info-adjustment"></p>
-                                <p id="score-info-neutral-start" class="score-detail-formula"></p>
-                                <p id="score-info-neutral-formula" class="score-detail-formula"></p>
-                                <p id="score-info-neutral-smooth" class="score-detail-formula"></p>
-                                <p id="score-info-adjustment-formula" class="score-detail-formula"></p>
-                            </div>
-                        </li>
-                        <li>
-                            <span class="score-step-number">3</span>
-                            <div>
-                                <strong>得到最终差异</strong>
-                                <p>游戏展示差异加上灰色修正，得到用于分数映射的最终差异。</p>
-                                <p id="score-info-total-formula" class="score-total-formula"><output id="score-info-total-base">0.00</output> + <output id="score-info-total-adjustment">0.00</output> ≈ <output id="score-info-distance">0.00</output></p>
-                                <p class="score-rounding-note">界面数值保留两位小数，评分使用未四舍五入的完整数值。</p>
-                            </div>
-                        </li>
-                    </ol>
-                </section>
-                <section class="score-conversion" aria-label="分数换算结果">
-                    <div>
-                        <h3>换成 10 分制</h3>
-                        <p class="score-conversion-method">先用最终差异在表中找到相邻的两个映射点，再根据它在该区间中的位置做线性插值。</p>
-                        <p id="score-info-range"></p>
-                        <p id="score-info-interpolation" class="score-detail-formula"></p>
-                    </div>
-                    <div class="score-final-value">
-                        <span>本轮得分</span>
-                        <strong id="score-info-score">0.00 / 10</strong>
-                    </div>
-                    <div class="score-mapping-table-wrap">
-                        <table class="score-mapping-table">
-                            <caption>最终差异与 10 分制映射表</caption>
-                            <thead>
-                                <tr>
-                                    <th scope="col">最终差异</th>
-                                    <th scope="col">得分</th>
-                                    <th scope="col">最终差异</th>
-                                    <th scope="col">得分</th>
-                                </tr>
-                            </thead>
-                            <tbody id="score-info-mapping-body"></tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
-
     <!-- 游戏脚本 -->
-    <script src="color-utils.js?v=20260821-match-bands"></script>
-    <script src="app.js?v=20260821-match-bands"></script>
+    <script src="color-utils.js?v=20260822-feedback-cleanup"></script>
+    <script src="app.js?v=20260822-recap-copy-v3"></script>
 </body>
 </html>
 

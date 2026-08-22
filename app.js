@@ -2,9 +2,13 @@
 const COLOR_HISTORY_STORAGE_KEY = 'colorMemoryGlobalColorHistory';
 const THEME_STORAGE_KEY = 'colorMemoryInterfaceTheme';
 const MAX_COLOR_HISTORY = 100;
+const MAX_SESSION_ROUNDS = 100;
+const MAX_RECAP_ROUNDS = 12;
 const OBSERVATION_DURATION_MS = 5000;
 const THEME_ROTATION_MS = 520;
 const THEME_SWAP_DELAY_MS = 260;
+const RECAP_TURN_MS = 240;
+const LOCAL_RECORD_HINT_DURATION_MS = 5000;
 const THEME_ORDER = ['cyan', 'amethyst', 'ivory'];
 const THEME_CONFIG = {
     cyan: { name: '青橙', themeColor: '#071820' },
@@ -60,6 +64,7 @@ let cubeRotationDegrees = activeThemeIndex * 120;
 let themeSwitching = false;
 let themeSwapTimeoutId;
 let themeFinishTimeoutId;
+let localRecordHintTimeoutId;
 document.documentElement.dataset.theme = THEME_ORDER[activeThemeIndex];
 
 const gameState = {
@@ -68,6 +73,7 @@ const gameState = {
     currentTargetColor: null,
     isGameActive: false,
     colorHistory: loadColorHistory(),
+    sessionRounds: [],
     // 新模式相关状态
     gameMode: null, // 'colorMatch' 或 'colorRecall'
     matchDifficulty: 'basic',
@@ -98,11 +104,17 @@ const gameState = {
     recallUserRGB: { r: 128, g: 128, b: 128 },
     recallRound: 1, // 当前轮次
     recallRoundSubmitted: false,
-    recallLastRoundScore: 0,
-    recallLastRoundDistance: 0,
-    recallLastRoundBaseDistance: 0,
-    recallLastRoundNeutralPenalty: 0,
     recallTotalRounds: 10 // 总轮次
+};
+
+const recapState = {
+    rounds: [],
+    page: 0,
+    selectedIndex: 0,
+    sample: 'target',
+    touchX: null,
+    touchY: null,
+    turnTimer: undefined
 };
 
 // DOM 元素
@@ -113,6 +125,7 @@ const elements = {
     themeStatus: document.getElementById('theme-status'),
     themeDots: document.querySelectorAll('[data-theme-dot]'),
     brandHeader: document.getElementById('brand-header'),
+    siteFooter: document.getElementById('site-footer'),
     landingScreen: document.getElementById('landing-screen'),
     enterGameButton: document.getElementById('enter-game-button'),
     colorHistoryEntry: document.getElementById('color-history-entry'),
@@ -143,6 +156,7 @@ const elements = {
     gameInfoBar: document.getElementById('game-info-bar'),
     gameStatsPanel: document.getElementById('game-stats-panel'),
     modeBestOverview: document.getElementById('mode-best-overview'),
+    localRecordHint: document.getElementById('local-record-hint'),
     localRecordNote: document.getElementById('local-record-note'),
     overviewBestBasicLabel: document.getElementById('overview-best-basic-label'),
     overviewBestAdvancedLabel: document.getElementById('overview-best-advanced-label'),
@@ -159,7 +173,6 @@ const elements = {
     recallPreviewPanel: document.getElementById('recall-preview-panel'),
     resultScreen: document.getElementById('result-screen'),
     startButton: document.getElementById('start-button'),
-    continueButton: document.getElementById('continue-button'),
     restartButton: document.getElementById('restart-button'),
     backButtons: document.querySelectorAll('[data-back-target]'),
     rulesList: document.getElementById('rules-list'),
@@ -176,21 +189,37 @@ const elements = {
     livesDisplay: document.getElementById('lives-display'),
     lives: document.getElementById('lives'),
     resultIcon: document.getElementById('result-icon'),
+    resultEyebrow: document.getElementById('result-eyebrow'),
     resultText: document.getElementById('result-text'),
-    resultDetail: document.getElementById('result-detail'),
-    matchResultSummary: document.getElementById('match-result-summary'),
-    resultLevelLabel: document.getElementById('result-level-label'),
-    resultLevel: document.getElementById('result-level'),
-    resultScore: document.getElementById('result-score'),
-    resultTargetColor: document.getElementById('result-target-color'),
-    resultSelectedColor: document.getElementById('result-selected-color'),
-    recallFinalSummary: document.getElementById('recall-final-summary'),
-    recallFinalScore: document.getElementById('recall-final-score'),
-    recallFinalMax: document.getElementById('recall-final-max'),
-    recallFinalAverage: document.getElementById('recall-final-average'),
-    recallFinalBest: document.getElementById('recall-final-best'),
-    recallFinalRounds: document.getElementById('recall-final-rounds'),
-    recallFinalRecordNote: document.getElementById('recall-final-record-note'),
+    finalPrimaryLabel: document.getElementById('final-primary-label'),
+    finalPrimaryValue: document.getElementById('final-primary-value'),
+    finalPrimaryUnit: document.getElementById('final-primary-unit'),
+    finalStatOneLabel: document.getElementById('final-stat-one-label'),
+    finalStatOneValue: document.getElementById('final-stat-one-value'),
+    finalStatTwoLabel: document.getElementById('final-stat-two-label'),
+    finalStatTwoValue: document.getElementById('final-stat-two-value'),
+    finalStatThreeLabel: document.getElementById('final-stat-three-label'),
+    finalStatThreeValue: document.getElementById('final-stat-three-value'),
+    finalRecordNote: document.getElementById('final-record-note'),
+    sessionRecap: document.getElementById('session-recap'),
+    recapShowTarget: document.getElementById('recap-show-target'),
+    recapShowAnswer: document.getElementById('recap-show-answer'),
+    recapCubeViewport: document.getElementById('session-recap-cube-viewport'),
+    recapCubeStage: document.getElementById('session-recap-cube-stage'),
+    recapCube: document.getElementById('session-recap-cube'),
+    recapFaces: document.querySelectorAll('[data-recap-face]'),
+    recapPrevious: document.getElementById('recap-previous'),
+    recapNext: document.getElementById('recap-next'),
+    recapFaceRange: document.getElementById('recap-face-range'),
+    recapFaceIndex: document.getElementById('recap-face-index'),
+    recapRoundList: document.getElementById('recap-round-list'),
+    recapDetailRound: document.getElementById('recap-detail-round'),
+    recapDetailResult: document.getElementById('recap-detail-result'),
+    recapDetailTargetSwatch: document.getElementById('recap-detail-target-swatch'),
+    recapDetailTargetHex: document.getElementById('recap-detail-target-hex'),
+    recapDetailAnswerSwatch: document.getElementById('recap-detail-answer-swatch'),
+    recapDetailAnswerHex: document.getElementById('recap-detail-answer-hex'),
+    recapDetailGuidance: document.getElementById('recap-detail-guidance'),
     resultChangeDifficulty: document.getElementById('result-change-difficulty'),
     colorHistory: document.getElementById('color-history'),
     colorHistoryCollection: document.getElementById('color-history-collection'),
@@ -230,32 +259,6 @@ const elements = {
     recallRoundScore: document.getElementById('recall-round-score'),
     recallRoundFeedback: document.getElementById('recall-round-feedback'),
     recallRoundGuidance: document.getElementById('recall-round-guidance'),
-    scoreInfoButton: document.getElementById('score-info-button'),
-    scoreInfoDialog: document.getElementById('score-info-dialog'),
-    scoreInfoClose: document.getElementById('score-info-close'),
-    scoreInfoTitle: document.getElementById('score-info-title'),
-    scoreInfoScore: document.getElementById('score-info-score'),
-    scoreInfoDistance: document.getElementById('score-info-distance'),
-    scoreInfoBaseDistance: document.getElementById('score-info-base-distance'),
-    scoreInfoBaseFormula: document.getElementById('score-info-base-formula'),
-    scoreInfoSquareFormula: document.getElementById('score-info-square-formula'),
-    scoreInfoRawFormula: document.getElementById('score-info-raw-formula'),
-    scoreInfoScaleInput: document.getElementById('score-info-scale-input'),
-    scoreInfoTotalBase: document.getElementById('score-info-total-base'),
-    scoreInfoTotalAdjustment: document.getElementById('score-info-total-adjustment'),
-    scoreInfoAdjustment: document.getElementById('score-info-adjustment'),
-    scoreInfoNeutralStart: document.getElementById('score-info-neutral-start'),
-    scoreInfoNeutralFormula: document.getElementById('score-info-neutral-formula'),
-    scoreInfoNeutralSmooth: document.getElementById('score-info-neutral-smooth'),
-    scoreInfoAdjustmentFormula: document.getElementById('score-info-adjustment-formula'),
-    scoreInfoRange: document.getElementById('score-info-range'),
-    scoreInfoInterpolation: document.getElementById('score-info-interpolation'),
-    scoreInfoMappingBody: document.getElementById('score-info-mapping-body'),
-    scoreInfoGuidance: document.getElementById('score-info-guidance'),
-    scoreInfoTargetSwatch: document.getElementById('score-info-target-swatch'),
-    scoreInfoTargetCode: document.getElementById('score-info-target-code'),
-    scoreInfoUserSwatch: document.getElementById('score-info-user-swatch'),
-    scoreInfoUserCode: document.getElementById('score-info-user-code'),
     recallResultTarget: document.getElementById('recall-result-target'),
     recallResultUser: document.getElementById('recall-result-user'),
     recallTargetCode: document.getElementById('recall-target-code'),
@@ -316,7 +319,6 @@ const recallSections = [
 let activeCountdownId = 0;
 let paletteRetryTimeoutId;
 let audioContext;
-let scoreInfoReturnFocus;
 let selectedHistoryHex;
 let clearHistoryConfirmationTimeoutId;
 
@@ -520,7 +522,11 @@ function updateBrandState(screen) {
     const isActiveGameScreen = screen === elements.targetColorScreen
         || screen === elements.colorGridScreen
         || screen === elements.colorRecallScreen;
-    elements.brandHeader.classList.toggle('hidden', screen === elements.landingScreen || isActiveGameScreen);
+    const isFinalScreen = screen === elements.resultScreen;
+    const isImmersiveScreen = isActiveGameScreen || isFinalScreen;
+    elements.brandHeader.classList.toggle('hidden', screen === elements.landingScreen || isImmersiveScreen);
+    elements.siteFooter.classList.toggle('hidden', isImmersiveScreen);
+    document.body.classList.toggle('is-immersive-screen', isImmersiveScreen);
 }
 
 function showRecallSection(section) {
@@ -548,34 +554,31 @@ function resetRecallAttemptState() {
     gameState.recallTotalScoreCenti = 0;
     gameState.recallRound = 1;
     gameState.recallRoundSubmitted = false;
-    gameState.recallLastRoundScore = 0;
-    gameState.recallLastRoundDistance = 0;
-    gameState.recallLastRoundBaseDistance = 0;
-    gameState.recallLastRoundNeutralPenalty = 0;
     gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
     gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
     elements.nextRecallBtn.textContent = '下一轮';
     updateDisplays();
 }
 
-function resetResultColorBlocks() {
-    elements.resultTargetColor.style.backgroundColor = '';
-    elements.resultTargetColor.style.border = '';
-    elements.resultTargetColor.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
-    elements.resultTargetColor.innerHTML = '';
-    elements.resultSelectedColor.style.backgroundColor = '';
-    elements.resultSelectedColor.style.border = '';
-    elements.resultSelectedColor.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
-    elements.resultSelectedColor.innerHTML = '';
+function resetSessionRecap() {
+    recapState.rounds = [];
+    recapState.page = 0;
+    recapState.selectedIndex = 0;
+    recapState.sample = 'target';
+    clearTimeout(recapState.turnTimer);
+    elements.sessionRecap.classList.add('hidden');
+    delete elements.sessionRecap.dataset.mode;
+    elements.recapFaces.forEach((face) => {
+        face.textContent = '';
+    });
+    elements.recapRoundList.textContent = '';
+    elements.recapCube.style.transform = 'rotateY(0deg)';
 }
 
 function showMatchResultLayout() {
-    elements.matchResultSummary.classList.remove('hidden');
-    elements.recallFinalSummary.classList.add('hidden');
-    elements.resultChangeDifficulty.classList.add('hidden');
-    elements.continueButton.classList.remove('hidden');
-    elements.restartButton.classList.remove('recall-primary-action');
-    elements.restartButton.textContent = '重新开始';
+    elements.resultScreen.dataset.resultMode = 'match';
+    elements.resultChangeDifficulty.classList.remove('hidden');
+    elements.restartButton.textContent = '再玩一次';
 }
 
 function resetMatchRoundFeedback() {
@@ -639,11 +642,250 @@ function showMatchRoundFeedback(selectedCard, isCorrect, isFinalRound) {
 }
 
 function showRecallFinalLayout() {
-    elements.matchResultSummary.classList.add('hidden');
-    elements.recallFinalSummary.classList.remove('hidden');
+    elements.resultScreen.dataset.resultMode = 'recall';
     elements.resultChangeDifficulty.classList.remove('hidden');
-    elements.restartButton.classList.add('recall-primary-action');
     elements.restartButton.textContent = '再玩一次';
+}
+
+function setFinalSummary({
+    primaryLabel,
+    primaryValue,
+    primaryUnit,
+    stats,
+    recordNote = ''
+}) {
+    elements.finalPrimaryLabel.textContent = primaryLabel;
+    elements.finalPrimaryValue.textContent = primaryValue;
+    elements.finalPrimaryUnit.textContent = primaryUnit;
+    elements.finalStatOneLabel.textContent = stats[0].label;
+    elements.finalStatOneValue.textContent = stats[0].value;
+    elements.finalStatTwoLabel.textContent = stats[1].label;
+    elements.finalStatTwoValue.textContent = stats[1].value;
+    elements.finalStatThreeLabel.textContent = stats[2].label;
+    elements.finalStatThreeValue.textContent = stats[2].value;
+    elements.finalRecordNote.textContent = recordNote;
+    elements.finalRecordNote.classList.toggle('hidden', !recordNote);
+}
+
+function appendSessionRound(round) {
+    gameState.sessionRounds.push(round);
+    if (gameState.sessionRounds.length > MAX_SESSION_ROUNDS) {
+        gameState.sessionRounds.splice(0, gameState.sessionRounds.length - MAX_SESSION_ROUNDS);
+    }
+}
+
+function getRecapRoundNumber(round, index = 0) {
+    return Number(round.attempt || round.round || index + 1);
+}
+
+function formatRecapRound(round, index = 0) {
+    return `R${String(getRecapRoundNumber(round, index)).padStart(2, '0')}`;
+}
+
+function getRecapResultText(round) {
+    if (round.mode === 'colorMatch') return round.correct ? '正确' : '未命中';
+    return `${round.score.toFixed(2)} 分`;
+}
+
+function getRecapTileResult(round) {
+    if (round.mode === 'colorMatch') return round.correct ? '✓' : '×';
+    return round.score.toFixed(1);
+}
+
+function createRecapRoundTile(round, index) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'session-recap-tile';
+    button.dataset.recapRound = String(getRecapRoundNumber(round, index));
+    button.dataset.recapIndex = String(index);
+    button.dataset.targetHex = round.targetHex;
+    button.dataset.answerHex = round.answerHex;
+    button.dataset.outcome = getRecapResultText(round);
+    button.style.backgroundColor = recapState.sample === 'target' ? round.targetHex : round.answerHex;
+    button.setAttribute('aria-label', `${formatRecapRound(round, index)}，${getRecapResultText(round)}`);
+    button.addEventListener('click', () => updateRecapDetail(index));
+    return button;
+}
+
+function createRecapEmptyTile() {
+    const tile = document.createElement('i');
+    tile.className = 'session-recap-tile session-recap-tile--empty';
+    tile.setAttribute('aria-hidden', 'true');
+    return tile;
+}
+
+function renderRecapFaces() {
+    elements.recapFaces.forEach((face, page) => {
+        face.textContent = '';
+        const startIndex = page * 4;
+        for (let offset = 0; offset < 4; offset++) {
+            const index = startIndex + offset;
+            face.appendChild(index < recapState.rounds.length
+                ? createRecapRoundTile(recapState.rounds[index], index)
+                : createRecapEmptyTile());
+        }
+    });
+}
+
+function renderRecapRoundList() {
+    elements.recapRoundList.textContent = '';
+    const startIndex = recapState.page * 4;
+    const endIndex = Math.min(startIndex + 4, recapState.rounds.length);
+    for (let index = startIndex; index < endIndex; index++) {
+        const round = recapState.rounds[index];
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'recap-round-button';
+        button.dataset.recapRound = String(getRecapRoundNumber(round, index));
+        button.dataset.recapIndex = String(index);
+        button.dataset.targetHex = round.targetHex;
+        button.dataset.answerHex = round.answerHex;
+        button.setAttribute('aria-label', `${formatRecapRound(round, index)}，${getRecapResultText(round)}`);
+
+        const swatch = document.createElement('i');
+        swatch.style.backgroundColor = recapState.sample === 'target' ? round.targetHex : round.answerHex;
+        swatch.setAttribute('aria-hidden', 'true');
+        const number = document.createElement('span');
+        number.textContent = formatRecapRound(round, index);
+        const result = document.createElement('strong');
+        result.textContent = getRecapTileResult(round);
+        button.append(swatch, number, result);
+        button.addEventListener('click', () => updateRecapDetail(index));
+        elements.recapRoundList.appendChild(button);
+    }
+}
+
+function updateRecapSample(sample) {
+    recapState.sample = sample;
+    elements.recapShowTarget.setAttribute('aria-pressed', sample === 'target' ? 'true' : 'false');
+    elements.recapShowAnswer.setAttribute('aria-pressed', sample === 'answer' ? 'true' : 'false');
+    elements.sessionRecap.querySelectorAll('[data-recap-index]').forEach((button) => {
+        const round = recapState.rounds[Number(button.dataset.recapIndex)];
+        const swatch = button.classList.contains('recap-round-button') ? button.querySelector('i') : button;
+        swatch.style.backgroundColor = sample === 'target' ? round.targetHex : round.answerHex;
+    });
+}
+
+function updateRecapDetail(index) {
+    const round = recapState.rounds[index];
+    if (!round) return;
+    recapState.selectedIndex = index;
+    elements.sessionRecap.querySelectorAll('[data-recap-index]').forEach((button) => {
+        const active = Number(button.dataset.recapIndex) === index;
+        button.classList.toggle('is-active', active);
+        if (active) button.setAttribute('aria-current', 'true');
+        else button.removeAttribute('aria-current');
+    });
+
+    elements.recapDetailRound.textContent = formatRecapRound(round, index);
+    elements.recapDetailResult.textContent = getRecapResultText(round);
+    elements.recapDetailResult.classList.toggle('is-failure', round.mode === 'colorMatch' && !round.correct);
+    elements.recapDetailTargetSwatch.style.backgroundColor = round.targetHex;
+    elements.recapDetailTargetHex.textContent = round.targetHex;
+    elements.recapDetailAnswerSwatch.style.backgroundColor = round.answerHex;
+    elements.recapDetailAnswerHex.textContent = round.answerHex;
+    const guidance = round.mode === 'colorRecall' ? round.guidance : '';
+    elements.recapDetailGuidance.textContent = guidance;
+    elements.recapDetailGuidance.classList.toggle('hidden', !guidance);
+}
+
+function updateRecapPage(page, selectFirst = true, animate = false) {
+    const pageCount = Math.max(1, Math.ceil(recapState.rounds.length / 4));
+    const nextPage = Math.max(0, Math.min(pageCount - 1, page));
+    recapState.page = nextPage;
+    const reduceMotion = Boolean(window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const supports3d = Boolean(window.CSS
+        && window.CSS.supports
+        && window.CSS.supports('transform-style', 'preserve-3d'));
+
+    elements.recapCubeStage.classList.toggle('is-flat', !supports3d);
+    clearTimeout(recapState.turnTimer);
+    elements.recapCube.classList.remove('is-turning');
+    if (animate && !reduceMotion && supports3d) {
+        elements.recapCube.classList.add('is-turning');
+        recapState.turnTimer = setTimeout(() => {
+            elements.recapCube.classList.remove('is-turning');
+        }, RECAP_TURN_MS + 20);
+    }
+    elements.recapCube.style.transform = `rotateY(${-90 * nextPage}deg)`;
+
+    elements.recapFaces.forEach((face, faceIndex) => {
+        const active = faceIndex === nextPage;
+        face.setAttribute('aria-hidden', active ? 'false' : 'true');
+        face.querySelectorAll('button').forEach((button) => {
+            button.tabIndex = active ? 0 : -1;
+        });
+    });
+
+    elements.recapPrevious.disabled = nextPage === 0;
+    elements.recapNext.disabled = nextPage === pageCount - 1;
+    const startIndex = nextPage * 4;
+    const endIndex = Math.min(startIndex + 4, recapState.rounds.length) - 1;
+    elements.recapFaceRange.textContent = `${formatRecapRound(recapState.rounds[startIndex], startIndex)}–${formatRecapRound(recapState.rounds[endIndex], endIndex)}`;
+    elements.recapFaceIndex.textContent = `${nextPage + 1}/${pageCount}`;
+    renderRecapRoundList();
+    updateRecapSample(recapState.sample);
+    if (selectFirst) updateRecapDetail(startIndex);
+    else updateRecapDetail(recapState.selectedIndex);
+}
+
+function renderSessionRecap() {
+    recapState.rounds = gameState.sessionRounds.slice(-MAX_RECAP_ROUNDS);
+    if (!recapState.rounds.length) {
+        resetSessionRecap();
+        return;
+    }
+    recapState.page = 0;
+    recapState.selectedIndex = 0;
+    recapState.sample = 'target';
+    const isRecall = recapState.rounds[0].mode === 'colorRecall';
+    elements.sessionRecap.dataset.mode = isRecall ? 'recall' : 'match';
+    elements.recapShowTarget.textContent = '目标颜色';
+    elements.recapShowAnswer.textContent = isRecall ? '复现颜色' : '选择颜色';
+    elements.recapShowTarget.parentElement.setAttribute(
+        'aria-label',
+        isRecall ? '切换目标颜色或复现颜色' : '切换目标颜色或选择颜色'
+    );
+    elements.sessionRecap.classList.remove('hidden');
+    renderRecapFaces();
+    updateRecapPage(0);
+}
+
+function setupSessionRecapInteraction() {
+    elements.recapShowTarget.addEventListener('click', () => updateRecapSample('target'));
+    elements.recapShowAnswer.addEventListener('click', () => updateRecapSample('answer'));
+    elements.recapPrevious.addEventListener('click', () => updateRecapPage(recapState.page - 1, true, true));
+    elements.recapNext.addEventListener('click', () => updateRecapPage(recapState.page + 1, true, true));
+    elements.recapCubeViewport.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            updateRecapPage(recapState.page - 1);
+            if (event.target !== elements.recapCubeViewport) {
+                elements.recapCubeViewport.focus({ preventScroll: true });
+            }
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            updateRecapPage(recapState.page + 1);
+            if (event.target !== elements.recapCubeViewport) {
+                elements.recapCubeViewport.focus({ preventScroll: true });
+            }
+        }
+    });
+    elements.recapCubeViewport.addEventListener('touchstart', (event) => {
+        if (!event.touches || event.touches.length !== 1) return;
+        recapState.touchX = event.touches[0].clientX;
+        recapState.touchY = event.touches[0].clientY;
+    }, { passive: true });
+    elements.recapCubeViewport.addEventListener('touchend', (event) => {
+        if (recapState.touchX === null || !event.changedTouches || event.changedTouches.length !== 1) return;
+        const deltaX = event.changedTouches[0].clientX - recapState.touchX;
+        const deltaY = event.changedTouches[0].clientY - recapState.touchY;
+        recapState.touchX = null;
+        recapState.touchY = null;
+        if (Math.abs(deltaX) < 36 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+        updateRecapPage(recapState.page + (deltaX < 0 ? 1 : -1), true, true);
+    }, { passive: true });
 }
 
 function loadColorHistory() {
@@ -666,23 +908,56 @@ function updateStatsVisibility(screen) {
     const isPreparationScreen = screen === elements.startScreen;
     const isDifficultyScreen = screen === elements.matchDifficultyScreen
         || screen === elements.recallDifficultyScreen;
-    const isRecallFinalResult = screen === elements.resultScreen
-        && gameState.gameMode === 'colorRecall'
-        && !gameState.isGameActive;
-    const isRecallGameplay = screen === elements.colorRecallScreen;
+    const isFinalResult = screen === elements.resultScreen && !gameState.isGameActive;
 
-    if (isRecallGameplay) {
-        elements.colorRecallScreen.prepend(elements.gameInfoBar);
-    } else {
-        elements.gameInfoAnchor.after(elements.gameInfoBar);
-    }
-    elements.gameInfoBar.classList.toggle('hidden', isMainMenu || isPreparationScreen || isRecallFinalResult);
-    elements.gameInfoBar.classList.toggle('recall-stats', isRecallGameplay);
+    document.body.classList.toggle('is-difficulty-screen', isDifficultyScreen);
+    elements.gameInfoAnchor.after(elements.gameInfoBar);
+    elements.gameInfoBar.classList.toggle('hidden', isMainMenu || isPreparationScreen || isFinalResult);
     elements.gameStatsPanel.classList.toggle('hidden', isMainMenu || isDifficultyScreen);
     elements.modeBestOverview.classList.toggle('hidden', !isDifficultyScreen);
+    elements.localRecordHint.classList.toggle('hidden', !isDifficultyScreen);
     elements.localRecordNote.classList.toggle('hidden', !isDifficultyScreen);
+    if (!isDifficultyScreen) hideLocalRecordHint(true);
     elements.gameInfoBar.style.gridTemplateColumns = '1fr';
     elements.gameInfoBar.style.justifyContent = 'stretch';
+}
+
+function showLocalRecordHint(autoHide = false) {
+    clearTimeout(localRecordHintTimeoutId);
+    localRecordHintTimeoutId = undefined;
+    elements.localRecordNote.classList.add('is-visible');
+    elements.localRecordHint.setAttribute('aria-expanded', 'true');
+
+    if (!autoHide) return;
+    localRecordHintTimeoutId = setTimeout(() => {
+        localRecordHintTimeoutId = undefined;
+        hideLocalRecordHint(true);
+    }, LOCAL_RECORD_HINT_DURATION_MS);
+}
+
+function hideLocalRecordHint(force = false) {
+    if (localRecordHintTimeoutId && !force) return;
+    clearTimeout(localRecordHintTimeoutId);
+    localRecordHintTimeoutId = undefined;
+    elements.localRecordNote.classList.remove('is-visible');
+    elements.localRecordHint.setAttribute('aria-expanded', 'false');
+}
+
+function setupLocalRecordHint() {
+    elements.localRecordHint.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'mouse') showLocalRecordHint();
+    });
+    elements.localRecordHint.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse') hideLocalRecordHint();
+    });
+    elements.localRecordHint.addEventListener('focus', () => showLocalRecordHint());
+    elements.localRecordHint.addEventListener('blur', () => hideLocalRecordHint());
+    elements.localRecordHint.addEventListener('click', () => showLocalRecordHint(true));
+    elements.localRecordHint.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        hideLocalRecordHint(true);
+    });
 }
 
 function updateBestOverviews(type = gameState.gameMode) {
@@ -815,6 +1090,8 @@ function initGame() {
     updateBestOverviews();
     updateDisplays();
     updateColorHistoryDisplay();
+    setupSessionRecapInteraction();
+    setupLocalRecordHint();
     
     // 设置HSL色轮交互
     setupHSLWheelInteraction();
@@ -831,7 +1108,6 @@ function initGame() {
         bindCardActivation(card, () => selectRecallDifficulty(card.dataset.recallDifficulty));
     });
     elements.startButton.addEventListener('click', startGame);
-    elements.continueButton.addEventListener('click', nextLevel);
     elements.restartButton.addEventListener('click', handleRestartButton);
     elements.matchContinueButton.addEventListener('click', handleMatchContinue);
     elements.matchRestartButton.addEventListener('click', restartCurrentMatchDifficulty);
@@ -844,13 +1120,7 @@ function initGame() {
         resetClearHistoryConfirmation();
         elements.clearHistoryBtn.focus();
     });
-    elements.resultChangeDifficulty.addEventListener('click', returnToRecallDifficultySelection);
-    elements.scoreInfoButton.addEventListener('click', openScoreInfoDialog);
-    elements.scoreInfoClose.addEventListener('click', closeScoreInfoDialog);
-    elements.scoreInfoDialog.addEventListener('click', (event) => {
-        if (event.target === elements.scoreInfoDialog) closeScoreInfoDialog();
-    });
-    elements.scoreInfoDialog.addEventListener('keydown', handleScoreInfoDialogKeydown);
+    elements.resultChangeDifficulty.addEventListener('click', returnToDifficultySelection);
     // 倒计时期间不允许点击跳过，确保每轮观察时间一致。
 }
 
@@ -971,9 +1241,7 @@ function restartCurrentMatchDifficulty() {
     gameState.totalAnswers = 0;
     gameState.lives = matchDifficultyConfig[gameState.matchDifficulty].endless ? 3 : 0;
     gameState.matchRoundCompletesGame = false;
-    resetResultColorBlocks();
-    elements.continueButton.classList.remove('hidden');
-    elements.continueButton.textContent = '下一关';
+    resetSessionRecap();
     updateDisplays();
     showScreen(elements.startScreen);
 }
@@ -982,41 +1250,40 @@ function restartCurrentRecallDifficulty() {
     stopActiveCountdown();
     gameState.isGameActive = false;
     gameState.gameMode = 'colorRecall';
-    resetResultColorBlocks();
+    resetSessionRecap();
     resetRecallAttemptState();
     showScreen(elements.startScreen);
 }
 
-function returnToRecallDifficultySelection() {
+function returnToDifficultySelection() {
     stopActiveCountdown();
     gameState.isGameActive = false;
-    gameState.gameMode = 'colorRecall';
-    resetResultColorBlocks();
-    resetRecallAttemptState();
-    showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
+    resetSessionRecap();
+    if (gameState.gameMode === 'colorRecall') {
+        resetRecallAttemptState();
+        showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
+        return;
+    }
+    showDifficultyScreen(elements.matchDifficultyScreen, 'colorMatch');
 }
 
 function handleRestartButton() {
-    if (gameState.gameMode === 'colorRecall') {
+    if (gameState.gameMode === 'colorRecall' || gameState.gameMode === 'colorMatch') {
         startGame();
         return;
     }
-
-    if (gameState.gameMode === 'colorMatch') {
-        restartCurrentMatchDifficulty();
-        return;
-    }
-
     restartGame();
 }
 
 // 开始游戏
 function startGame() {
     gameState.isGameActive = true;
+    gameState.sessionRounds = [];
     gameState.level = 1;
     gameState.score = 0;
     gameState.correctAnswers = 0;
     gameState.totalAnswers = 0;
+    resetSessionRecap();
     
     // 根据模式初始化状态
     if (gameState.gameMode === 'colorMatch') {
@@ -1131,25 +1398,21 @@ function showColorGrid() {
 function checkColorSelection(selectedColor, selectedCard) {
     if (gameState.matchRoundSubmitted) return;
     gameState.matchRoundSubmitted = true;
-    resetResultColorBlocks();
-    elements.resultDetail.innerHTML = '';
-    elements.resultDetail.classList.add('hidden');
     addToColorHistory(gameState.currentTargetColor);
-    
-    // 更新结果显示
-    elements.resultTargetColor.style.backgroundColor = gameState.currentTargetColor;
-    elements.resultSelectedColor.style.backgroundColor = selectedColor;
-    elements.resultLevel.textContent = gameState.level;
-    
-    // 显示颜色的十六进制色码
-    document.getElementById('target-color-code').textContent = rgbToHex(gameState.currentTargetColor);
-    document.getElementById('selected-color-code').textContent = rgbToHex(selectedColor);
-    
-    // 增加总答题数
+    const targetHex = rgbToHex(gameState.currentTargetColor);
+    const selectedHex = rgbToHex(selectedColor);
     gameState.totalAnswers++;
-    const isCorrect = rgbToHex(selectedColor) === rgbToHex(gameState.currentTargetColor);
+    const isCorrect = selectedHex === targetHex;
     const config = matchDifficultyConfig[gameState.matchDifficulty];
     gameState.matchLastAnswerCorrect = isCorrect;
+    appendSessionRound({
+        mode: 'colorMatch',
+        attempt: gameState.totalAnswers,
+        round: gameState.level,
+        targetHex,
+        answerHex: selectedHex,
+        correct: isCorrect
+    });
     
     // 判断选择是否正确
     if (isCorrect) {
@@ -1184,7 +1447,6 @@ function checkColorSelection(selectedColor, selectedCard) {
     }
 
     showMatchRoundFeedback(selectedCard, isCorrect, isFinalRound);
-    elements.resultScore.textContent = gameState.score;
     updateDisplays();
 }
 
@@ -1211,8 +1473,6 @@ function showGameEnd() {
     gameState.isGameActive = false;
     showMatchResultLayout();
     showScreen(elements.resultScreen);
-    elements.resultDetail.classList.add('hidden');
-    elements.resultDetail.innerHTML = '';
     const config = matchDifficultyConfig[gameState.matchDifficulty];
     const isNewRecord = gameState.score > gameState.matchBestScores[gameState.matchDifficulty];
     if (isNewRecord) {
@@ -1220,51 +1480,43 @@ function showGameEnd() {
         setStorageItem(config.storageKey, gameState.score.toString());
         updateBestOverviews();
     }
-    
-    // 根据游戏模式显示不同的结束信息
+
+    elements.resultEyebrow.textContent = '本局完成';
+    elements.resultIcon.innerHTML = iconMarkup(config.endless ? 'star' : 'check-circle');
+    elements.resultText.textContent = `${config.name} · 颜色匹配`;
+
     if (!config.endless) {
-        // 固定关卡匹配模式结束
         const accuracy = gameState.totalAnswers > 0
             ? Math.round((gameState.correctAnswers / gameState.totalAnswers) * 100)
             : 0;
-        
-        elements.resultIcon.className = 'text-6xl mb-4 text-primary';
-        elements.resultIcon.innerHTML = iconMarkup('trophy');
-        elements.resultText.textContent = `${config.name}颜色匹配完成！`;
-        elements.resultText.className = 'text-3xl font-bold mb-6 text-primary';
-        
-        elements.resultDetail.innerHTML = `
-            <p class="text-xl font-semibold mb-2">正确率: <span class="text-success">${accuracy}%</span></p>
-            <div class="progress-track w-full rounded-full h-2.5">
-                <div class="progress-fill h-2.5 rounded-full" style="width: ${accuracy}%"></div>
-            </div>
-            <p class="text-sm text-gray-400 mt-2">答对: ${gameState.correctAnswers} / 总题数: ${gameState.totalAnswers}</p>
-            <p class="text-sm text-gray-400 mt-1">${isNewRecord ? '新纪录！' : `${config.name}最佳：${gameState.matchBestScores[gameState.matchDifficulty]}`}</p>
-        `;
-        elements.resultDetail.classList.remove('hidden');
+        setFinalSummary({
+            primaryLabel: '正确率',
+            primaryValue: String(accuracy),
+            primaryUnit: '%',
+            stats: [
+                { label: '答对', value: `${gameState.correctAnswers} / ${gameState.totalAnswers}` },
+                { label: '本机最佳', value: String(gameState.matchBestScores[gameState.matchDifficulty]) },
+                { label: '完成', value: String(gameState.totalAnswers) }
+            ],
+            recordNote: isNewRecord ? '新纪录' : ''
+        });
     } else {
-        // 大师无尽模式结束
-        elements.resultIcon.className = 'text-6xl mb-4 text-secondary';
-        elements.resultIcon.innerHTML = iconMarkup('star');
-        elements.resultText.textContent = '大师颜色匹配结束！';
-        elements.resultText.className = 'text-3xl font-bold mb-6 text-secondary';
-        
-        elements.resultDetail.innerHTML = `
-            <p class="text-xl font-semibold mb-2">最高关卡: <span class="text-secondary">${gameState.level}</span></p>
-            <p class="text-sm text-gray-400">你坚持到了第 ${gameState.level} 关！</p>
-            <p class="text-sm text-gray-400 mt-1">${isNewRecord ? '新纪录！' : `大师最佳：${gameState.matchBestScores.master}`}</p>
-        `;
-        elements.resultDetail.classList.remove('hidden');
+        setFinalSummary({
+            primaryLabel: '得分',
+            primaryValue: String(gameState.score),
+            primaryUnit: '分',
+            stats: [
+                { label: '最高关', value: String(gameState.level) },
+                { label: '本机最佳', value: String(gameState.matchBestScores.master) },
+                { label: '答题', value: String(gameState.totalAnswers) }
+            ],
+            recordNote: isNewRecord ? '新纪录' : ''
+        });
     }
-    
-    // 更新结果显示
-    elements.resultLevel.textContent = gameState.level;
-    elements.resultScore.textContent = gameState.score;
+
+    renderSessionRecap();
     updateDisplays();
-    
-    // 隐藏"下一关"按钮，只显示"重新开始"按钮
-    elements.continueButton.classList.add('hidden');
-    elements.restartButton.classList.remove('hidden');
+    elements.resultText.focus({ preventScroll: true });
 }
 
 // 重新开始游戏
@@ -1279,22 +1531,13 @@ function restartGame() {
     elements.scoreLabel.textContent = '得分';
     elements.bestScoreLabel.textContent = '最佳记录';
     
-    // 清除结果屏幕上的模式详情
-    elements.resultDetail.innerHTML = '';
-    elements.resultDetail.classList.add('hidden');
-    
-    // 恢复按钮显示
-    elements.continueButton.classList.remove('hidden');
-    
-    // 恢复结果区域样式
-    resetResultColorBlocks();
+    resetSessionRecap();
 }
 
 // 更新显示
 function updateDisplays() {
     const isRecallMode = gameState.gameMode === 'colorRecall';
     elements.levelLabel.textContent = isRecallMode ? '当前轮次' : '当前关卡';
-    elements.resultLevelLabel.textContent = isRecallMode ? '完成轮数' : '当前关卡';
     elements.levelDisplay.textContent = gameState.gameMode === 'colorRecall'
         ? gameState.recallRound
         : gameState.level;
@@ -1445,10 +1688,6 @@ function selectColorHistoryItem(item) {
 // 开始一轮颜色复现
 function startColorRecallRound() {
     gameState.recallRoundSubmitted = false;
-    gameState.recallLastRoundScore = 0;
-    gameState.recallLastRoundDistance = 0;
-    gameState.recallLastRoundBaseDistance = 0;
-    gameState.recallLastRoundNeutralPenalty = 0;
     elements.nextRecallBtn.textContent = '下一轮';
     updateDisplays();
     configureRecallControlPanel();
@@ -1517,7 +1756,7 @@ function configureRecallControlPanel() {
     const config = recallDifficultyConfig[gameState.recallDifficulty];
     const usesHsl = gameState.recallDifficulty === 'basic';
 
-    elements.recallControlTitle.textContent = `${config.name}模式：你的复现`;
+    elements.recallControlTitle.textContent = '你的复现';
     elements.hslControlPanel.classList.toggle('hidden', !usesHsl);
     elements.rgbControlPanel.classList.toggle('hidden', usesHsl);
     elements.recallPreviewPanel.classList.toggle('hidden', !config.preview);
@@ -1576,9 +1815,9 @@ function getRecallDifferenceFeedback(details) {
 
     if (details.userChroma < 0.02 && details.targetChroma - details.userChroma >= 0.025) {
         if (lightnessDifference <= 7) {
-            return '明度接近，但饱和度明显偏低，颜色接近灰色';
+            return '明度接近，但饱和度明显偏低';
         }
-        return `饱和度明显偏低，颜色接近灰色，同时${lightnessIssue}`;
+        return `饱和度明显偏低，同时${lightnessIssue}`;
     }
 
     if (details.targetChroma < 0.02 && details.userChroma - details.targetChroma >= 0.025) {
@@ -1620,140 +1859,6 @@ function getRecallDifferenceFeedback(details) {
         : issueParts.join('、');
 }
 
-function getScoreBracket(distance) {
-    const safeDistance = Math.max(0, Number(distance) || 0);
-    const exactAnchor = OKLAB_SCORE_ANCHORS.find((anchor) => (
-        Math.abs(anchor.distance - safeDistance) < 1e-9
-    ));
-    if (exactAnchor) return { lower: exactAnchor, upper: exactAnchor };
-
-    for (let index = 1; index < OKLAB_SCORE_ANCHORS.length; index++) {
-        const upper = OKLAB_SCORE_ANCHORS[index];
-        if (safeDistance < upper.distance) {
-            return { lower: OKLAB_SCORE_ANCHORS[index - 1], upper };
-        }
-    }
-
-    const lastAnchor = OKLAB_SCORE_ANCHORS[OKLAB_SCORE_ANCHORS.length - 1];
-    return { lower: lastAnchor, upper: null };
-}
-
-function updateScoreInfoDialog() {
-    const score = gameState.recallLastRoundScore;
-    const distance = gameState.recallLastRoundDistance;
-    const baseDistance = gameState.recallLastRoundBaseDistance;
-    const neutralPenalty = gameState.recallLastRoundNeutralPenalty;
-    const target = gameState.recallTargetRGB;
-    const user = getRecallUserRGB();
-    const distanceDetails = calculateRecallDistanceDetails(target, user);
-    const { lower, upper } = getScoreBracket(distance);
-    const formatOklabDelta = (value) => `(${value.toFixed(4)})²`;
-    const squaredDistance = distanceDetails.rawDistance ** 2;
-    const targetChroma = distanceDetails.targetChroma;
-    const userChroma = distanceDetails.userChroma;
-    const targetChromaStart = RECALL_NEUTRAL_CHROMA_THRESHOLD;
-    const targetChromaFull = RECALL_TARGET_CHROMA_FULL_THRESHOLD;
-
-    elements.scoreInfoTitle.textContent = `为什么是 ${score.toFixed(2)} 分`;
-    elements.scoreInfoScore.textContent = `${score.toFixed(2)} / 10`;
-    elements.scoreInfoDistance.textContent = distance.toFixed(2);
-    elements.scoreInfoBaseDistance.textContent = baseDistance.toFixed(2);
-    elements.scoreInfoSquareFormula.textContent = `三项平方和 = ${formatOklabDelta(distanceDetails.oklabDelta.l)} + ${formatOklabDelta(distanceDetails.oklabDelta.a)} + ${formatOklabDelta(distanceDetails.oklabDelta.b)} ≈ ${squaredDistance.toFixed(5)}`;
-    elements.scoreInfoRawFormula.textContent = `原始 ΔOK = √(${squaredDistance.toFixed(5)}) ≈ ${distanceDetails.rawDistance.toFixed(4)}`;
-    elements.scoreInfoScaleInput.textContent = distanceDetails.rawDistance.toFixed(4);
-    elements.scoreInfoTotalBase.textContent = baseDistance.toFixed(2);
-    elements.scoreInfoTotalAdjustment.textContent = neutralPenalty.toFixed(2);
-    elements.scoreInfoTargetSwatch.style.backgroundColor = rgbToCss(target);
-    elements.scoreInfoTargetCode.textContent = rgbToCss(target);
-    elements.scoreInfoUserSwatch.style.backgroundColor = rgbToCss(user);
-    elements.scoreInfoUserCode.textContent = rgbToCss(user);
-    elements.scoreInfoGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
-    elements.scoreInfoAdjustment.textContent = neutralPenalty >= 0.05
-        ? `只有目标明显带色、复现接近灰色并且丢失色彩强度时，才会启用额外修正；目标本身接近灰色时不修正。本轮修正值 ${neutralPenalty.toFixed(2)} 会加入最终差异，不是直接扣掉 ${neutralPenalty.toFixed(2)} 分。`
-        : `只有目标明显带色、复现接近灰色并且丢失色彩强度时，才会启用额外修正；目标本身接近灰色时不修正。本轮各项相乘后，修正值为 ${neutralPenalty.toFixed(2)}。`;
-    elements.scoreInfoNeutralStart.textContent = `色彩强度：目标 C = ${targetChroma.toFixed(4)}，复现 C = ${userChroma.toFixed(4)}；两者相减，低于 0 时按 0 计算，丢失量 = ${distanceDetails.missingChroma.toFixed(4)}`;
-    if (distanceDetails.targetColorRawAmount <= 0) {
-        elements.scoreInfoNeutralFormula.textContent = `目标 C 未超过 ${targetChromaStart.toFixed(2)}，因此目标显色系数 q = ${distanceDetails.targetColorFactor.toFixed(3)}，不启用额外修正`;
-    } else if (distanceDetails.targetColorRawAmount >= 1) {
-        elements.scoreInfoNeutralFormula.textContent = `目标 C 已达到 ${targetChromaFull.toFixed(2)}，因此目标显色系数 q = ${distanceDetails.targetColorFactor.toFixed(3)}`;
-    } else {
-        elements.scoreInfoNeutralFormula.textContent = `目标显色程度 t = (${targetChroma.toFixed(4)} − ${targetChromaStart.toFixed(2)}) ÷ (${targetChromaFull.toFixed(2)} − ${targetChromaStart.toFixed(2)}) ≈ ${distanceDetails.targetColorAmount.toFixed(3)}；平滑后 q = ${distanceDetails.targetColorFactor.toFixed(3)}`;
-    }
-    if (distanceDetails.userNeutralRawAmount <= 0) {
-        elements.scoreInfoNeutralSmooth.textContent = `复现 C 已达到 ${RECALL_NEUTRAL_CHROMA_THRESHOLD.toFixed(2)}，因此复现灰色系数 n = ${distanceDetails.userNeutralFactor.toFixed(3)}`;
-    } else {
-        elements.scoreInfoNeutralSmooth.textContent = `复现灰色程度 r = 1 − ${userChroma.toFixed(4)} ÷ ${RECALL_NEUTRAL_CHROMA_THRESHOLD.toFixed(2)} ≈ ${distanceDetails.userNeutralAmount.toFixed(3)}；平滑后 n = ${distanceDetails.userNeutralFactor.toFixed(3)}`;
-    }
-    elements.scoreInfoAdjustmentFormula.textContent = `修正值 = 丢失量 ${distanceDetails.missingChroma.toFixed(4)} × 100 × ${RECALL_NEUTRAL_PENALTY_WEIGHT.toFixed(1)} × q ${distanceDetails.targetColorFactor.toFixed(3)} × n ${distanceDetails.userNeutralFactor.toFixed(3)} ≈ ${neutralPenalty.toFixed(2)}`;
-
-    if (!elements.scoreInfoMappingBody.children.length) {
-        for (let index = 0; index < OKLAB_SCORE_ANCHORS.length; index += 2) {
-            const row = document.createElement('tr');
-            OKLAB_SCORE_ANCHORS.slice(index, index + 2).forEach((anchor) => {
-                const distanceCell = document.createElement('td');
-                const scoreCell = document.createElement('td');
-                distanceCell.textContent = anchor.distance === 100 ? '100+' : String(anchor.distance);
-                scoreCell.textContent = anchor.score.toFixed(1);
-                distanceCell.dataset.scoreAnchor = String(anchor.distance);
-                scoreCell.dataset.scoreAnchor = String(anchor.distance);
-                row.append(distanceCell, scoreCell);
-            });
-            elements.scoreInfoMappingBody.appendChild(row);
-        }
-    }
-
-    const activeAnchors = new Set([lower.distance, upper ? upper.distance : undefined].filter(Number.isFinite));
-    elements.scoreInfoMappingBody.querySelectorAll('[data-score-anchor]').forEach((cell) => {
-        cell.classList.toggle('is-active', activeAnchors.has(Number(cell.dataset.scoreAnchor)));
-    });
-
-    if (!upper) {
-        elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(2)}，已经达到 ${lower.distance} 以上。`;
-        elements.scoreInfoInterpolation.textContent = `本轮得分 = ${lower.distance} 以上均映射为 0.00 分。`;
-        return;
-    }
-
-    if (lower === upper) {
-        elements.scoreInfoRange.textContent = distance === 0
-            ? '最终差异是 0，表示两种颜色一致。'
-            : `最终差异 ${distance.toFixed(2)}，正好落在一个映射点上。`;
-        elements.scoreInfoInterpolation.textContent = `映射点：差异 ${lower.distance} → ${lower.score.toFixed(2)} 分。`;
-        return;
-    }
-
-    elements.scoreInfoRange.textContent = `最终差异 ${distance.toFixed(2)}，介于 ${lower.distance} 和 ${upper.distance} 之间。`;
-    elements.scoreInfoInterpolation.textContent = `本轮得分 = ${lower.score.toFixed(1)} + (${upper.score.toFixed(1)} − ${lower.score.toFixed(1)}) × (${distance.toFixed(2)} − ${lower.distance}) ÷ (${upper.distance} − ${lower.distance}) ≈ ${score.toFixed(2)}`;
-}
-
-function openScoreInfoDialog() {
-    updateScoreInfoDialog();
-    scoreInfoReturnFocus = elements.scoreInfoButton;
-    elements.scoreInfoDialog.classList.remove('hidden');
-    elements.scoreInfoDialog.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-    elements.scoreInfoTitle.focus();
-}
-
-function closeScoreInfoDialog() {
-    if (elements.scoreInfoDialog.classList.contains('hidden')) return;
-    elements.scoreInfoDialog.classList.add('hidden');
-    elements.scoreInfoDialog.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
-    if (scoreInfoReturnFocus && scoreInfoReturnFocus.isConnected) scoreInfoReturnFocus.focus();
-    scoreInfoReturnFocus = undefined;
-}
-
-function handleScoreInfoDialogKeydown(event) {
-    if (event.key === 'Escape') {
-        event.preventDefault();
-        closeScoreInfoDialog();
-        return;
-    }
-    if (event.key !== 'Tab') return;
-    event.preventDefault();
-    elements.scoreInfoClose.focus();
-}
-
 // 提交颜色复现答案
 function submitRecallAnswer() {
     if (gameState.recallRoundSubmitted) return;
@@ -1764,16 +1869,23 @@ function submitRecallAnswer() {
     const distance = distanceDetails.distance;
     const scoreCenti = Math.round(scoreFromPerceptualDistance(distance) * 100);
     const score = scoreCenti / 100;
+    const guidance = getRecallDifferenceFeedback(distanceDetails);
     addToColorHistory(`rgb(${target.r}, ${target.g}, ${target.b})`);
     
     // 累计得分
     gameState.recallTotalScoreCenti += scoreCenti;
     gameState.recallTotalScore = gameState.recallTotalScoreCenti / 100;
     gameState.recallRoundSubmitted = true;
-    gameState.recallLastRoundScore = score;
-    gameState.recallLastRoundDistance = distance;
-    gameState.recallLastRoundBaseDistance = distanceDetails.baseDistance;
-    gameState.recallLastRoundNeutralPenalty = distanceDetails.neutralPenalty;
+    appendSessionRound({
+        mode: 'colorRecall',
+        attempt: gameState.recallRound,
+        round: gameState.recallRound,
+        targetHex: rgbToHex(target),
+        answerHex: rgbToHex(user),
+        score,
+        perceptualDistance: distance,
+        guidance
+    });
     
     // 显示结果
     showRecallSection(elements.recallResultSection);
@@ -1781,7 +1893,7 @@ function submitRecallAnswer() {
     // 显示本轮得分
     elements.recallRoundScore.textContent = score.toFixed(2);
     elements.recallRoundFeedback.textContent = `“${getRecallFeedback(score, gameState.recallRound)}”`;
-    elements.recallRoundGuidance.textContent = getRecallDifferenceFeedback(distanceDetails);
+    elements.recallRoundGuidance.textContent = guidance;
     
     // 显示目标颜色和用户复现
     elements.recallResultTarget.style.backgroundColor = `rgb(${target.r}, ${target.g}, ${target.b})`;
@@ -1821,9 +1933,6 @@ function showColorRecallResult() {
     gameState.isGameActive = false;
     showRecallFinalLayout();
     showScreen(elements.resultScreen);
-    resetResultColorBlocks();
-    elements.resultDetail.innerHTML = '';
-    elements.resultDetail.classList.add('hidden');
     const config = recallDifficultyConfig[gameState.recallDifficulty];
     
     // 检查是否是新纪录
@@ -1835,35 +1944,39 @@ function showColorRecallResult() {
         updateBestOverviews();
     }
     
-    elements.resultIcon.className = 'text-6xl mb-4 text-primary';
+    elements.resultEyebrow.textContent = '本局完成';
     elements.resultIcon.innerHTML = iconMarkup('paint-brush');
-    elements.resultText.textContent = `${config.name}颜色复现完成！`;
-    elements.resultText.className = 'text-3xl font-bold mb-6 text-primary';
+    elements.resultText.textContent = `${config.name} · 颜色复现`;
 
     const totalScore = gameState.recallTotalScore;
     const bestScore = gameState.recallBestScores[gameState.recallDifficulty];
     const averageScore = totalScore / gameState.recallTotalRounds;
 
-    elements.recallFinalScore.textContent = totalScore.toFixed(2);
-    elements.recallFinalMax.textContent = `/ ${gameState.recallTotalRounds * 10}`;
-    elements.recallFinalAverage.textContent = averageScore.toFixed(2);
-    elements.recallFinalBest.textContent = bestScore.toFixed(2);
-    elements.recallFinalRounds.textContent = gameState.recallTotalRounds;
-
+    let recordNote = '';
     if (isNewRecord && previousBest > 0) {
-        elements.recallFinalRecordNote.textContent = `刷新本机最佳，比上次提高 ${(totalScore - previousBest).toFixed(2)} 分`;
+        recordNote = `刷新本机最佳，比上次提高 ${(totalScore - previousBest).toFixed(2)} 分`;
     } else if (isNewRecord) {
-        elements.recallFinalRecordNote.textContent = '首次完成，已记录为本机最佳';
+        recordNote = '首次完成，已记录为本机最佳';
     } else if (totalScore === previousBest) {
-        elements.recallFinalRecordNote.textContent = '追平本机最佳';
+        recordNote = '追平本机最佳';
     } else {
-        elements.recallFinalRecordNote.textContent = `距离本机最佳还差 ${(previousBest - totalScore).toFixed(2)} 分`;
+        recordNote = `距离本机最佳还差 ${(previousBest - totalScore).toFixed(2)} 分`;
     }
 
+    setFinalSummary({
+        primaryLabel: '总分',
+        primaryValue: totalScore.toFixed(2),
+        primaryUnit: `/ ${gameState.recallTotalRounds * 10}`,
+        stats: [
+            { label: '平均', value: `${averageScore.toFixed(2)} / 10` },
+            { label: '本机最佳', value: bestScore.toFixed(2) },
+            { label: '完成轮数', value: String(gameState.recallTotalRounds) }
+        ],
+        recordNote
+    });
+    renderSessionRecap();
     updateDisplays();
-    elements.continueButton.classList.add('hidden');
-    elements.restartButton.classList.remove('hidden');
-    requestAnimationFrame(() => elements.resultText.focus({ preventScroll: true }));
+    elements.resultText.focus({ preventScroll: true });
 }
 
 // 设置HSL色轮交互

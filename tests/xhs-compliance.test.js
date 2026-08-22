@@ -81,7 +81,16 @@ test('container fallbacks avoid fragile native behavior', () => {
     const storageCalls = app.match(/\blocalStorage\.(?:getItem|setItem|removeItem)\s*\(/g) || [];
 
     assert.equal(/<dialog\b/i.test(html), false, 'Native dialog is not reliable in every target WebView.');
-    assert.match(html, /id="score-info-dialog"[^>]+role="dialog"[^>]+aria-modal="true"/);
+    assert.doesNotMatch(
+        html,
+        /id\s*=\s*["']score-info-(?:button|dialog)["']/,
+        'Removed score explanation controls must not remain in the HTML.'
+    );
+    assert.doesNotMatch(
+        app,
+        /score-info|\b(?:scoreInfo\w*|\w*ScoreInfo\w*)\b/,
+        'Removed score explanation functions and names must not remain in the app.'
+    );
     assert.equal(/\bshowModal\s*\(/.test(app), false, 'Native dialog methods must not be used.');
     assert.equal(storageCalls.length, 3, 'Persistent storage must only be accessed inside its three safe wrappers.');
     assert.match(app, /function getStorageItem\s*\(/);
