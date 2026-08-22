@@ -3544,7 +3544,7 @@ html.theme-transitioning .palette-tray {
 
     #recall-preview-panel:not(.hidden) {
         display: grid;
-        grid-template-columns: auto minmax(56px, 1fr) minmax(0, auto);
+        grid-template-columns: max-content 3rem minmax(0, 1fr);
         gap: 10px;
         padding: 8px 11px;
         align-items: center;
@@ -3560,8 +3560,9 @@ html.theme-transitioning .palette-tray {
     }
 
     #recall-user-color {
-        width: 100% !important;
+        width: 3rem !important;
         height: 3rem !important;
+        aspect-ratio: 1;
         border-radius: 0.55rem;
     }
 

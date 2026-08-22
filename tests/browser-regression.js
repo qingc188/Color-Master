@@ -2531,6 +2531,7 @@ async function run() {
                     const submit = elements.submitRecallBtn.getBoundingClientRect();
                     const exit = document.querySelector('#recall-control-section [data-back-target="start"]').getBoundingClientRect();
                     const preview = elements.recallPreviewPanel.getBoundingClientRect();
+                    const previewSwatch = elements.recallUserColor.getBoundingClientRect();
                     const wheel = document.querySelector('.hsl-wheel-container').getBoundingClientRect();
                     return {
                         difficulty: gameState.recallDifficulty,
@@ -2549,6 +2550,8 @@ async function run() {
                         previewHidden: elements.recallPreviewPanel.classList.contains('hidden'),
                         previewWidth: preview.width,
                         previewHeight: preview.height,
+                        previewSwatchWidth: previewSwatch.width,
+                        previewSwatchHeight: previewSwatch.height,
                         wheelWidth: wheel.width
                     };
                 })()`);
@@ -2558,6 +2561,7 @@ async function run() {
                 }
                 const expectsPreview = difficulty !== 'master';
                 if (report.scrollWidth > report.viewportWidth
+                    || report.scrollHeight > report.viewportHeight + 1
                     || report.submitTop < 0
                     || report.submitBottom > report.viewportHeight + 1
                     || report.exitTop < 0
@@ -2567,7 +2571,8 @@ async function run() {
                     || report.round !== '1'
                     || report.scoreLabel !== '累计得分'
                     || report.previewHidden === expectsPreview
-                    || (expectsPreview && report.previewWidth <= report.previewHeight)
+                    || (expectsPreview
+                        && Math.abs(report.previewSwatchWidth - report.previewSwatchHeight) > 0.5)
                     || (difficulty === 'basic' && (report.wheelWidth < 132 || report.wheelWidth > 148))) {
                     throw new Error(`Mobile control regression failed: ${JSON.stringify({ viewport, report })}`);
                 }
