@@ -3224,6 +3224,15 @@ html.theme-transitioning .palette-tray {
         width: min(58vw, 14rem);
     }
 
+    #target-color-screen.game-stage--observation,
+    #color-recall-screen > #recall-target-section.game-stage--observation {
+        padding-bottom: clamp(
+            5rem,
+            calc(50svh - 7.5rem - min(29vw, 7rem)),
+            15rem
+        );
+    }
+
     #recall-round-score {
         font-size: clamp(2rem, 14vw, 3.75rem);
     }
@@ -3549,8 +3558,8 @@ html.theme-transitioning .palette-tray {
         grid-template-areas:
             "label code"
             "swatch swatch";
-        gap: 0.5rem 0.75rem;
-        padding: 0.5rem;
+        gap: clamp(0.5rem, calc(5svh - 25.35px), 0.9rem) 0.75rem;
+        padding: 0.5rem 0.5rem clamp(0.5rem, calc(20svh - 125.4px), 3rem);
         align-items: center;
     }
 

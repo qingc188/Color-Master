@@ -136,6 +136,26 @@ async function openRecallControl(client, appUrl, difficulty) {
     await waitFor(client, `document.activeElement.id === 'recall-control-title'`);
 }
 
+async function openObservation(client, appUrl, mode) {
+    const isRecall = mode === 'recall';
+    const modeSelector = isRecall ? '#color-recall-mode' : '#color-match-mode';
+    const difficultyScreen = isRecall ? '#recall-difficulty-screen' : '#match-difficulty-screen';
+    const difficultySelector = isRecall
+        ? '[data-recall-difficulty="basic"]'
+        : '[data-match-difficulty="basic"]';
+    const observationSelector = isRecall ? '#recall-target-section' : '#target-color-screen';
+
+    await navigate(client, appUrl);
+    await evaluate(client, `document.querySelector('#enter-game-button').click()`);
+    await waitFor(client, `!document.querySelector('#mode-selection-screen').classList.contains('hidden')`);
+    await evaluate(client, `document.querySelector('${modeSelector}').click()`);
+    await waitFor(client, `!document.querySelector('${difficultyScreen}').classList.contains('hidden')`);
+    await evaluate(client, `document.querySelector('${difficultySelector}').click()`);
+    await waitFor(client, `!document.querySelector('#start-screen').classList.contains('hidden')`);
+    await evaluate(client, `document.querySelector('#start-button').click(); stopActiveCountdown();`);
+    await waitFor(client, `!document.querySelector('${observationSelector}').classList.contains('hidden')`);
+}
+
 async function captureScreenshot(client, name) {
     const captureDirectory = process.env.UI_CAPTURE_DIR;
     const captureFilter = process.env.UI_CAPTURE_FILTER;
@@ -2511,13 +2531,63 @@ async function run() {
         }
         await captureScreenshot(client, 'recall-control-basic-desktop.png');
 
-        const mobileReports = [];
         const viewports = [
             { width: 375, height: 667 },
             { width: 390, height: 844 },
             { width: 360, height: 800 },
             { width: 430, height: 932 }
         ];
+        const mobileObservationReports = [];
+        for (const viewport of viewports) {
+            await client.send('Emulation.setDeviceMetricsOverride', {
+                ...viewport,
+                deviceScaleFactor: 2,
+                mobile: true
+            });
+            for (const mode of ['match', 'recall']) {
+                await openObservation(client, appUrl, mode);
+                const report = await evaluate(client, `(() => {
+                    const isRecall = ${JSON.stringify(mode)} === 'recall';
+                    const stage = document.querySelector(isRecall
+                        ? '#recall-target-section'
+                        : '#target-color-screen').getBoundingClientRect();
+                    const swatch = document.querySelector(isRecall
+                        ? '#recall-target-color'
+                        : '#target-color').getBoundingClientRect();
+                    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+                    return {
+                        viewportWidth: document.documentElement.clientWidth,
+                        viewportHeight,
+                        scrollWidth: document.documentElement.scrollWidth,
+                        scrollHeight: document.documentElement.scrollHeight,
+                        stageTop: stage.top,
+                        stageBottom: stage.bottom,
+                        swatchBottom: swatch.bottom,
+                        swatchToStageBottom: stage.bottom - swatch.bottom,
+                        stageToViewportBottom: viewportHeight - stage.bottom,
+                        bottomGapBalanceDelta: Math.abs(
+                            (stage.bottom - swatch.bottom)
+                            - (viewportHeight - stage.bottom)
+                        )
+                    };
+                })()`);
+                mobileObservationReports.push({ ...viewport, mode, ...report });
+                if (viewport.width === 390 && viewport.height === 844) {
+                    await captureScreenshot(client, `observation-${mode}-mobile.png`);
+                }
+                if (report.scrollWidth > report.viewportWidth
+                    || report.scrollHeight > report.viewportHeight + 1
+                    || report.stageTop < 0
+                    || report.stageBottom > report.viewportHeight + 1
+                    || report.swatchToStageBottom < 79
+                    || report.stageToViewportBottom < -1
+                    || report.bottomGapBalanceDelta > 4) {
+                    throw new Error(`Mobile observation regression failed: ${JSON.stringify({ viewport, mode, report })}`);
+                }
+            }
+        }
+
+        const mobileReports = [];
         for (const viewport of viewports) {
             await client.send('Emulation.setDeviceMetricsOverride', {
                 ...viewport,
@@ -2826,6 +2896,7 @@ async function run() {
             feedbackReport,
             scoreExplanationRemovalReport,
             recallNavigationGuardReport,
+            mobileObservationReports,
             mobileReports,
             zoomReport,
             finalZoomReport,
