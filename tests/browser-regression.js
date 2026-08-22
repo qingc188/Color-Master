@@ -1683,8 +1683,10 @@ async function run() {
                 correctAnswers: gameState.correctAnswers,
                 totalAnswers: gameState.totalAnswers,
                 statOne: elements.finalStatOneValue.textContent,
-                statThreeLabel: elements.finalStatThreeLabel.textContent,
-                statThree: elements.finalStatThreeValue.textContent,
+                statLabels: Array.from(document.querySelectorAll('.final-stats > div span'))
+                    .map((label) => label.textContent),
+                statColumns: getComputedStyle(document.querySelector('.final-stats'))
+                    .gridTemplateColumns.split(' ').length,
                 lastRecap: {
                     targetHex: lastRecapTile.dataset.targetHex,
                     answerHex: lastRecapTile.dataset.answerHex,
@@ -1730,8 +1732,8 @@ async function run() {
                 (matchFinalSummaryReport.correctAnswers / matchFinalSummaryReport.totalAnswers) * 100
             ))
             || matchFinalSummaryReport.statOne !== `${matchFinalSummaryReport.correctAnswers} / ${matchFinalSummaryReport.totalAnswers}`
-            || matchFinalSummaryReport.statThreeLabel !== '完成'
-            || matchFinalSummaryReport.statThree !== String(matchFinalSummaryReport.totalAnswers)
+            || JSON.stringify(matchFinalSummaryReport.statLabels) !== JSON.stringify(['答对', '本机最佳'])
+            || matchFinalSummaryReport.statColumns !== 2
             || matchFinalSummaryReport.lastRecap.targetHex !== matchFinalSummaryReport.expectedTargetHex
             || matchFinalSummaryReport.lastRecap.answerHex !== matchFinalSummaryReport.expectedAnswerHex
             || matchFinalSummaryReport.lastRecap.outcome !== '未命中'
@@ -1791,8 +1793,9 @@ async function run() {
                 score: gameState.score,
                 statOne: elements.finalStatOneValue.textContent,
                 level: gameState.level,
-                statThree: elements.finalStatThreeValue.textContent,
-                totalAnswers: gameState.totalAnswers,
+                statLabels: Array.from(document.querySelectorAll('.final-stats > div span'))
+                    .map((label) => label.textContent),
+                recordNote: elements.finalRecordNote.textContent,
                 recapOutcome: lastRecapTile.dataset.outcome
             };
         })()`);
@@ -1808,7 +1811,8 @@ async function run() {
             || masterFinalSummaryReport.primaryLabel !== '得分'
             || masterFinalSummaryReport.primaryValue !== String(masterFinalSummaryReport.score)
             || masterFinalSummaryReport.statOne !== String(masterFinalSummaryReport.level)
-            || masterFinalSummaryReport.statThree !== String(masterFinalSummaryReport.totalAnswers)
+            || JSON.stringify(masterFinalSummaryReport.statLabels) !== JSON.stringify(['最高关', '本机最佳'])
+            || masterFinalSummaryReport.recordNote !== '新纪录！！'
             || masterFinalSummaryReport.recapOutcome !== '未命中') {
             throw new Error(`Master final summary failed: ${JSON.stringify(masterFinalSummaryReport)}`);
         }
@@ -2070,7 +2074,8 @@ async function run() {
             recordNote: elements.finalRecordNote.textContent,
             primaryValue: elements.finalPrimaryValue.textContent,
             averageValue: elements.finalStatOneValue.textContent,
-            completedLabel: elements.finalStatThreeLabel.textContent,
+            statLabels: Array.from(document.querySelectorAll('.final-stats > div span'))
+                .map((label) => label.textContent),
             recapVisible: !elements.sessionRecap.classList.contains('hidden'),
             recapMode: elements.sessionRecap.dataset.mode,
             recapToggleLabels: [elements.recapShowTarget.textContent, elements.recapShowAnswer.textContent],
@@ -2093,7 +2098,7 @@ async function run() {
             || persistenceReport.recordNote !== '首次完成，已记录为本机最佳'
             || persistenceReport.primaryValue !== '100.00'
             || persistenceReport.averageValue !== '10.00 / 10'
-            || persistenceReport.completedLabel !== '完成轮数'
+            || JSON.stringify(persistenceReport.statLabels) !== JSON.stringify(['平均得分', '本机最佳'])
             || !persistenceReport.recapVisible
             || persistenceReport.recapMode !== 'recall'
             || JSON.stringify(persistenceReport.recapToggleLabels) !== JSON.stringify(['目标颜色', '复现颜色'])
@@ -2106,6 +2111,30 @@ async function run() {
             throw new Error(`Score persistence regression failed: ${JSON.stringify(persistenceReport)}`);
         }
         await captureScreenshot(client, 'recall-final-desktop.png');
+
+        const improvedRecallRecordReport = await evaluate(client, `(() => {
+            const previousBest = gameState.recallBestScores.advanced;
+            gameState.recallBestScores.advanced = 75;
+            gameState.recallTotalScoreCenti = 8250;
+            gameState.recallTotalScore = 82.5;
+            showColorRecallResult();
+            const report = {
+                note: elements.finalRecordNote.textContent,
+                best: gameState.recallBestScores.advanced,
+                stored: localStorage.getItem('colorMemoryBestRecallScore_advanced_oklab_v4')
+            };
+            gameState.recallBestScores.advanced = previousBest;
+            gameState.recallTotalScoreCenti = previousBest * 100;
+            gameState.recallTotalScore = previousBest;
+            setStorageItem('colorMemoryBestRecallScore_advanced_oklab_v4', String(previousBest));
+            showColorRecallResult();
+            return report;
+        })()`);
+        if (improvedRecallRecordReport.note !== '新纪录！！ 提高了7.50分'
+            || improvedRecallRecordReport.best !== 82.5
+            || improvedRecallRecordReport.stored !== '82.5') {
+            throw new Error(`Improved recall record copy failed: ${JSON.stringify(improvedRecallRecordReport)}`);
+        }
 
         const recapInteractionReport = await evaluate(client, `(() => {
             gameState.sessionRounds = Array.from({ length: 15 }, (_, index) => ({

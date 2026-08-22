@@ -198,8 +198,6 @@ const elements = {
     finalStatOneValue: document.getElementById('final-stat-one-value'),
     finalStatTwoLabel: document.getElementById('final-stat-two-label'),
     finalStatTwoValue: document.getElementById('final-stat-two-value'),
-    finalStatThreeLabel: document.getElementById('final-stat-three-label'),
-    finalStatThreeValue: document.getElementById('final-stat-three-value'),
     finalRecordNote: document.getElementById('final-record-note'),
     sessionRecap: document.getElementById('session-recap'),
     recapShowTarget: document.getElementById('recap-show-target'),
@@ -661,8 +659,6 @@ function setFinalSummary({
     elements.finalStatOneValue.textContent = stats[0].value;
     elements.finalStatTwoLabel.textContent = stats[1].label;
     elements.finalStatTwoValue.textContent = stats[1].value;
-    elements.finalStatThreeLabel.textContent = stats[2].label;
-    elements.finalStatThreeValue.textContent = stats[2].value;
     elements.finalRecordNote.textContent = recordNote;
     elements.finalRecordNote.classList.toggle('hidden', !recordNote);
 }
@@ -1512,10 +1508,9 @@ function showGameEnd() {
             primaryUnit: '%',
             stats: [
                 { label: '答对', value: `${gameState.correctAnswers} / ${gameState.totalAnswers}` },
-                { label: '本机最佳', value: String(gameState.matchBestScores[gameState.matchDifficulty]) },
-                { label: '完成', value: String(gameState.totalAnswers) }
+                { label: '本机最佳', value: String(gameState.matchBestScores[gameState.matchDifficulty]) }
             ],
-            recordNote: isNewRecord ? '新纪录' : ''
+            recordNote: isNewRecord ? '新纪录！！' : ''
         });
     } else {
         setFinalSummary({
@@ -1524,10 +1519,9 @@ function showGameEnd() {
             primaryUnit: '分',
             stats: [
                 { label: '最高关', value: String(gameState.level) },
-                { label: '本机最佳', value: String(gameState.matchBestScores.master) },
-                { label: '答题', value: String(gameState.totalAnswers) }
+                { label: '本机最佳', value: String(gameState.matchBestScores.master) }
             ],
-            recordNote: isNewRecord ? '新纪录' : ''
+            recordNote: isNewRecord ? '新纪录！！' : ''
         });
     }
 
@@ -1971,7 +1965,7 @@ function showColorRecallResult() {
 
     let recordNote = '';
     if (isNewRecord && previousBest > 0) {
-        recordNote = `刷新本机最佳，比上次提高 ${(totalScore - previousBest).toFixed(2)} 分`;
+        recordNote = `新纪录！！ 提高了${(totalScore - previousBest).toFixed(2)}分`;
     } else if (isNewRecord) {
         recordNote = '首次完成，已记录为本机最佳';
     } else if (totalScore === previousBest) {
@@ -1985,9 +1979,8 @@ function showColorRecallResult() {
         primaryValue: totalScore.toFixed(2),
         primaryUnit: `/ ${gameState.recallTotalRounds * 10}`,
         stats: [
-            { label: '平均', value: `${averageScore.toFixed(2)} / 10` },
-            { label: '本机最佳', value: bestScore.toFixed(2) },
-            { label: '完成轮数', value: String(gameState.recallTotalRounds) }
+            { label: '平均得分', value: `${averageScore.toFixed(2)} / 10` },
+            { label: '本机最佳', value: bestScore.toFixed(2) }
         ],
         recordNote
     });
