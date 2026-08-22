@@ -3243,8 +3243,10 @@ html.theme-transitioning .palette-tray {
     #match-difficulty-screen > p,
     #recall-difficulty-screen > p {
         margin-bottom: 12px;
-        font-size: 13.2px;
+        font-size: clamp(9.5px, 3vw, 12px);
+        letter-spacing: -0.025em;
         line-height: 1.45;
+        white-space: nowrap;
     }
 
     #match-difficulty-screen > .grid,
@@ -3286,9 +3288,11 @@ html.theme-transitioning .palette-tray {
     [data-match-difficulty] ul,
     [data-recall-difficulty] ul {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 4px 10px;
-        line-height: 1.4;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 2px;
+        margin-top: 8px;
+        font-size: 10.8px;
+        line-height: 1.35;
     }
 
     [data-match-difficulty] li,

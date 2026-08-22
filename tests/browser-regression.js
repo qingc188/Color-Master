@@ -734,10 +734,23 @@ async function run() {
                 cardBodyFontSize: getComputedStyle(modeCard.querySelector(':scope > p:not(.mode-card-code)')).fontSize,
                 cardListFontSize: getComputedStyle(modeCard.querySelector('ul')).fontSize
             };
+            showDifficultyScreen(elements.matchDifficultyScreen, 'colorMatch');
+            const matchSubtitle = elements.matchDifficultyScreen.querySelector(':scope > p');
+            const matchSubtitleStyle = getComputedStyle(matchSubtitle);
+            const matchSubtitleReport = {
+                fontSize: matchSubtitleStyle.fontSize,
+                singleLine: matchSubtitle.scrollWidth <= matchSubtitle.clientWidth + 1
+                    && matchSubtitle.getBoundingClientRect().height <= parseFloat(matchSubtitleStyle.lineHeight) + 1
+            };
             showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
             const difficultyRect = elements.recallDifficultyScreen.getBoundingClientRect();
             const difficultyCards = Array.from(elements.recallDifficultyScreen.querySelectorAll('[data-recall-difficulty]'));
             const difficultyCardHeights = difficultyCards.map((card) => card.getBoundingClientRect().height);
+            const difficultyListRows = difficultyCards.map((card) => new Set(
+                Array.from(card.querySelectorAll('li')).map((item) => Math.round(item.getBoundingClientRect().top))
+            ).size);
+            const recallSubtitle = elements.recallDifficultyScreen.querySelector(':scope > p');
+            const recallSubtitleStyle = getComputedStyle(recallSubtitle);
             const difficultyCardContentFits = difficultyCards.every((card) => {
                 const cardRect = card.getBoundingClientRect();
                 return Array.from(card.children).every((child) => {
@@ -754,8 +767,11 @@ async function run() {
                 cardBodyFontSize: getComputedStyle(difficultyCards[0].querySelector(':scope > p')).fontSize,
                 cardListFontSize: getComputedStyle(difficultyCards[0].querySelector('ul')).fontSize,
                 cardListColumns: getComputedStyle(difficultyCards[0].querySelector('ul')).gridTemplateColumns,
+                cardListRows: difficultyListRows,
                 cardHeights: difficultyCardHeights,
-                cardContentFits: difficultyCardContentFits
+                cardContentFits: difficultyCardContentFits,
+                subtitleSingleLine: recallSubtitle.scrollWidth <= recallSubtitle.clientWidth + 1
+                    && recallSubtitle.getBoundingClientRect().height <= parseFloat(recallSubtitleStyle.lineHeight) + 1
             };
             selectRecallDifficulty('basic');
             const preparationRect = elements.startScreen.getBoundingClientRect();
@@ -784,6 +800,7 @@ async function run() {
                 footerTextFits: footerText.scrollWidth <= footerText.clientWidth + 1,
                 modeCardContentFits,
                 modeTypography,
+                matchSubtitleReport,
                 difficultyReport,
                 preparationReport
             };
@@ -797,14 +814,19 @@ async function run() {
             || embeddedTextScaleReport.modeTypography.cardHeadingFontSize !== '20.25px'
             || embeddedTextScaleReport.modeTypography.cardBodyFontSize !== '12.25px'
             || embeddedTextScaleReport.modeTypography.cardListFontSize !== '11.75px'
+            || embeddedTextScaleReport.matchSubtitleReport.fontSize !== '11.7px'
+            || !embeddedTextScaleReport.matchSubtitleReport.singleLine
             || embeddedTextScaleReport.difficultyReport.bottom > embeddedTextScaleReport.viewportHeight + 1
             || embeddedTextScaleReport.difficultyReport.headingFontSize !== '22.5px'
-            || embeddedTextScaleReport.difficultyReport.bodyFontSize !== '13.2px'
+            || embeddedTextScaleReport.difficultyReport.bodyFontSize !== '11.7px'
             || embeddedTextScaleReport.difficultyReport.cardHeadingFontSize !== '17px'
             || embeddedTextScaleReport.difficultyReport.cardBodyFontSize !== '12.25px'
-            || embeddedTextScaleReport.difficultyReport.cardListFontSize !== '11.75px'
+            || embeddedTextScaleReport.difficultyReport.cardListFontSize !== '10.8px'
+            || embeddedTextScaleReport.difficultyReport.cardListColumns.includes(' ')
+            || embeddedTextScaleReport.difficultyReport.cardListRows.some((rows) => rows !== 3)
             || embeddedTextScaleReport.difficultyReport.cardHeights.some((height) => height > 150)
             || !embeddedTextScaleReport.difficultyReport.cardContentFits
+            || !embeddedTextScaleReport.difficultyReport.subtitleSingleLine
             || embeddedTextScaleReport.preparationReport.bottom > embeddedTextScaleReport.viewportHeight + 1
             || embeddedTextScaleReport.preparationReport.headingFontSize !== '23.5px'
             || embeddedTextScaleReport.preparationReport.contextFontSize !== '11.75px'
@@ -905,6 +927,13 @@ async function run() {
         const narrowEmbeddedReport = await evaluate(client, `(() => {
             const viewportHeight = window.visualViewport?.height || window.innerHeight;
             const difficultyBottom = elements.recallDifficultyScreen.getBoundingClientRect().bottom;
+            const recallSubtitle = elements.recallDifficultyScreen.querySelector(':scope > p');
+            const recallSubtitleFontSize = getComputedStyle(recallSubtitle).fontSize;
+            const recallSubtitleFits = recallSubtitle.scrollWidth <= recallSubtitle.clientWidth + 1;
+            showDifficultyScreen(elements.matchDifficultyScreen, 'colorMatch');
+            const matchSubtitle = elements.matchDifficultyScreen.querySelector(':scope > p');
+            const matchSubtitleFits = matchSubtitle.scrollWidth <= matchSubtitle.clientWidth + 1;
+            showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
             selectRecallDifficulty('basic');
             return {
                 viewportWidth: document.documentElement.clientWidth,
@@ -912,12 +941,18 @@ async function run() {
                 scrollWidth: document.documentElement.scrollWidth,
                 difficultyBottom,
                 preparationBottom: elements.startScreen.getBoundingClientRect().bottom,
+                recallSubtitleFontSize,
+                recallSubtitleFits,
+                matchSubtitleFits,
                 brandSuffixHidden: getComputedStyle(document.querySelector('.brand-name small')).display === 'none'
             };
         })()`);
         if (narrowEmbeddedReport.scrollWidth > narrowEmbeddedReport.viewportWidth
             || narrowEmbeddedReport.difficultyBottom > narrowEmbeddedReport.viewportHeight + 1
             || narrowEmbeddedReport.preparationBottom > narrowEmbeddedReport.viewportHeight + 1
+            || narrowEmbeddedReport.recallSubtitleFontSize !== '10.8px'
+            || !narrowEmbeddedReport.recallSubtitleFits
+            || !narrowEmbeddedReport.matchSubtitleFits
             || !narrowEmbeddedReport.brandSuffixHidden) {
             throw new Error(`Narrow embedded layout failed: ${JSON.stringify(narrowEmbeddedReport)}`);
         }
