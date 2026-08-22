@@ -2453,15 +2453,42 @@ async function run() {
             document.querySelector('#start-button').click();
             stopActiveCountdown();
             showRecallSection(elements.recallControlSection);
-            elements.hueSlider.value = 0;
+            updateHSLPointerPosition();
         })()`);
         await waitFor(client, `document.activeElement.id === 'recall-control-title'`);
         const basicRecallReport = await evaluate(client, `(() => {
-            elements.hueSlider.focus();
+            const wheel = elements.hslWheel.getBoundingClientRect();
+            const pointer = elements.hslWheelPointer.getBoundingClientRect();
             return {
-                targetHsl: { ...gameState.recallTargetHSL }
+                targetHsl: { ...gameState.recallTargetHSL },
+                userHsl: { ...gameState.recallUserHSL },
+                hueSlider: Number(elements.hueSlider.value),
+                saturationSlider: Number(elements.saturationSlider.value),
+                lightnessSlider: Number(elements.lightnessSlider.value),
+                hueValue: elements.hueValue.textContent,
+                saturationValue: elements.saturationValue.textContent,
+                lightnessValue: elements.lightnessValue.textContent,
+                userColor: getComputedStyle(elements.recallUserColor).backgroundColor,
+                userCode: elements.recallUserCodeDisplay.textContent,
+                pointerCenterDelta: Math.hypot(
+                    (pointer.left + pointer.right) / 2 - (wheel.left + wheel.right) / 2,
+                    (pointer.top + pointer.bottom) / 2 - (wheel.top + wheel.bottom) / 2
+                )
             };
         })()`);
+        if (JSON.stringify(basicRecallReport.userHsl) !== JSON.stringify({ h: 180, s: 0, l: 50 })
+            || basicRecallReport.hueSlider !== 180
+            || basicRecallReport.saturationSlider !== 0
+            || basicRecallReport.lightnessSlider !== 50
+            || basicRecallReport.hueValue !== '180°'
+            || basicRecallReport.saturationValue !== '0%'
+            || basicRecallReport.lightnessValue !== '50%'
+            || basicRecallReport.userColor !== 'rgb(128, 128, 128)'
+            || basicRecallReport.userCode !== 'hsl(180, 0%, 50%)'
+            || basicRecallReport.pointerCenterDelta > 0.5) {
+            throw new Error(`Basic recall neutral start failed: ${JSON.stringify(basicRecallReport)}`);
+        }
+        await evaluate(client, `elements.hueSlider.value = 0; elements.hueSlider.focus();`);
         await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight' });
         await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight' });
         const hueKeyboardReport = await evaluate(client, `({

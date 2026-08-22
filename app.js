@@ -10,6 +10,7 @@ const THEME_SWAP_DELAY_MS = 260;
 const RECAP_TURN_MS = 240;
 const LOCAL_RECORD_HINT_DURATION_MS = 5000;
 const THEME_ORDER = ['cyan', 'amethyst', 'ivory'];
+const INITIAL_RECALL_HSL = Object.freeze({ h: 180, s: 0, l: 50 });
 const THEME_CONFIG = {
     cyan: { name: '青橙', themeColor: '#071820' },
     amethyst: { name: '星夜紫金', themeColor: '#100B25' },
@@ -100,7 +101,7 @@ const gameState = {
     },
     recallTargetHSL: null, // 目标HSL颜色
     recallTargetRGB: null,
-    recallUserHSL: { h: 0, s: 100, l: 50 }, // 用户当前HSL颜色
+    recallUserHSL: { ...INITIAL_RECALL_HSL }, // 用户当前HSL颜色
     recallUserRGB: { r: 128, g: 128, b: 128 },
     recallRound: 1, // 当前轮次
     recallRoundSubmitted: false,
@@ -552,7 +553,7 @@ function resetRecallAttemptState() {
     gameState.recallTotalScoreCenti = 0;
     gameState.recallRound = 1;
     gameState.recallRoundSubmitted = false;
-    gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
+    gameState.recallUserHSL = { ...INITIAL_RECALL_HSL };
     gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
     elements.nextRecallBtn.textContent = '下一轮';
     updateDisplays();
@@ -1721,10 +1722,10 @@ function startColorRecallRound() {
     showRecallSection(elements.recallTargetSection);
     
     // 重置用户颜色
-    gameState.recallUserHSL = { h: 0, s: 100, l: 50 };
+    gameState.recallUserHSL = { ...INITIAL_RECALL_HSL };
     gameState.recallUserRGB = { r: 128, g: 128, b: 128 };
-    elements.hueSlider.value = 0;
-    elements.saturationSlider.value = 100;
+    elements.hueSlider.value = INITIAL_RECALL_HSL.h;
+    elements.saturationSlider.value = INITIAL_RECALL_HSL.s;
     elements.lightnessSlider.value = 50;
     elements.lightnessValue.textContent = '50%';
     elements.redSlider.value = 128;

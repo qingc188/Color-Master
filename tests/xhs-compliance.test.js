@@ -8,12 +8,23 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('production entry uses only packaged local resources', () => {
     const html = read('index.html');
+    const scripts = `${read('color-utils.js')}\n${read('app.js')}`;
     const resourceUrls = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((match) => match[1]);
     const resourcePaths = resourceUrls.map((url) => url.split(/[?#]/, 1)[0]);
 
+    assert.match(html, /^\uFEFF?<!DOCTYPE html>/i);
+    assert.match(html, /<html\b[^>]*\blang="zh-CN"/i);
+    assert.match(html, /<meta\b[^>]*\bcharset="UTF-8"/i);
+    assert.match(html, /<meta\b[^>]*\bname="viewport"[^>]*\bcontent="[^"]*width=device-width[^"]*initial-scale=1\.0[^"]*viewport-fit=cover/i);
     assert.equal(/<script\b(?![^>]*\bsrc=)[^>]*>/i.test(html), false, 'Inline scripts are forbidden.');
     assert.equal(/\son[a-z]+\s*=/i.test(html), false, 'Inline event handlers are forbidden.');
+    assert.equal(/<script\b[^>]*\btype=["']module["']/i.test(html), false, 'Module scripts are forbidden.');
+    assert.equal(/<base\b/i.test(html), false, 'A base URL breaks packaged relative paths.');
+    assert.equal(/<meta\b[^>]*http-equiv=["']Content-Security-Policy["']/i.test(html), false, 'The container owns the CSP.');
+    assert.equal(/\bjavascript:/i.test(html), false, 'javascript: URLs are forbidden.');
     assert.equal(resourceUrls.some((url) => /^(?:https?:)?\/\//i.test(url)), false, 'Remote resources are forbidden.');
+    assert.equal(resourceUrls.some((url) => /^\//.test(url)), false, 'Absolute resource paths are forbidden.');
+    assert.equal(/^\s*(?:import|export)\b/m.test(scripts), false, 'Production scripts must remain classic scripts.');
     assert.deepEqual(
         resourcePaths.filter((url) => url.endsWith('.css')),
         ['tailwind.css', 'styles.css']
@@ -51,19 +62,54 @@ test('production code avoids forbidden container APIs', () => {
         /\bXMLHttpRequest\b/,
         /\bWebSocket\b/,
         /\bEventSource\b/,
+        /\bRTCPeerConnection\b/,
         /\b(?:Shared|Service)?Worker\s*\(/,
+        /\b(?:Accelerometer|Gyroscope|Magnetometer)\s*\(/,
+        /\b(?:PaymentRequest|Notification|NDEFReader|SharedArrayBuffer|OffscreenCanvas)\b/,
         /\bWebAssembly\b/,
         /\beval\s*\(/,
         /\bnew\s+Function\b/,
+        /\bdocument\.execCommand\s*\(\s*["'](?:copy|cut|paste)["']/,
         /<iframe\b/i,
         /<object\b/i,
         /\bwindow\.open\s*\(/,
-        /\brequestFullscreen\s*\(/
+        /\bwindow\.prompt\s*\(/,
+        /\bnavigator\.(?:geolocation|clipboard|bluetooth|usb|hid|serial|getBattery|connection|credentials|locks)\b/,
+        /\bnavigator\.mediaDevices\.(?:enumerateDevices|getDisplayMedia)\b/,
+        /\bnavigator\.storage\.persist\s*\(/,
+        /\bnavigator\.serviceWorker\.register\s*\(/,
+        /\b(?:DeviceMotionEvent|DeviceOrientationEvent)\b/,
+        /\b(?:requestFullscreen|webkitRequestFullscreen)\s*\(/,
+        /\blocation\.(?:href\s*=|assign\s*\()/,
+        /\btarget\s*=\s*["']_blank["']/i,
+        /<a\b[^>]*\bdownload(?:\s|=|>)/i,
+        /<form\b/i
     ];
 
     forbiddenPatterns.forEach((pattern) => {
         assert.equal(pattern.test(source), false, `Forbidden pattern found: ${pattern}`);
     });
+});
+
+test('safe areas support both the simulator and real devices', () => {
+    const styles = read('styles.css');
+    const safeAreaUses = [...styles.matchAll(/env\(safe-area-inset-(top|right|bottom|left),\s*0px\)/g)];
+
+    assert.ok(safeAreaUses.length > 0, 'Expected safe-area handling in the production stylesheet.');
+    safeAreaUses.forEach((match) => {
+        const edge = match[1];
+        const prefix = styles.slice(Math.max(0, match.index - 50), match.index);
+        assert.match(
+            prefix,
+            new RegExp(`var\\(--safe-area-inset-${edge},\\s*$`),
+            `safe-area-inset-${edge} must prefer the simulator variable before env().`
+        );
+    });
+    assert.equal(
+        /env\(safe-area-inset-(?:top|right|bottom|left)\)(?!\s*,)/.test(styles),
+        false,
+        'Safe-area env() calls must include a 0px fallback.'
+    );
 });
 
 test('compiled Tailwind stylesheet is present and self-contained', () => {
