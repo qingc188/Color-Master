@@ -950,9 +950,26 @@ function setupLocalRecordHint() {
     elements.localRecordHint.addEventListener('pointerleave', (event) => {
         if (event.pointerType === 'mouse') hideLocalRecordHint();
     });
-    elements.localRecordHint.addEventListener('focus', () => showLocalRecordHint());
+    elements.localRecordHint.addEventListener('focus', () => {
+        if (elements.localRecordHint.matches(':focus-visible')) showLocalRecordHint();
+    });
     elements.localRecordHint.addEventListener('blur', () => hideLocalRecordHint());
-    elements.localRecordHint.addEventListener('click', () => showLocalRecordHint(true));
+    elements.localRecordHint.addEventListener('click', (event) => {
+        const isTap = event.pointerType === 'touch'
+            || event.pointerType === 'pen'
+            || (event.detail > 0
+                && window.matchMedia
+                && window.matchMedia('(hover: none)').matches);
+        if (!isTap) {
+            showLocalRecordHint(true);
+            return;
+        }
+        if (elements.localRecordHint.getAttribute('aria-expanded') === 'true') {
+            hideLocalRecordHint(true);
+        } else {
+            showLocalRecordHint();
+        }
+    });
     elements.localRecordHint.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
         event.preventDefault();

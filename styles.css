@@ -1496,9 +1496,7 @@ html[data-theme="ivory"] .theme-cube-face--left {
     transition: opacity 140ms ease, transform 140ms ease;
 }
 
-.local-record-note.is-visible,
-.local-record-hint:hover + .local-record-note,
-.local-record-hint:focus-visible + .local-record-note {
+.local-record-note.is-visible {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);

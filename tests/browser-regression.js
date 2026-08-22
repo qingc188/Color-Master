@@ -619,8 +619,40 @@ async function run() {
         await captureScreenshot(client, 'landing-mobile.png');
         await evaluate(client, `showScreen(elements.matchDifficultyScreen)`);
         await captureScreenshot(client, 'difficulty-mobile.png');
-        await evaluate(client, `elements.localRecordHint.click()`);
+        const mobileHintOpened = await evaluate(client, `(() => {
+            elements.localRecordHint.dispatchEvent(new PointerEvent('click', {
+                pointerType: 'touch',
+                bubbles: true
+            }));
+            return {
+                expanded: elements.localRecordHint.getAttribute('aria-expanded'),
+                visible: elements.localRecordNote.classList.contains('is-visible'),
+                visibility: getComputedStyle(elements.localRecordNote).visibility
+            };
+        })()`);
         await captureScreenshot(client, 'difficulty-hint-mobile.png');
+        const mobileHintClosed = await evaluate(client, `(() => {
+            elements.localRecordHint.dispatchEvent(new PointerEvent('click', {
+                pointerType: 'touch',
+                bubbles: true
+            }));
+            return {
+                expanded: elements.localRecordHint.getAttribute('aria-expanded'),
+                visible: elements.localRecordNote.classList.contains('is-visible'),
+                visibility: getComputedStyle(elements.localRecordNote).visibility
+            };
+        })()`);
+        if (mobileHintOpened.expanded !== 'true'
+            || !mobileHintOpened.visible
+            || mobileHintOpened.visibility !== 'visible'
+            || mobileHintClosed.expanded !== 'false'
+            || mobileHintClosed.visible
+            || mobileHintClosed.visibility !== 'hidden') {
+            throw new Error(`Mobile local record toggle failed: ${JSON.stringify({
+                opened: mobileHintOpened,
+                closed: mobileHintClosed
+            })}`);
+        }
         await evaluate(client, `showScreen(elements.landingScreen)`);
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 360,
