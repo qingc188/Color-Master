@@ -919,6 +919,7 @@ function updateStatsVisibility(screen) {
     const isFinalResult = screen === elements.resultScreen && !gameState.isGameActive;
 
     document.body.classList.toggle('is-difficulty-screen', isDifficultyScreen);
+    document.body.classList.toggle('is-preparation-screen', isPreparationScreen);
     elements.gameInfoAnchor.after(elements.gameInfoBar);
     elements.gameInfoBar.classList.toggle('hidden', isMainMenu || isPreparationScreen || isFinalResult);
     elements.gameStatsPanel.classList.toggle('hidden', isMainMenu || isDifficultyScreen);

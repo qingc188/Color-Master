@@ -516,6 +516,11 @@ async function run() {
             };
             showScreen(elements.matchDifficultyScreen);
             const overviewScoreboard = measureScoreboard(elements.modeBestOverview);
+            const desktopDifficultyTypography = {
+                heading: getComputedStyle(elements.matchDifficultyScreen.querySelector(':scope > h2')).fontSize,
+                cardHeading: getComputedStyle(document.querySelector('[data-match-difficulty="basic"] h3')).fontSize,
+                cardBody: getComputedStyle(document.querySelector('[data-match-difficulty="basic"] > p')).fontSize
+            };
             showScreen(elements.targetColorScreen);
             const gameScoreboard = measureScoreboard(elements.gameStatsPanel);
             showScreen(elements.matchDifficultyScreen);
@@ -528,6 +533,7 @@ async function run() {
                 footerPosition: getComputedStyle(footer).position,
                 measurements,
                 scoreboards: { overviewScoreboard, gameScoreboard },
+                desktopDifficultyTypography,
                 overviewSeparator: {
                     width: overviewSeparator.width,
                     height: overviewSeparator.height,
@@ -555,6 +561,9 @@ async function run() {
             || desktopShellReport.scoreboards.gameScoreboard.height > 70
             || desktopShellReport.scoreboards.gameScoreboard.barPaddingTop !== '4px'
             || desktopShellReport.scoreboards.gameScoreboard.cellPaddingTop !== '4px'
+            || desktopShellReport.desktopDifficultyTypography.heading !== '30px'
+            || desktopShellReport.desktopDifficultyTypography.cardHeading !== '20px'
+            || desktopShellReport.desktopDifficultyTypography.cardBody !== '16px'
             || desktopShellReport.backButtonHeights.some((height) => height !== 36)) {
             throw new Error(`Desktop shell layout failed: ${JSON.stringify(desktopShellReport)}`);
         }
@@ -603,8 +612,8 @@ async function run() {
         const mobileScoreboardsMatch = JSON.stringify(mobileScoreboardReport.overviewScoreboard)
             === JSON.stringify(mobileScoreboardReport.gameScoreboard);
         if (!mobileScoreboardsMatch
-            || mobileScoreboardReport.gameScoreboard.height > 60
-            || mobileScoreboardReport.gameScoreboard.barPaddingTop !== '4px') {
+            || mobileScoreboardReport.gameScoreboard.height > 48
+            || mobileScoreboardReport.gameScoreboard.barPaddingTop !== '2px') {
             throw new Error(`Mobile scoreboard consistency failed: ${JSON.stringify(mobileScoreboardReport)}`);
         }
         const homepageMobileReport = await evaluate(client, `(() => {
@@ -626,6 +635,12 @@ async function run() {
             const landingContentWidth = landing.clientWidth
                 - parseFloat(landingStyle.paddingLeft)
                 - parseFloat(landingStyle.paddingRight);
+            showScreen(elements.matchDifficultyScreen);
+            const brandSuffix = brandName.querySelector('small').getBoundingClientRect();
+            const brandTitleRect = brandTitle.getBoundingClientRect();
+            const brandTextBottomOffset = Math.abs(brandSuffix.bottom - brandTitleRect.bottom);
+            const brandTextGap = brandSuffix.left - brandTitleRect.right;
+            showScreen(elements.landingScreen);
             return {
                 viewportWidth: document.documentElement.clientWidth,
                 viewportHeight: window.visualViewport?.height || window.innerHeight,
@@ -636,6 +651,8 @@ async function run() {
                 brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color,
                 brandTitleFontFamily: getComputedStyle(brandTitle).fontFamily,
                 brandTitleFontWeight: getComputedStyle(brandTitle).fontWeight,
+                brandTextBottomOffset,
+                brandTextGap,
                 textSizeAdjust: getComputedStyle(document.documentElement).webkitTextSizeAdjust,
                 footerPosition: getComputedStyle(footer).position,
                 footerDirection: getComputedStyle(footer).flexDirection,
@@ -662,6 +679,9 @@ async function run() {
             || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor
             || !homepageMobileReport.brandTitleFontFamily.includes('Yise QingKe Title')
             || homepageMobileReport.brandTitleFontWeight !== '400'
+            || homepageMobileReport.brandTextBottomOffset > 1
+            || homepageMobileReport.brandTextGap < 6
+            || homepageMobileReport.brandTextGap > 8
             || homepageMobileReport.textSizeAdjust !== '100%'
             || homepageMobileReport.footerPosition !== 'static'
             || homepageMobileReport.footerDirection !== 'column'
@@ -679,6 +699,8 @@ async function run() {
         await evaluate(client, `document.documentElement.style.fontSize = '125%'`);
         await delay(100);
         const embeddedTextScaleReport = await evaluate(client, `(() => {
+            document.documentElement.style.setProperty('--safe-area-inset-top', '44px');
+            document.documentElement.style.setProperty('--safe-area-inset-bottom', '24px');
             const footer = document.querySelector('.site-footer');
             const footerText = footer.querySelector('p');
             const lineTops = Array.from(footerText.children)
@@ -693,21 +715,81 @@ async function run() {
                     && rect.top >= modeCardRect.top - 1
                     && rect.bottom <= modeCardRect.bottom + 1;
             });
+            showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
+            const difficultyRect = elements.recallDifficultyScreen.getBoundingClientRect();
+            const difficultyCards = Array.from(elements.recallDifficultyScreen.querySelectorAll('[data-recall-difficulty]'));
+            const difficultyCardHeights = difficultyCards.map((card) => card.getBoundingClientRect().height);
+            const difficultyCardContentFits = difficultyCards.every((card) => {
+                const cardRect = card.getBoundingClientRect();
+                return Array.from(card.children).every((child) => {
+                    const rect = child.getBoundingClientRect();
+                    return rect.left >= cardRect.left - 1 && rect.right <= cardRect.right + 1;
+                });
+            });
+            const difficultyReport = {
+                bottom: difficultyRect.bottom,
+                height: difficultyRect.height,
+                headingFontSize: getComputedStyle(elements.recallDifficultyScreen.querySelector(':scope > h2')).fontSize,
+                bodyFontSize: getComputedStyle(elements.recallDifficultyScreen.querySelector(':scope > p')).fontSize,
+                cardBodyFontSize: getComputedStyle(difficultyCards[0].querySelector(':scope > p')).fontSize,
+                cardListColumns: getComputedStyle(difficultyCards[0].querySelector('ul')).gridTemplateColumns,
+                cardHeights: difficultyCardHeights,
+                cardContentFits: difficultyCardContentFits
+            };
+            selectRecallDifficulty('basic');
+            const preparationRect = elements.startScreen.getBoundingClientRect();
+            const startButtonRect = elements.startButton.getBoundingClientRect();
+            const preparationReport = {
+                bottom: preparationRect.bottom,
+                height: preparationRect.height,
+                headingFontSize: getComputedStyle(elements.startScreen.querySelector(':scope > h2')).fontSize,
+                rulesFontSize: getComputedStyle(document.getElementById('game-rules')).fontSize,
+                startButtonHeight: startButtonRect.height,
+                contentFits: Array.from(elements.startScreen.children).every((child) => {
+                    const rect = child.getBoundingClientRect();
+                    return rect.left >= preparationRect.left - 1 && rect.right <= preparationRect.right + 1;
+                }),
+                bodyClassApplied: document.body.classList.contains('is-preparation-screen')
+            };
+            const viewportHeight = window.visualViewport?.height || window.innerHeight;
             return {
                 viewportWidth: document.documentElement.clientWidth,
+                viewportHeight,
                 scrollWidth: document.documentElement.scrollWidth,
                 footerTextOnOneLine: Math.max(...lineTops) - Math.min(...lineTops) <= 1,
                 footerTextFits: footerText.scrollWidth <= footerText.clientWidth + 1,
-                modeCardContentFits
+                modeCardContentFits,
+                difficultyReport,
+                preparationReport
             };
         })()`);
         if (embeddedTextScaleReport.scrollWidth > embeddedTextScaleReport.viewportWidth
             || !embeddedTextScaleReport.footerTextOnOneLine
             || !embeddedTextScaleReport.footerTextFits
-            || !embeddedTextScaleReport.modeCardContentFits) {
+            || !embeddedTextScaleReport.modeCardContentFits
+            || embeddedTextScaleReport.difficultyReport.bottom > embeddedTextScaleReport.viewportHeight + 1
+            || embeddedTextScaleReport.difficultyReport.headingFontSize !== '24px'
+            || embeddedTextScaleReport.difficultyReport.bodyFontSize !== '14px'
+            || embeddedTextScaleReport.difficultyReport.cardBodyFontSize !== '13px'
+            || embeddedTextScaleReport.difficultyReport.cardHeights.some((height) => height > 150)
+            || !embeddedTextScaleReport.difficultyReport.cardContentFits
+            || embeddedTextScaleReport.preparationReport.bottom > embeddedTextScaleReport.viewportHeight + 1
+            || embeddedTextScaleReport.preparationReport.headingFontSize !== '25px'
+            || embeddedTextScaleReport.preparationReport.rulesFontSize !== '13.5px'
+            || embeddedTextScaleReport.preparationReport.startButtonHeight < 44
+            || !embeddedTextScaleReport.preparationReport.contentFits
+            || !embeddedTextScaleReport.preparationReport.bodyClassApplied) {
             throw new Error(`Embedded WebView text scaling failed: ${JSON.stringify(embeddedTextScaleReport)}`);
         }
-        await evaluate(client, `document.documentElement.style.fontSize = ''; showScreen(elements.landingScreen)`);
+        await captureScreenshot(client, 'preparation-webview-mobile.png');
+        await evaluate(client, `showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall')`);
+        await captureScreenshot(client, 'difficulty-webview-mobile.png');
+        await evaluate(client, `(() => {
+            document.documentElement.style.fontSize = '';
+            document.documentElement.style.removeProperty('--safe-area-inset-top');
+            document.documentElement.style.removeProperty('--safe-area-inset-bottom');
+            showScreen(elements.landingScreen);
+        })()`);
         await evaluate(client, `showScreen(elements.matchDifficultyScreen)`);
         await captureScreenshot(client, 'difficulty-mobile.png');
         const mobileHintOpened = await evaluate(client, `(() => {
@@ -776,6 +858,40 @@ async function run() {
             || narrowLandingReport.paletteBottom > narrowLandingReport.viewportHeight + 1) {
             throw new Error(`Narrow landing alignment failed: ${JSON.stringify(narrowLandingReport)}`);
         }
+        await evaluate(client, `(() => {
+            document.documentElement.style.fontSize = '125%';
+            document.documentElement.style.setProperty('--safe-area-inset-top', '44px');
+            document.documentElement.style.setProperty('--safe-area-inset-bottom', '24px');
+            showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall');
+        })()`);
+        const narrowEmbeddedReport = await evaluate(client, `(() => {
+            const viewportHeight = window.visualViewport?.height || window.innerHeight;
+            const difficultyBottom = elements.recallDifficultyScreen.getBoundingClientRect().bottom;
+            selectRecallDifficulty('basic');
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                viewportHeight,
+                scrollWidth: document.documentElement.scrollWidth,
+                difficultyBottom,
+                preparationBottom: elements.startScreen.getBoundingClientRect().bottom,
+                brandSuffixHidden: getComputedStyle(document.querySelector('.brand-name small')).display === 'none'
+            };
+        })()`);
+        if (narrowEmbeddedReport.scrollWidth > narrowEmbeddedReport.viewportWidth
+            || narrowEmbeddedReport.difficultyBottom > narrowEmbeddedReport.viewportHeight + 1
+            || narrowEmbeddedReport.preparationBottom > narrowEmbeddedReport.viewportHeight + 1
+            || !narrowEmbeddedReport.brandSuffixHidden) {
+            throw new Error(`Narrow embedded layout failed: ${JSON.stringify(narrowEmbeddedReport)}`);
+        }
+        await captureScreenshot(client, 'preparation-webview-360.png');
+        await evaluate(client, `showDifficultyScreen(elements.recallDifficultyScreen, 'colorRecall')`);
+        await captureScreenshot(client, 'difficulty-webview-360.png');
+        await evaluate(client, `(() => {
+            document.documentElement.style.fontSize = '';
+            document.documentElement.style.removeProperty('--safe-area-inset-top');
+            document.documentElement.style.removeProperty('--safe-area-inset-bottom');
+            showScreen(elements.landingScreen);
+        })()`);
         await captureScreenshot(client, 'landing-mobile-360.png');
         await client.send('Emulation.setDeviceMetricsOverride', {
             width: 320,
@@ -2749,12 +2865,15 @@ async function run() {
                 await openObservation(client, appUrl, mode);
                 const report = await evaluate(client, `(() => {
                     const isRecall = ${JSON.stringify(mode)} === 'recall';
-                    const stage = document.querySelector(isRecall
+                    const stageElement = document.querySelector(isRecall
                         ? '#recall-target-section'
-                        : '#target-color-screen').getBoundingClientRect();
+                        : '#target-color-screen');
+                    const stage = stageElement.getBoundingClientRect();
                     const swatch = document.querySelector(isRecall
                         ? '#recall-target-color'
                         : '#target-color').getBoundingClientRect();
+                    const toolbar = stageElement.querySelector('.game-stage-toolbar').getBoundingClientRect();
+                    const heading = stageElement.querySelector('.game-stage-title').getBoundingClientRect();
                     const viewportHeight = window.visualViewport?.height || window.innerHeight;
                     return {
                         viewportWidth: document.documentElement.clientWidth,
@@ -2763,9 +2882,14 @@ async function run() {
                         scrollHeight: document.documentElement.scrollHeight,
                         stageTop: stage.top,
                         stageBottom: stage.bottom,
+                        stageHeight: stage.height,
                         swatchBottom: swatch.bottom,
                         swatchToStageBottom: stage.bottom - swatch.bottom,
                         stageToViewportBottom: viewportHeight - stage.bottom,
+                        contentBalanceDelta: Math.abs(
+                            (heading.top - toolbar.bottom)
+                            - (stage.bottom - swatch.bottom)
+                        ),
                         bottomGapBalanceDelta: Math.abs(
                             (stage.bottom - swatch.bottom)
                             - (viewportHeight - stage.bottom)
@@ -2780,10 +2904,12 @@ async function run() {
                     || report.scrollHeight > report.viewportHeight + 1
                     || report.stageTop < 0
                     || report.stageBottom > report.viewportHeight + 1
-                    || (mode === 'match' && report.swatchToStageBottom < 56)
-                    || (mode === 'recall' && report.swatchToStageBottom < 79)
-                    || report.stageToViewportBottom < -1
-                    || (mode === 'recall' && report.bottomGapBalanceDelta > 4)) {
+                    || Math.abs(report.stageTop - matchStageReport.observation.top) > 1
+                    || Math.abs(report.stageBottom - matchStageReport.observation.bottom) > 1
+                    || Math.abs(report.stageHeight - matchStageReport.observation.height) > 1
+                    || report.swatchToStageBottom < 56
+                    || report.contentBalanceDelta > 20
+                    || report.stageToViewportBottom < -1) {
                     throw new Error(`Mobile observation regression failed: ${JSON.stringify({ viewport, mode, report })}`);
                 }
             }
