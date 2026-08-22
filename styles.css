@@ -3543,10 +3543,14 @@ html.theme-transitioning .palette-tray {
     }
 
     #recall-preview-panel:not(.hidden) {
+        --recall-preview-size: clamp(7rem, min(36vw, 18svh), 8.75rem);
         display: grid;
-        grid-template-columns: max-content 3rem minmax(0, 1fr);
-        gap: 10px;
-        padding: 8px 11px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "label code"
+            "swatch swatch";
+        gap: 0.5rem 0.75rem;
+        padding: 0.5rem;
         align-items: center;
     }
 
@@ -3556,17 +3560,21 @@ html.theme-transitioning .palette-tray {
     }
 
     #recall-preview-panel > p {
+        grid-area: label;
         font-size: 0.72rem;
     }
 
     #recall-user-color {
-        width: 3rem !important;
-        height: 3rem !important;
+        grid-area: swatch;
+        width: var(--recall-preview-size) !important;
+        height: var(--recall-preview-size) !important;
         aspect-ratio: 1;
+        justify-self: center;
         border-radius: 0.55rem;
     }
 
     #recall-user-code-display {
+        grid-area: code;
         min-width: 0;
         padding: 0.25rem 0.4rem;
         font-size: 0.65rem;

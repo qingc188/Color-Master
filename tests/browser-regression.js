@@ -2532,6 +2532,8 @@ async function run() {
                     const exit = document.querySelector('#recall-control-section [data-back-target="start"]').getBoundingClientRect();
                     const preview = elements.recallPreviewPanel.getBoundingClientRect();
                     const previewSwatch = elements.recallUserColor.getBoundingClientRect();
+                    const previewLabel = elements.recallPreviewPanel.querySelector(':scope > p').getBoundingClientRect();
+                    const previewCode = elements.recallUserCodeDisplay.getBoundingClientRect();
                     const wheel = document.querySelector('.hsl-wheel-container').getBoundingClientRect();
                     return {
                         difficulty: gameState.recallDifficulty,
@@ -2552,6 +2554,16 @@ async function run() {
                         previewHeight: preview.height,
                         previewSwatchWidth: previewSwatch.width,
                         previewSwatchHeight: previewSwatch.height,
+                        previewSwatchCenterDelta: Math.abs(
+                            (previewSwatch.left + previewSwatch.right) / 2
+                            - (preview.left + preview.right) / 2
+                        ),
+                        previewMetaCenterDelta: Math.abs(
+                            (previewLabel.top + previewLabel.bottom) / 2
+                            - (previewCode.top + previewCode.bottom) / 2
+                        ),
+                        previewSwatchBelowMeta: previewSwatch.top
+                            > Math.max(previewLabel.bottom, previewCode.bottom),
                         wheelWidth: wheel.width
                     };
                 })()`);
@@ -2573,6 +2585,11 @@ async function run() {
                     || report.previewHidden === expectsPreview
                     || (expectsPreview
                         && Math.abs(report.previewSwatchWidth - report.previewSwatchHeight) > 0.5)
+                    || (expectsPreview
+                        && (report.previewSwatchWidth < 112 || report.previewSwatchWidth > 141))
+                    || (expectsPreview && report.previewSwatchCenterDelta > 0.5)
+                    || (expectsPreview && report.previewMetaCenterDelta > 0.5)
+                    || (expectsPreview && !report.previewSwatchBelowMeta)
                     || (difficulty === 'basic' && (report.wheelWidth < 132 || report.wheelWidth > 148))) {
                     throw new Error(`Mobile control regression failed: ${JSON.stringify({ viewport, report })}`);
                 }
