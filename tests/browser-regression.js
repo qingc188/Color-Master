@@ -208,6 +208,12 @@ async function run() {
     if (typeof WebSocket === 'undefined') {
         throw new Error('Browser regression requires Node.js 22 or newer.');
     }
+    const stylesSource = fs.readFileSync(path.resolve(__dirname, '..', 'styles.css'), 'utf8');
+    const titleFontBlocksFallback = /@font-face\s*\{(?=[^}]*font-family:\s*"Yise QingKe Title")(?=[^}]*font-display:\s*block;)[^}]*\}/s
+        .test(stylesSource);
+    if (!titleFontBlocksFallback) {
+        throw new Error('Title font must block fallback rendering during its preload window.');
+    }
     const edgePath = EDGE_PATHS.find((candidate) => fs.existsSync(candidate));
     if (!edgePath) {
         throw new Error('Microsoft Edge was not found. Set BROWSER_PATH to a Chromium executable.');
@@ -422,19 +428,30 @@ async function run() {
         }
 
         await evaluate(client, `document.fonts.ready`);
-        const homepageReport = await evaluate(client, `({
-            secondaryGuideRemoved: !document.querySelector('.landing-secondary')
-                && !document.querySelector('#game-guide'),
-            supportingContentRemoved: !document.querySelector('#supporting-content'),
-            paletteEntryTag: elements.colorHistoryEntry.tagName,
-            paletteCount: elements.landingHistoryCount.textContent,
-            titleFontFamily: getComputedStyle(document.querySelector('.landing-title')).fontFamily,
-            titleFontWeight: getComputedStyle(document.querySelector('.landing-title')).fontWeight,
-            titleFontLoaded: document.fonts.check('400 64px "Yise QingKe Title"', '忆色'),
-            audioControlsRemoved: !document.querySelector('#sound-toggle')
-                && !document.querySelector('#icon-volume-up')
-                && !document.querySelector('#icon-volume-off')
-        })`);
+        const homepageReport = await evaluate(client, `(() => {
+            const fontPreload = document.querySelector(
+                'link[rel="preload"][as="font"][type="font/woff2"][href$="zcool-qingke-huangyou-yise.woff2"]'
+            );
+            const firstStylesheet = document.querySelector('link[rel="stylesheet"]');
+            return {
+                secondaryGuideRemoved: !document.querySelector('.landing-secondary')
+                    && !document.querySelector('#game-guide'),
+                supportingContentRemoved: !document.querySelector('#supporting-content'),
+                paletteEntryTag: elements.colorHistoryEntry.tagName,
+                paletteCount: elements.landingHistoryCount.textContent,
+                titleFontFamily: getComputedStyle(document.querySelector('.landing-title')).fontFamily,
+                titleFontWeight: getComputedStyle(document.querySelector('.landing-title')).fontWeight,
+                titleFontLoaded: document.fonts.check('400 64px "Yise QingKe Title"', '忆色'),
+                titleFontPreloaded: Boolean(fontPreload),
+                titleFontPreloadBeforeStyles: Boolean(fontPreload
+                    && firstStylesheet
+                    && (fontPreload.compareDocumentPosition(firstStylesheet) & Node.DOCUMENT_POSITION_FOLLOWING)),
+                audioControlsRemoved: !document.querySelector('#sound-toggle')
+                    && !document.querySelector('#icon-volume-up')
+                    && !document.querySelector('#icon-volume-off')
+            };
+        })()`);
+        homepageReport.titleFontBlocksFallback = titleFontBlocksFallback;
         if (!homepageReport.secondaryGuideRemoved
             || !homepageReport.supportingContentRemoved
             || homepageReport.paletteEntryTag !== 'BUTTON'
@@ -442,6 +459,9 @@ async function run() {
             || !homepageReport.titleFontFamily.includes('Yise QingKe Title')
             || homepageReport.titleFontWeight !== '400'
             || !homepageReport.titleFontLoaded
+            || !homepageReport.titleFontPreloaded
+            || !homepageReport.titleFontPreloadBeforeStyles
+            || !homepageReport.titleFontBlocksFallback
             || !homepageReport.audioControlsRemoved) {
             throw new Error(`Homepage simplification failed: ${JSON.stringify(homepageReport)}`);
         }
