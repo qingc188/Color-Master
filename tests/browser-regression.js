@@ -618,6 +618,64 @@ async function run() {
             || mobileScoreboardReport.overviewScoreboard.valueFontSize !== '15px') {
             throw new Error(`Mobile scoreboard consistency failed: ${JSON.stringify(mobileScoreboardReport)}`);
         }
+        const mobileShellConsistencyReport = await evaluate(client, `(() => {
+            const screens = [
+                elements.colorHistoryScreen,
+                elements.modeSelectionScreen,
+                elements.matchDifficultyScreen,
+                elements.recallDifficultyScreen,
+                elements.startScreen,
+                elements.targetColorScreen,
+                elements.colorGridScreen,
+                elements.colorRecallScreen,
+                elements.resultScreen
+            ];
+            const measurements = screens.map((screen) => {
+                showScreen(screen);
+                const header = elements.brandHeader.getBoundingClientRect();
+                const mark = elements.brandHeader.querySelector('.brand-mark').getBoundingClientRect();
+                const panel = screen.getBoundingClientRect();
+                return {
+                    screen: screen.id,
+                    brandHidden: elements.brandHeader.classList.contains('hidden'),
+                    header: { top: header.top, left: header.left, width: header.width, height: header.height },
+                    mark: { top: mark.top, left: mark.left, width: mark.width, height: mark.height },
+                    panel: { left: panel.left, right: panel.right }
+                };
+            });
+            const reference = measurements.find(({ screen }) => screen === 'mode-selection-screen');
+            const brandConsistent = measurements.every((measurement) => (
+                !measurement.brandHidden
+                && ['top', 'left', 'width', 'height'].every((key) => (
+                    Math.abs(measurement.header[key] - reference.header[key]) <= 0.5
+                ))
+                && ['top', 'left', 'width', 'height'].every((key) => (
+                    Math.abs(measurement.mark[key] - reference.mark[key]) <= 0.5
+                ))
+            ));
+            const modePanel = measurements.find(({ screen }) => screen === 'mode-selection-screen').panel;
+            const difficultyPanels = measurements
+                .filter(({ screen }) => screen === 'match-difficulty-screen' || screen === 'recall-difficulty-screen')
+                .map(({ panel }) => panel);
+            const panelsAligned = difficultyPanels.every((panel) => (
+                Math.abs(panel.left - modePanel.left) <= 0.5
+                && Math.abs(panel.right - modePanel.right) <= 0.5
+            ));
+            showScreen(elements.landingScreen);
+            return {
+                measurements,
+                brandConsistent,
+                panelsAligned,
+                landingBrandHidden: elements.brandHeader.classList.contains('hidden'),
+                landingClassApplied: document.body.classList.contains('is-landing-screen')
+            };
+        })()`);
+        if (!mobileShellConsistencyReport.brandConsistent
+            || !mobileShellConsistencyReport.panelsAligned
+            || !mobileShellConsistencyReport.landingBrandHidden
+            || !mobileShellConsistencyReport.landingClassApplied) {
+            throw new Error(`Mobile shell consistency failed: ${JSON.stringify(mobileShellConsistencyReport)}`);
+        }
         const homepageMobileReport = await evaluate(client, `(() => {
             const primary = elements.enterGameButton.getBoundingClientRect();
             const paletteEntry = elements.colorHistoryEntry.getBoundingClientRect();
@@ -1791,7 +1849,7 @@ async function run() {
             || !matchReport.stableSurround
             || !matchReport.gridStillVisible
             || !matchReport.resultScreenHidden
-            || !matchReport.brandStillHidden
+            || matchReport.brandStillHidden
             || !matchReport.failureMessages.includes(matchReport.resultTitle)
             || matchReport.resultIcon !== '#icon-x-circle'
             || !matchReport.titleFocused
@@ -2036,7 +2094,7 @@ async function run() {
             })
             || matchFinalSummaryReport.recapRounds < 1
             || !matchFinalSummaryReport.footerHidden
-            || !matchFinalSummaryReport.brandHidden
+            || matchFinalSummaryReport.brandHidden
             || !matchFinalSummaryReport.statsHidden
             || !matchFinalSummaryReport.bodyImmersive
             || matchFinalSummaryReport.shellMode !== 'shared'
@@ -2195,7 +2253,7 @@ async function run() {
             || !recallStatsReport.duplicateProgressRemoved
             || !recallStatsReport.statsAnchored
             || !recallStatsReport.footerHidden
-            || !recallStatsReport.brandHidden
+            || recallStatsReport.brandHidden
             || recallStatsReport.joinedGap < 0
             || recallStatsReport.joinedGap > 24) {
             throw new Error(`Recall stats bar failed: ${JSON.stringify(recallStatsReport)}`);
@@ -2414,7 +2472,7 @@ async function run() {
             || persistenceReport.recapListRounds !== 4
             || persistenceReport.shellMode !== 'shared'
             || !persistenceReport.footerHidden
-            || !persistenceReport.brandHidden
+            || persistenceReport.brandHidden
             || persistenceReport.focused !== 'result-text') {
             throw new Error(`Score persistence regression failed: ${JSON.stringify(persistenceReport)}`);
         }
@@ -3035,6 +3093,7 @@ async function run() {
                         ),
                         previewSwatchBelowMeta: previewSwatch.top
                             > Math.max(previewLabel.bottom, previewCode.bottom),
+                        compactPreview: matchMedia('(max-height: 700px)').matches,
                         wheelWidth: wheel.width
                     };
                 })()`);
@@ -3060,7 +3119,8 @@ async function run() {
                         && (report.previewSwatchWidth < 112 || report.previewSwatchWidth > 141))
                     || (expectsPreview && report.previewSwatchCenterDelta > 0.5)
                     || (expectsPreview && report.previewMetaCenterDelta > 0.5)
-                    || (expectsPreview && !report.previewSwatchBelowMeta)
+                    || (expectsPreview && !report.compactPreview && !report.previewSwatchBelowMeta)
+                    || (expectsPreview && report.compactPreview && report.previewHeight > 124)
                     || (difficulty === 'basic' && (report.wheelWidth < 132 || report.wheelWidth > 148))) {
                     throw new Error(`Mobile control regression failed: ${JSON.stringify({ viewport, report })}`);
                 }
@@ -3115,7 +3175,7 @@ async function run() {
             || !finalZoomReport.scorePanelFits
             || !finalZoomReport.statsFit
             || !finalZoomReport.footerHidden
-            || !finalZoomReport.brandHidden
+            || finalZoomReport.brandHidden
             || JSON.stringify(finalZoomReport.shellParts) !== JSON.stringify([
                 'header', 'summary', 'recap', 'actions'
             ])

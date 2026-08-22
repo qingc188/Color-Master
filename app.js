@@ -518,13 +518,15 @@ function showScreen(screen) {
 }
 
 function updateBrandState(screen) {
+    const isLandingScreen = screen === elements.landingScreen;
     const isActiveGameScreen = screen === elements.targetColorScreen
         || screen === elements.colorGridScreen
         || screen === elements.colorRecallScreen;
     const isFinalScreen = screen === elements.resultScreen;
     const isImmersiveScreen = isActiveGameScreen || isFinalScreen;
-    elements.brandHeader.classList.toggle('hidden', screen === elements.landingScreen || isImmersiveScreen);
+    elements.brandHeader.classList.toggle('hidden', isLandingScreen);
     elements.siteFooter.classList.toggle('hidden', isImmersiveScreen);
+    document.body.classList.toggle('is-landing-screen', isLandingScreen);
     document.body.classList.toggle('is-immersive-screen', isImmersiveScreen);
 }
 
