@@ -405,6 +405,8 @@ html {
     overflow-x: hidden;
     color-scheme: dark;
     scroll-behavior: auto;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 body.site-body {
@@ -3082,7 +3084,21 @@ html.theme-transitioning .palette-tray {
     .site-footer {
         position: static;
         inset: auto;
+        padding-inline: 0;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: clamp(0.625rem, 2.8vw, 0.68rem);
+        letter-spacing: 0.05em;
         transform: none;
+    }
+
+    .site-footer-spectrum {
+        width: 3.5rem;
+    }
+
+    .site-footer p {
+        width: 100%;
+        gap: 0.4rem;
     }
 
     .back-button {
@@ -3151,6 +3167,15 @@ html.theme-transitioning .palette-tray {
         padding-top: 3.5rem;
     }
 
+    .screen-heading h2,
+    #match-difficulty-screen > h2,
+    #recall-difficulty-screen > h2,
+    #start-screen > h2 {
+        font-size: 1.75rem;
+        line-height: 1.2;
+        text-wrap: balance;
+    }
+
     .screen-heading .back-button {
         top: 0;
     }
@@ -3159,6 +3184,30 @@ html.theme-transitioning .palette-tray {
     [data-match-difficulty],
     [data-recall-difficulty] {
         min-height: 0;
+    }
+
+    .mode-card h3 {
+        font-size: 1.35rem;
+    }
+
+    .mode-card > p:not(.mode-card-code),
+    [data-match-difficulty] > p,
+    [data-recall-difficulty] > p {
+        font-size: 0.9375rem;
+    }
+
+    .mode-card ul,
+    [data-match-difficulty] ul,
+    [data-recall-difficulty] ul {
+        font-size: 0.8125rem;
+    }
+
+    #game-rules {
+        font-size: 0.9375rem;
+    }
+
+    #game-rules > h3 {
+        font-size: 1.125rem;
     }
 
     #game-info-bar {

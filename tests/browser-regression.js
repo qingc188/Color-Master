@@ -618,6 +618,11 @@ async function run() {
             const actions = document.querySelector('.landing-actions').getBoundingClientRect();
             const english = document.querySelector('.landing-english');
             const paletteIndicator = document.querySelector('.theme-palette-indicator');
+            const footerText = footer.querySelector('p');
+            const footerSpectrum = footer.querySelector('.site-footer-spectrum');
+            const footerRect = footer.getBoundingClientRect();
+            const footerTextLineTops = Array.from(footerText.children)
+                .map((child) => child.getBoundingClientRect().top);
             const landingContentWidth = landing.clientWidth
                 - parseFloat(landingStyle.paddingLeft)
                 - parseFloat(landingStyle.paddingRight);
@@ -631,9 +636,18 @@ async function run() {
                 brandSuffixColor: getComputedStyle(brandName.querySelector('small')).color,
                 brandTitleFontFamily: getComputedStyle(brandTitle).fontFamily,
                 brandTitleFontWeight: getComputedStyle(brandTitle).fontWeight,
+                textSizeAdjust: getComputedStyle(document.documentElement).webkitTextSizeAdjust,
                 footerPosition: getComputedStyle(footer).position,
+                footerDirection: getComputedStyle(footer).flexDirection,
                 footerAfterMain: footer.offsetTop >= document.querySelector('.app-container > main').offsetTop
                     + document.querySelector('.app-container > main').offsetHeight,
+                footerTextOnOneLine: Math.max(...footerTextLineTops) - Math.min(...footerTextLineTops) <= 1,
+                footerTextFits: footerText.scrollWidth <= footerText.clientWidth + 1,
+                footerSpectrumCenterOffset: Math.abs(
+                    footerSpectrum.getBoundingClientRect().left
+                        + footerSpectrum.getBoundingClientRect().width / 2
+                        - (footerRect.left + footerRect.width / 2)
+                ),
                 paletteToEnglishGap: english.getBoundingClientRect().top
                     - paletteIndicator.getBoundingClientRect().bottom,
                 englishFontSize: parseFloat(getComputedStyle(english).fontSize),
@@ -648,8 +662,13 @@ async function run() {
             || homepageMobileReport.brandNameColor !== homepageMobileReport.brandSuffixColor
             || !homepageMobileReport.brandTitleFontFamily.includes('Yise QingKe Title')
             || homepageMobileReport.brandTitleFontWeight !== '400'
+            || homepageMobileReport.textSizeAdjust !== '100%'
             || homepageMobileReport.footerPosition !== 'static'
+            || homepageMobileReport.footerDirection !== 'column'
             || !homepageMobileReport.footerAfterMain
+            || !homepageMobileReport.footerTextOnOneLine
+            || !homepageMobileReport.footerTextFits
+            || homepageMobileReport.footerSpectrumCenterOffset > 1
             || homepageMobileReport.paletteToEnglishGap < 20
             || Math.abs(homepageMobileReport.englishFontSize - 10.88) > 0.1
             || Math.abs(homepageMobileReport.actionWidthRatio - 0.70) > 0.01
@@ -657,6 +676,38 @@ async function run() {
             throw new Error(`Mobile homepage layout failed: ${JSON.stringify(homepageMobileReport)}`);
         }
         await captureScreenshot(client, 'landing-mobile.png');
+        await evaluate(client, `document.documentElement.style.fontSize = '125%'`);
+        await delay(100);
+        const embeddedTextScaleReport = await evaluate(client, `(() => {
+            const footer = document.querySelector('.site-footer');
+            const footerText = footer.querySelector('p');
+            const lineTops = Array.from(footerText.children)
+                .map((child) => child.getBoundingClientRect().top);
+            const modeCard = document.querySelector('#color-match-mode');
+            showScreen(elements.modeSelectionScreen);
+            const modeCardRect = modeCard.getBoundingClientRect();
+            const modeCardContentFits = Array.from(modeCard.children).every((child) => {
+                const rect = child.getBoundingClientRect();
+                return rect.left >= modeCardRect.left - 1
+                    && rect.right <= modeCardRect.right + 1
+                    && rect.top >= modeCardRect.top - 1
+                    && rect.bottom <= modeCardRect.bottom + 1;
+            });
+            return {
+                viewportWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                footerTextOnOneLine: Math.max(...lineTops) - Math.min(...lineTops) <= 1,
+                footerTextFits: footerText.scrollWidth <= footerText.clientWidth + 1,
+                modeCardContentFits
+            };
+        })()`);
+        if (embeddedTextScaleReport.scrollWidth > embeddedTextScaleReport.viewportWidth
+            || !embeddedTextScaleReport.footerTextOnOneLine
+            || !embeddedTextScaleReport.footerTextFits
+            || !embeddedTextScaleReport.modeCardContentFits) {
+            throw new Error(`Embedded WebView text scaling failed: ${JSON.stringify(embeddedTextScaleReport)}`);
+        }
+        await evaluate(client, `document.documentElement.style.fontSize = ''; showScreen(elements.landingScreen)`);
         await evaluate(client, `showScreen(elements.matchDifficultyScreen)`);
         await captureScreenshot(client, 'difficulty-mobile.png');
         const mobileHintOpened = await evaluate(client, `(() => {
